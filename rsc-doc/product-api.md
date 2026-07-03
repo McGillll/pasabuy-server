@@ -1,0 +1,134 @@
+# Product API
+
+Global product catalog, managed by the seller/admin. Products have no price of their own — price is set per pasabuy schedule (see `pasabuy-schedule-api.md`).
+
+## Endpoints overview
+
+| Method | Endpoint                     | Auth required | Description             |
+|--------|-------------------------------|----------------|--------------------------|
+| GET    | `/api/admin/products`         | Yes (admin)    | List products (paginated) |
+| POST   | `/api/admin/products`         | Yes (admin)    | Create a product          |
+| GET    | `/api/admin/products/{uuid}`  | Yes (admin)    | Get one product           |
+| PUT    | `/api/admin/products/{uuid}`  | Yes (admin)    | Update a product          |
+| DELETE | `/api/admin/products/{uuid}`  | Yes (admin)    | Soft-delete a product     |
+
+All requests send `Accept: application/json` and `Authorization: Bearer {token}` (token must carry the `admin` ability — see `auth-api.md`). `POST`/`PUT` bodies are `multipart/form-data`; `PUT` must be sent as `POST` with a `_method=PUT` field (PHP does not parse multipart bodies on real PUT requests).
+
+## Response envelope
+
+Standard `{success, message, data}` envelope (see `auth-api.md`).
+
+## Product object
+
+| Field       | Type            | Notes                                    |
+|-------------|-----------------|--------------------------------------------|
+| uuid        | string          | Public identifier                          |
+| name        | string          |                                              |
+| description | string\|null    |                                              |
+| image_url   | string\|null    | Full public URL, or `null` if no image set |
+| is_active   | boolean         | Informational only — inactive products can still be attached to a schedule; use it to hide discontinued items from your own catalog view |
+
+Soft-deleted products are excluded from `index`/`show` automatically but remain referenced (by name/price snapshot) on any historical `order_items`.
+
+---
+
+## GET /api/admin/products
+
+### Query params
+
+| Field    | Type   | Required | Notes                          |
+|----------|--------|----------|----------------------------------|
+| search   | string | No       | Filter by name (partial match)   |
+| per_page | int    | No       | Default 15                       |
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {
+    "data": [ { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true } ],
+    "current_page": 1,
+    "last_page": 1,
+    "total": 1
+  }
+}
+```
+
+`data` is a standard Laravel paginator; use `data.data` for the array of products.
+
+---
+
+## POST /api/admin/products
+
+### Request body (multipart/form-data)
+
+| Field       | Type   | Required | Notes                    |
+|-------------|--------|----------|----------------------------|
+| name        | string | Yes      |                             |
+| description | string | No       |                             |
+| image       | file   | No       | Image file, max 4MB        |
+| is_active   | bool   | No       | Defaults to `true`          |
+
+### Success response — 201
+
+```json
+{ "success": true, "message": "Product created successfully", "data": { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true } }
+```
+
+### Error responses
+
+- **422** — validation failure (missing `name`, or `image` not a valid image).
+
+---
+
+## GET /api/admin/products/{uuid}
+
+### Success response — 200
+
+Same shape as one item in the `POST` response.
+
+### Error responses
+
+- **404** — no product with that uuid: `{ "success": false, "message": "Product not found.", "data": null }`
+
+---
+
+## PUT /api/admin/products/{uuid}
+
+Send as `POST` with `_method=PUT`. Same body fields as `POST /api/admin/products`. Omitting `image` leaves the existing image untouched; sending a new one replaces and deletes the old file from storage.
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Product updated successfully", "data": { ... } }
+```
+
+### Error responses
+
+Same as `POST`, plus **404** if the uuid doesn't exist.
+
+---
+
+## DELETE /api/admin/products/{uuid}
+
+Soft-deletes the product (reversible in the database — no restore endpoint is exposed yet). Safe to call even if the product is referenced by past orders, since `order_items` stores its own name/price snapshot.
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Product deleted successfully", "data": null }
+```
+
+### Error responses
+
+- **404** — no product with that uuid.
+
+## Error status summary
+
+| Status | Meaning               | Applies to                  |
+|--------|------------------------|-------------------------------|
+| 401    | Missing/invalid token  | all endpoints                  |
+| 404    | Product not found      | show, update, destroy          |
+| 422    | Validation failure     | store, update                  |
