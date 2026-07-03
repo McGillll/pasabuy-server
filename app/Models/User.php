@@ -19,19 +19,14 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected static function booted(): void
+    protected static function booted()
     {
         static::creating(function (User $user) {
             $user->uuid = Str::uuid()->toString();
         });
     }
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected function casts()
     {
         return [
             'email_verified_at' => 'datetime',

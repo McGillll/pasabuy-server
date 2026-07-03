@@ -14,14 +14,14 @@ class Product extends Model
 {
     use Filterable, HasFactory, SoftDeletes;
 
-    protected static function booted(): void
+    protected static function booted()
     {
         static::creating(function (Product $product) {
             $product->uuid = Str::uuid()->toString();
         });
     }
 
-    protected function casts(): array
+    protected function casts()
     {
         return [
             'is_active' => 'boolean',

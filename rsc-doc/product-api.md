@@ -9,10 +9,10 @@ Global product catalog, managed by the seller/admin. Products have no price of t
 | GET    | `/api/admin/products`         | Yes (admin)    | List products (paginated) |
 | POST   | `/api/admin/products`         | Yes (admin)    | Create a product          |
 | GET    | `/api/admin/products/{uuid}`  | Yes (admin)    | Get one product           |
-| PUT    | `/api/admin/products/{uuid}`  | Yes (admin)    | Update a product          |
+| POST   | `/api/admin/products/{uuid}`  | Yes (admin)    | Update a product          |
 | DELETE | `/api/admin/products/{uuid}`  | Yes (admin)    | Soft-delete a product     |
 
-All requests send `Accept: application/json` and `Authorization: Bearer {token}` (token must carry the `admin` ability — see `auth-api.md`). `POST`/`PUT` bodies are `multipart/form-data`; `PUT` must be sent as `POST` with a `_method=PUT` field (PHP does not parse multipart bodies on real PUT requests).
+All requests send `Accept: application/json` and `Authorization: Bearer {token}` (token must carry the `admin` ability — see `auth-api.md`). `POST` bodies are `multipart/form-data`. Update also uses `POST` (not `PUT`) because PHP does not parse multipart bodies on real `PUT` requests.
 
 ## Response envelope
 
@@ -95,9 +95,9 @@ Same shape as one item in the `POST` response.
 
 ---
 
-## PUT /api/admin/products/{uuid}
+## POST /api/admin/products/{uuid}
 
-Send as `POST` with `_method=PUT`. Same body fields as `POST /api/admin/products`. Omitting `image` leaves the existing image untouched; sending a new one replaces and deletes the old file from storage.
+Same body fields as `POST /api/admin/products`. Omitting `image` leaves the existing image untouched; sending a new one replaces and deletes the old file from storage.
 
 ### Success response — 200
 

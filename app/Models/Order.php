@@ -4,26 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 #[Fillable(['customer_name', 'customer_contact', 'status', 'total_amount'])]
 class Order extends Model
 {
-    protected static function booted(): void
+    protected static function booted()
     {
         static::creating(function (Order $order) {
             $order->uuid = Str::uuid()->toString();
         });
     }
 
-    public function pasabuySchedule(): BelongsTo
+    public function pasabuySchedule()
     {
         return $this->belongsTo(PasabuySchedule::class);
     }
 
-    public function items(): HasMany
+    public function items()
     {
         return $this->hasMany(OrderItem::class);
     }

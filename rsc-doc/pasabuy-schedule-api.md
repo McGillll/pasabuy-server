@@ -14,7 +14,7 @@ A pasabuy schedule is the seller's shareable "batch" — a subset of the global 
 | PUT    | `/api/admin/pasabuy-schedules/{uuid}/products`          | Replace the attached product set                 |
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/orders`            | List orders placed against this schedule         |
 
-All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin ability). Any endpoint accepting a body is `multipart/form-data`; send `PUT` as `POST` + `_method=PUT`.
+All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin ability). Bodies are JSON (no file uploads on this module, so `PUT` is sent as a real `PUT`).
 
 ## Schedule object
 

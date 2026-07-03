@@ -14,7 +14,7 @@ use Illuminate\Support\ServiceProvider;
 
 class RepositoryProviders extends ServiceProvider
 {
-    public function register(): void
+    public function register()
     {
         $this->app->bind(AuthRepositoryInterface::class, AuthRepository::class);
         $this->app->bind(ProductRepositoryInterface::class, ProductRepository::class);

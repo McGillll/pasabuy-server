@@ -4,32 +4,31 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 #[Fillable(['price', 'max_quantity', 'is_disabled'])]
 class PasabuyScheduleProduct extends Model
 {
-    protected static function booted(): void
+    protected static function booted()
     {
         static::creating(function (PasabuyScheduleProduct $scheduleProduct) {
             $scheduleProduct->uuid = Str::uuid()->toString();
         });
     }
 
-    protected function casts(): array
+    protected function casts()
     {
         return [
             'is_disabled' => 'boolean',
         ];
     }
 
-    public function pasabuySchedule(): BelongsTo
+    public function pasabuySchedule()
     {
         return $this->belongsTo(PasabuySchedule::class);
     }
 
-    public function product(): BelongsTo
+    public function product()
     {
         return $this->belongsTo(Product::class);
     }
