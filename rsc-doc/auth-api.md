@@ -1,6 +1,6 @@
 # Auth API
 
-Sanctum personal-access-token authentication for the seller/admin app. Customers never authenticate — this module has no public/unauthenticated endpoints.
+Sanctum personal-access-token authentication, shared by both the seller/admin app and customer accounts — `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/me` work identically regardless of `role`. Customer registration and admin approval are separate endpoints documented in `customer-api.md`; this module only covers logging in with an already-registered account (admin or customer).
 
 ## Endpoints overview
 
@@ -28,12 +28,14 @@ Every response — success or failure — uses:
 
 ## User object
 
-| Field | Type   | Notes                          |
-|-------|--------|---------------------------------|
-| uuid  | string | Public identifier, use this — never the internal `id` |
-| name  | string |                                  |
-| email | string |                                  |
-| role  | string | Currently always `"admin"`; reserved for future role differentiation |
+| Field          | Type          | Notes                          |
+|----------------|---------------|---------------------------------|
+| uuid           | string        | Public identifier, use this — never the internal `id` |
+| name           | string        |                                  |
+| email          | string        |                                  |
+| contact_number | string\|null  |                                  |
+| role           | string        | `"admin"` or `"customer"`        |
+| is_approved    | boolean       | Always `true` for `admin`. For `customer`, `false` until an admin approves the registration — a pending customer can still log in and call `/auth/me` to see this flag, but every ordering/product-request endpoint rejects with **403** until it flips to `true` (see `customer-api.md`) |
 
 ---
 
@@ -143,4 +145,4 @@ Requires `Authorization: Bearer {token}`. Returns the currently authenticated us
 
 ## Seeded credentials (local/dev only)
 
-`UserSeeder` creates one admin: `admin@pasabuy.test` / `password`. Run via `php artisan migrate:fresh --seed`.
+`UserSeeder` creates one admin: `admin@pasabuy.test` / `password`. `CustomerSeeder` creates sample customers (`juan@pasabuy.test`, `maria@pasabuy.test`, `pedro@pasabuy.test` — all approved, password `password`; `ana@pasabuy.test` — pending approval, same password). Run via `php artisan migrate:fresh --seed`.

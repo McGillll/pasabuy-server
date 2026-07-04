@@ -13,19 +13,36 @@ class OrderRepository implements OrderRepositoryInterface
         return Order::with('items.product')->where('uuid', $uuid)->first();
     }
 
+    public function findOwnedByUuid(string $uuid, int $userId)
+    {
+        return Order::with('items.product', 'pasabuySchedule')
+            ->where('uuid', $uuid)
+            ->where('user_id', $userId)
+            ->first();
+    }
+
+    public function myOrders(int $userId, object $payload)
+    {
+        return Order::with('items.product', 'pasabuySchedule')
+            ->where('user_id', $userId)
+            ->latest()
+            ->paginate($payload->per_page ?? 15);
+    }
+
     public function updateStatus(string $uuid, object $payload)
     {
         $order = Order::where('uuid', $uuid)->first();
         $order->status = $payload->status;
         $order->save();
 
-        return $order;
+        return $order->fresh(['items.product', 'pasabuySchedule']);
     }
 
     public function create(object $payload)
     {
         $order = new Order;
         $order->pasabuy_schedule_id = $payload->pasabuy_schedule_id;
+        $order->user_id = $payload->user_id;
         $order->customer_name = $payload->customer_name;
         $order->customer_contact = $payload->customer_contact;
         $order->status = 'pending';
@@ -55,12 +72,20 @@ class OrderRepository implements OrderRepositoryInterface
         $order->total_amount = $total;
         $order->save();
 
-        return $order->fresh('items.product');
+        return $order->fresh(['items.product', 'pasabuySchedule']);
     }
 
-    public function orderedQuantity(int $scheduleId, int $productId)
+    public function replaceItems(object $order, object $payload)
+    {
+        $order->items()->delete();
+
+        return $this->addItems($order, $payload);
+    }
+
+    public function orderedQuantity(int $scheduleId, int $productId, ?int $excludeOrderId = null)
     {
         return OrderItem::where('product_id', $productId)
+            ->when($excludeOrderId, fn ($query) => $query->where('order_id', '!=', $excludeOrderId))
             ->whereHas('order', function ($query) use ($scheduleId) {
                 $query->where('pasabuy_schedule_id', $scheduleId)
                     ->whereIn('status', ['pending', 'confirmed']);

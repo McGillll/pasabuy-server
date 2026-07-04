@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,6 +16,11 @@ class OrderResource extends JsonResource
             'customer_contact' => $this->customer_contact,
             'status' => $this->status,
             'total_amount' => $this->total_amount,
+            'is_editable' => in_array($this->status, Order::EDITABLE_STATUSES)
+                && $this->relationLoaded('pasabuySchedule')
+                && $this->pasabuySchedule->status === 'open'
+                && (! $this->pasabuySchedule->cutoff_at || $this->pasabuySchedule->cutoff_at->isFuture()),
+            'pasabuy_schedule' => $this->whenLoaded('pasabuySchedule', fn () => new PasabuyScheduleResource($this->pasabuySchedule)),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'created_at' => $this->created_at,
         ];

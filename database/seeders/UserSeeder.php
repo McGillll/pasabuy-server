@@ -9,6 +9,10 @@ class UserSeeder extends Seeder
 {
     public function run()
     {
+        if (User::where('email', 'admin@pasabuy.test')->exists()) {
+            return;
+        }
+
         User::factory()->create([
             'name' => 'Admin',
             'email' => 'admin@pasabuy.test',

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('pasabuy_schedule_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained();
             $table->string('customer_name');
             $table->string('customer_contact');
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');

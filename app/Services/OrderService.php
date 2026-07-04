@@ -7,6 +7,7 @@ use App\Exceptions\NotFoundException;
 use App\Interfaces\Order\OrderRepositoryInterface;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
+use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 
 class OrderService implements OrderServiceInterface
@@ -35,15 +36,75 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Pasabuy schedule not found.');
         }
 
+        $this->ensureScheduleIsOpen($schedule);
+
+        $resolvedItems = $this->resolveItems($schedule, $payload->items);
+
+        return DB::transaction(function () use ($schedule, $payload, $resolvedItems) {
+            $order = $this->orderRepository->create((object) [
+                'pasabuy_schedule_id' => $schedule->id,
+                'user_id' => $payload->user->id,
+                'customer_name' => $payload->user->name,
+                'customer_contact' => $payload->user->contact_number,
+            ]);
+
+            return $this->orderRepository->addItems($order, (object) ['items' => $resolvedItems]);
+        });
+    }
+
+    public function updateItemsForCustomer(string $orderUuid, object $payload)
+    {
+        $order = $this->orderRepository->findOwnedByUuid($orderUuid, $payload->user->id);
+
+        if (! $order) {
+            throw new NotFoundException('Order not found.');
+        }
+
+        if (! in_array($order->status, Order::EDITABLE_STATUSES)) {
+            throw new InvalidPayloadException('This order can no longer be edited.');
+        }
+
+        $schedule = $this->pasabuyScheduleRepository->findByUuid($order->pasabuySchedule->uuid);
+
+        $this->ensureScheduleIsOpen($schedule);
+
+        $resolvedItems = $this->resolveItems($schedule, $payload->items, $order->id);
+
+        return DB::transaction(function () use ($order, $resolvedItems) {
+            return $this->orderRepository->replaceItems($order, (object) ['items' => $resolvedItems]);
+        });
+    }
+
+    public function myOrders(object $payload)
+    {
+        return $this->orderRepository->myOrders($payload->user->id, $payload);
+    }
+
+    public function findOwnedByUuid(string $uuid, object $payload)
+    {
+        $order = $this->orderRepository->findOwnedByUuid($uuid, $payload->user->id);
+
+        if (! $order) {
+            throw new NotFoundException('Order not found.');
+        }
+
+        return $order;
+    }
+
+    protected function ensureScheduleIsOpen($schedule)
+    {
         $isOpen = $schedule->status === 'open' && (! $schedule->cutoff_at || $schedule->cutoff_at->isFuture());
 
         if (! $isOpen) {
             throw new InvalidPayloadException('This pasabuy is closed for orders.');
         }
+    }
 
+    protected function resolveItems($schedule, array $items, ?int $excludeOrderId = null)
+    {
         $scheduleProductsByProductUuid = $schedule->scheduleProducts->keyBy(fn ($scheduleProduct) => $scheduleProduct->product->uuid);
 
-        $resolvedItems = collect($payload->items)->map(function ($item) use ($scheduleProductsByProductUuid, $schedule) {
+        return collect($items)->map(function ($item) use ($scheduleProductsByProductUuid, $schedule, $excludeOrderId) {
             $scheduleProduct = $scheduleProductsByProductUuid->get($item['product_uuid']);
 
             if (! $scheduleProduct) {
@@ -51,7 +112,7 @@ class OrderService implements OrderServiceInterface
             }
 
             if ($scheduleProduct->max_quantity !== null) {
-                $alreadyOrdered = $this->orderRepository->orderedQuantity($schedule->id, $scheduleProduct->product_id);
+                $alreadyOrdered = $this->orderRepository->orderedQuantity($schedule->id, $scheduleProduct->product_id, $excludeOrderId);
 
                 if ($alreadyOrdered + $item['quantity'] > $scheduleProduct->max_quantity) {
                     $remaining = max(0, $scheduleProduct->max_quantity - $alreadyOrdered);
@@ -66,15 +127,5 @@ class OrderService implements OrderServiceInterface
                 'quantity' => $item['quantity'],
             ];
         })->all();
-
-        return DB::transaction(function () use ($schedule, $payload, $resolvedItems) {
-            $order = $this->orderRepository->create((object) [
-                'pasabuy_schedule_id' => $schedule->id,
-                'customer_name' => $payload->customer_name,
-                'customer_contact' => $payload->customer_contact,
-            ]);
-
-            return $this->orderRepository->addItems($order, (object) ['items' => $resolvedItems]);
-        });
     }
 }

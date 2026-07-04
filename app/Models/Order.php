@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 #[Fillable(['customer_name', 'customer_contact', 'status', 'total_amount'])]
 class Order extends Model
 {
+    public const EDITABLE_STATUSES = ['pending'];
+
     protected static function booted()
     {
         static::creating(function (Order $order) {
@@ -24,5 +26,10 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

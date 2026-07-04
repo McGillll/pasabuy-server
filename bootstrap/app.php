@@ -4,6 +4,7 @@ use App\Exceptions\AuthenticationFailedException;
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
+use App\Http\Middleware\EnsureCustomerIsApproved;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
+            'customer.approved' => EnsureCustomerIsApproved::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -1,6 +1,6 @@
 # Order API (admin)
 
-Admin-side order management. Orders themselves are created by customers via the public API (`public-pasabuy-api.md`) — this module only covers the seller reviewing and updating them. To list orders for a schedule, use `GET /api/admin/pasabuy-schedules/{uuid}/orders` (documented in `pasabuy-schedule-api.md`).
+Admin-side order management. Orders themselves are created and edited by customers via the customer API (`customer-api.md`) — this module only covers the seller reviewing and updating status. To list orders for a schedule, use `GET /api/admin/pasabuy-schedules/{uuid}/orders` (documented in `pasabuy-schedule-api.md`).
 
 ## Endpoints overview
 
@@ -12,25 +12,30 @@ Admin-side order management. Orders themselves are created by customers via the 
 
 ## Order object
 
-| Field            | Type     | Notes                                             |
-|------------------|----------|--------------------------------------------------|
-| uuid             | string   | Public identifier                                  |
-| customer_name    | string   | As entered by the customer, no account behind it   |
-| customer_contact | string   | Phone/Messenger/etc., free text                    |
-| status           | string   | `pending` \| `confirmed` \| `cancelled`             |
-| total_amount     | string   | Decimal string, server-computed — never trust a client-sent total |
-| items            | array    | See `OrderItem` object below                        |
-| created_at       | datetime |                                                     |
+| Field            | Type          | Notes                                             |
+|------------------|---------------|--------------------------------------------------|
+| uuid             | string        | Public identifier                                  |
+| customer_name    | string        | Snapshot of the owning customer's name at order time |
+| customer_contact | string        | Snapshot of the owning customer's contact number at order time |
+| status           | string        | `pending` \| `confirmed` \| `cancelled`             |
+| total_amount     | string        | Decimal string, server-computed — never trust a client-sent total |
+| is_editable      | boolean       | `true` only while `status` is `pending` and the parent schedule is still open/before cutoff — matches the customer-side edit gate |
+| pasabuy_schedule | object\|null  | Present when loaded — see `PasabuyScheduleResource` in `pasabuy-schedule-api.md` |
+| items            | array         | See `OrderItem` object below                        |
+| created_at       | datetime      |                                                     |
+
+Every order now belongs to a customer account (`user_id` internally) — there is no more anonymous/guest ordering. See `customer-api.md` for registration, approval, and the customer-facing order placement/edit/list endpoints.
 
 ### OrderItem object
 
-| Field         | Type   | Notes                                                             |
-|---------------|--------|--------------------------------------------------------------------|
-| uuid          | string |                                                                      |
-| product_name  | string | Snapshot at order time — won't change if the product is later renamed |
-| product_price | string | Snapshot of the schedule's per-item price at order time              |
-| quantity      | int    |                                                                      |
-| subtotal      | string | `product_price * quantity`                                          |
+| Field         | Type          | Notes                                                             |
+|---------------|---------------|--------------------------------------------------------------------|
+| uuid          | string        |                                                                      |
+| product_uuid  | string\|null  | The live `Product`'s uuid (when loaded) — use this, not `product_name`, to match against the schedule's current product list when editing |
+| product_name  | string        | Snapshot at order time — won't change if the product is later renamed |
+| product_price | string        | Snapshot of the schedule's per-item price at order time              |
+| quantity      | int           |                                                                      |
+| subtotal      | string        | `product_price * quantity`                                          |
 
 ---
 
