@@ -11,4 +11,5 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::delete('/{uuid}', [PasabuyScheduleController::class, 'destroy']);
     Route::put('/{uuid}/products', [PasabuyScheduleController::class, 'syncProducts']);
     Route::get('/{uuid}/orders', [PasabuyScheduleController::class, 'orders']);
+    Route::patch('/{uuid}/schedule-products/{scheduleProductUuid}/confirm-price', [PasabuyScheduleController::class, 'confirmProductPrice']);
 });

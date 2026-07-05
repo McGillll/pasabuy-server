@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PasabuyScheduleProductConfirmPriceRequest;
 use App\Http\Requests\PasabuyScheduleStoreRequest;
 use App\Http\Requests\PasabuyScheduleSyncProductsRequest;
 use App\Http\Requests\PasabuyScheduleUpdateRequest;
 use App\Http\Resources\OrderResource;
+use App\Http\Resources\PasabuyScheduleProductResource;
 use App\Http\Resources\PasabuyScheduleResource;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Traits\ApiResponse;
@@ -75,5 +77,15 @@ class PasabuyScheduleController extends Controller
         $orders = $this->pasabuyScheduleService->orders($uuid);
 
         return $this->success(OrderResource::collection($orders));
+    }
+
+    public function confirmProductPrice(PasabuyScheduleProductConfirmPriceRequest $request, string $uuid, string $scheduleProductUuid)
+    {
+        $result = $this->pasabuyScheduleService->confirmProductPrice($uuid, $scheduleProductUuid, (object) $request->validated());
+
+        return $this->success([
+            'schedule_product' => new PasabuyScheduleProductResource($result->schedule_product),
+            'summary' => $result->summary,
+        ], 'Price confirmed');
     }
 }

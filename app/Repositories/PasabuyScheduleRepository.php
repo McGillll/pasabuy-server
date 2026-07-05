@@ -105,4 +105,18 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 
         return $schedule->orders()->with('items')->latest()->get();
     }
+
+    public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload)
+    {
+        $scheduleProduct = PasabuyScheduleProduct::where('uuid', $scheduleProductUuid)
+            ->whereHas('pasabuySchedule', fn ($query) => $query->where('uuid', $scheduleUuid))
+            ->first();
+
+        $scheduleProduct->actual_price = $payload->promo_status === 'out_of_stock' ? null : $payload->actual_price;
+        $scheduleProduct->promo_status = $payload->promo_status;
+        $scheduleProduct->price_confirmed_at = now();
+        $scheduleProduct->save();
+
+        return $scheduleProduct->fresh('product');
+    }
 }

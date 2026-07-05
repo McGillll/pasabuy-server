@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
+use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
@@ -13,6 +14,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     public function __construct(
         protected PasabuyScheduleRepositoryInterface $pasabuyScheduleRepository,
         protected ProductRepositoryInterface $productRepository,
+        protected OrderServiceInterface $orderService,
     ) {}
 
     public function all(object $payload)
@@ -80,5 +82,20 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         $this->findByUuid($uuid);
 
         return $this->pasabuyScheduleRepository->orders($uuid);
+    }
+
+    public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload)
+    {
+        $this->findByUuid($scheduleUuid);
+
+        if ($payload->promo_status !== 'out_of_stock' && (! isset($payload->actual_price) || $payload->actual_price < 0)) {
+            throw new InvalidPayloadException('A valid actual price is required unless marking the item out of stock.');
+        }
+
+        $scheduleProduct = $this->pasabuyScheduleRepository->confirmProductPrice($scheduleUuid, $scheduleProductUuid, $payload);
+
+        $summary = $this->orderService->recalculateForScheduleProduct($scheduleProduct);
+
+        return (object) ['schedule_product' => $scheduleProduct, 'summary' => $summary];
     }
 }

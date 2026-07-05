@@ -62,23 +62,20 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function addItems(object $order, object $payload)
     {
-        $total = 0;
-
         foreach ($payload->items as $item) {
             $orderItem = new OrderItem;
             $orderItem->order_id = $order->id;
             $orderItem->product_id = $item['product_id'];
             $orderItem->product_name = $item['product_name'];
             $orderItem->estimated_price = $item['estimated_price'];
+            $orderItem->actual_price = $item['actual_price'] ?? null;
+            $orderItem->confirmation_status = $item['confirmation_status'] ?? 'none';
             $orderItem->quantity = $item['quantity'];
-            $orderItem->subtotal = $item['estimated_price'] * $item['quantity'];
+            $orderItem->subtotal = ($item['actual_price'] ?? $item['estimated_price']) * $item['quantity'];
             $orderItem->save();
-
-            $total += $orderItem->subtotal;
         }
 
-        $order->total_amount = $total;
-        $order->save();
+        $this->recalcTotal($order);
 
         return $order->fresh(['items.product', 'pasabuySchedule']);
     }
@@ -107,5 +104,87 @@ class OrderRepository implements OrderRepositoryInterface
         $order->save();
 
         return $order->fresh(['items.product', 'pasabuySchedule']);
+    }
+
+    public function findLiveItemsForProduct(int $scheduleId, int $productId)
+    {
+        return OrderItem::where('product_id', $productId)
+            ->where('is_bonus', false)
+            ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $scheduleId)
+                ->whereIn('status', ['pending', 'needs_confirmation']))
+            ->with('order')
+            ->get();
+    }
+
+    public function applyResolvedPrice(object $item, ?float $actualPrice, ?int $quantity = null)
+    {
+        if ($quantity !== null) {
+            $item->quantity = $quantity;
+        }
+
+        $item->actual_price = $actualPrice;
+        $item->confirmation_status = 'accepted';
+        $item->subtotal = $actualPrice * $item->quantity;
+        $item->save();
+
+        $this->recalcTotal($item->order);
+
+        return $item->fresh();
+    }
+
+    public function flagNeedsConfirmation(object $item)
+    {
+        $item->confirmation_status = 'pending';
+        $item->save();
+
+        $order = $item->order;
+
+        if ($order->status === 'pending') {
+            $order->status = 'needs_confirmation';
+            $order->save();
+        }
+
+        return $item->fresh();
+    }
+
+    public function addOrUpdateBonusItem(object $order, object $scheduleProduct)
+    {
+        $paidItem = $order->items()
+            ->where('product_id', $scheduleProduct->product_id)
+            ->where('is_bonus', false)
+            ->first();
+
+        if (! $paidItem) {
+            return null;
+        }
+
+        $bonusItem = $order->items()
+            ->where('product_id', $scheduleProduct->product_id)
+            ->where('is_bonus', true)
+            ->first() ?? new OrderItem;
+
+        $bonusItem->order_id = $order->id;
+        $bonusItem->product_id = $scheduleProduct->product_id;
+        $bonusItem->product_name = $paidItem->product_name;
+        $bonusItem->estimated_price = 0;
+        $bonusItem->actual_price = 0;
+        $bonusItem->is_bonus = true;
+        $bonusItem->confirmation_status = 'none';
+        $bonusItem->quantity = $paidItem->quantity;
+        $bonusItem->subtotal = 0;
+        $bonusItem->save();
+
+        return $bonusItem;
+    }
+
+    public function removeBonusItem(object $order, int $productId)
+    {
+        $order->items()->where('product_id', $productId)->where('is_bonus', true)->delete();
+    }
+
+    protected function recalcTotal(Order $order)
+    {
+        $order->total_amount = $order->items()->sum('subtotal');
+        $order->save();
     }
 }

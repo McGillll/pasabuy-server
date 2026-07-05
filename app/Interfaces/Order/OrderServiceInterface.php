@@ -15,4 +15,6 @@ interface OrderServiceInterface
     public function findOwnedByUuid(string $uuid, object $payload);
 
     public function cancelForCustomer(string $uuid, object $payload);
+
+    public function recalculateForScheduleProduct(object $scheduleProduct);
 }

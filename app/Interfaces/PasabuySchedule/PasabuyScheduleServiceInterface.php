@@ -17,4 +17,6 @@ interface PasabuyScheduleServiceInterface
     public function syncProducts(string $uuid, object $payload);
 
     public function orders(string $uuid);
+
+    public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload);
 }

@@ -110,6 +110,57 @@ class OrderService implements OrderServiceInterface
         return $this->orderRepository->cancel($order);
     }
 
+    public function recalculateForScheduleProduct(object $scheduleProduct)
+    {
+        $items = $this->orderRepository->findLiveItemsForProduct($scheduleProduct->pasabuy_schedule_id, $scheduleProduct->product_id);
+
+        $summary = (object) ['auto_applied' => 0, 'needs_confirmation' => 0, 'bonus_applied' => 0];
+
+        DB::transaction(function () use ($items, $scheduleProduct, $summary) {
+            foreach ($items as $item) {
+                if ($scheduleProduct->promo_status === 'out_of_stock') {
+                    $this->orderRepository->flagNeedsConfirmation($item);
+                    $summary->needs_confirmation++;
+
+                    continue;
+                }
+
+                $actualPrice = (float) $scheduleProduct->actual_price;
+
+                if ($actualPrice <= (float) $item->estimated_price) {
+                    $this->orderRepository->applyResolvedPrice($item, $actualPrice);
+                    $summary->auto_applied++;
+
+                    continue;
+                }
+
+                if ($item->auto_buy_if_under_max && $item->max_price !== null && $actualPrice <= (float) $item->max_price) {
+                    $this->orderRepository->applyResolvedPrice($item, $actualPrice);
+                    $summary->auto_applied++;
+
+                    continue;
+                }
+
+                $this->orderRepository->flagNeedsConfirmation($item);
+                $summary->needs_confirmation++;
+            }
+
+            $orders = $items->pluck('order')->unique('id');
+
+            foreach ($orders as $order) {
+                if ($scheduleProduct->promo_status === 'b1t1') {
+                    if ($this->orderRepository->addOrUpdateBonusItem($order, $scheduleProduct)) {
+                        $summary->bonus_applied++;
+                    }
+                } else {
+                    $this->orderRepository->removeBonusItem($order, $scheduleProduct->product_id);
+                }
+            }
+        });
+
+        return $summary;
+    }
+
     protected function ensureScheduleIsOpen($schedule)
     {
         $isOpen = $schedule->status === 'open' && (! $schedule->cutoff_at || $schedule->cutoff_at->isFuture());
@@ -143,6 +194,8 @@ class OrderService implements OrderServiceInterface
                 'product_id' => $scheduleProduct->product_id,
                 'product_name' => $scheduleProduct->product->name,
                 'estimated_price' => $scheduleProduct->estimated_price,
+                'actual_price' => $scheduleProduct->actual_price,
+                'confirmation_status' => $scheduleProduct->promo_status === 'out_of_stock' ? 'pending' : 'none',
                 'quantity' => $item['quantity'],
             ];
         })->all();
