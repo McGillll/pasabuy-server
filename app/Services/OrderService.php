@@ -38,6 +38,10 @@ class OrderService implements OrderServiceInterface
 
         $this->ensureScheduleIsOpen($schedule);
 
+        if ($this->orderRepository->findActiveForSchedule($payload->user->id, $schedule->id)) {
+            throw new InvalidPayloadException('You already have an order for this pasabuy. Edit your existing order instead.');
+        }
+
         $resolvedItems = $this->resolveItems($schedule, $payload->items);
 
         return DB::transaction(function () use ($schedule, $payload, $resolvedItems) {

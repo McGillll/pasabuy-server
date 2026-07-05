@@ -8,6 +8,8 @@ interface OrderRepositoryInterface
 
     public function findOwnedByUuid(string $uuid, int $userId);
 
+    public function findActiveForSchedule(int $userId, int $scheduleId);
+
     public function myOrders(int $userId, object $payload);
 
     public function updateStatus(string $uuid, object $payload);

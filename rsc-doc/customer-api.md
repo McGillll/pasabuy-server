@@ -103,6 +103,8 @@ The seller verifies the applicant manually, outside the system, before approving
 
 Replaces the old anonymous public order-placement endpoint. Creates the order and its items in one call, owned by the authenticated customer — `customer_name`/`customer_contact` are snapshotted from the customer's account, not sent in the request body. The server computes `subtotal`/`total_amount` itself from each product's current schedule price.
 
+**One active order per customer per schedule.** A customer can only have one `pending`/`confirmed` order against a given schedule at a time — placing a second one returns **422**. To change items, use `PUT /api/customer/orders/{uuid}` on the existing order instead (see below). A new order is only allowed again if the previous one was `cancelled`.
+
 ### Request body (JSON)
 
 | Field                | Type   | Required | Notes                                      |
@@ -128,7 +130,7 @@ POST /api/customer/pasabuy-schedules/e9400549-.../orders
 
 - **403** — `"Your account is pending admin approval."`
 - **404** — no schedule with that uuid.
-- **422** — `"This pasabuy is closed for orders."` / `"Product {uuid} is not available in this pasabuy."` / `"Only {n} of \"{product name}\" remaining."` / standard field validation.
+- **422** — `"This pasabuy is closed for orders."` / `"You already have an order for this pasabuy. Edit your existing order instead."` / `"Product {uuid} is not available in this pasabuy."` / `"Only {n} of \"{product name}\" remaining."` / standard field validation.
 
 ---
 

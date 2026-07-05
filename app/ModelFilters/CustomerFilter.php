@@ -13,7 +13,8 @@ class CustomerFilter extends ModelFilter
         return $this->where(function ($q) use ($query) {
             $q->where('first_name', 'like', "%{$query}%")
                 ->orWhere('last_name', 'like', "%{$query}%")
-                ->orWhere('email', 'like', "%{$query}%");
+                ->orWhere('email', 'like', "%{$query}%")
+                ->orWhere('contact_number', 'like', "%{$query}%");
         });
     }
 

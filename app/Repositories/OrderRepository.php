@@ -21,6 +21,14 @@ class OrderRepository implements OrderRepositoryInterface
             ->first();
     }
 
+    public function findActiveForSchedule(int $userId, int $scheduleId)
+    {
+        return Order::where('user_id', $userId)
+            ->where('pasabuy_schedule_id', $scheduleId)
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->first();
+    }
+
     public function myOrders(int $userId, object $payload)
     {
         return Order::with('items.product', 'pasabuySchedule')
