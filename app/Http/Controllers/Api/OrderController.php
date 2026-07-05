@@ -67,4 +67,11 @@ class OrderController extends Controller
 
         return $this->success(new OrderResource($order), 'Order updated successfully');
     }
+
+    public function cancelMyOrder(Request $request, string $uuid)
+    {
+        $order = $this->orderService->cancelForCustomer($uuid, (object) ['user' => $request->user()]);
+
+        return $this->success(new OrderResource($order), 'Order cancelled');
+    }
 }

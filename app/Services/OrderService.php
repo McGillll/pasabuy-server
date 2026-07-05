@@ -95,6 +95,21 @@ class OrderService implements OrderServiceInterface
         return $order;
     }
 
+    public function cancelForCustomer(string $uuid, object $payload)
+    {
+        $order = $this->orderRepository->findOwnedByUuid($uuid, $payload->user->id);
+
+        if (! $order) {
+            throw new NotFoundException('Order not found.');
+        }
+
+        if (! in_array($order->status, Order::CONFIRMABLE_STATUSES)) {
+            throw new InvalidPayloadException('This order can no longer be cancelled.');
+        }
+
+        return $this->orderRepository->cancel($order);
+    }
+
     protected function ensureScheduleIsOpen($schedule)
     {
         $isOpen = $schedule->status === 'open' && (! $schedule->cutoff_at || $schedule->cutoff_at->isFuture());

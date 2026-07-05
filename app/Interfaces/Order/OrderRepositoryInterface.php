@@ -21,4 +21,6 @@ interface OrderRepositoryInterface
     public function replaceItems(object $order, object $payload);
 
     public function orderedQuantity(int $scheduleId, int $productId, ?int $excludeOrderId = null);
+
+    public function cancel(object $order);
 }

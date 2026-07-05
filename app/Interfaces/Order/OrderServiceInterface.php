@@ -13,4 +13,6 @@ interface OrderServiceInterface
     public function myOrders(object $payload);
 
     public function findOwnedByUuid(string $uuid, object $payload);
+
+    public function cancelForCustomer(string $uuid, object $payload);
 }

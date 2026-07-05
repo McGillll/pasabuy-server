@@ -100,4 +100,12 @@ class OrderRepository implements OrderRepositoryInterface
             })
             ->sum('quantity');
     }
+
+    public function cancel(object $order)
+    {
+        $order->status = 'cancelled';
+        $order->save();
+
+        return $order->fresh(['items.product', 'pasabuySchedule']);
+    }
 }

@@ -20,6 +20,7 @@ class OrderResource extends JsonResource
                 && $this->relationLoaded('pasabuySchedule')
                 && $this->pasabuySchedule->status === 'open'
                 && (! $this->pasabuySchedule->cutoff_at || $this->pasabuySchedule->cutoff_at->isFuture()),
+            'is_cancellable' => in_array($this->status, Order::CONFIRMABLE_STATUSES),
             'pasabuy_schedule' => $this->whenLoaded('pasabuySchedule', fn () => new PasabuyScheduleResource($this->pasabuySchedule)),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'created_at' => $this->created_at,
