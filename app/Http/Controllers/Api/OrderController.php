@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\OrderItemResolveRequest;
 use App\Http\Requests\OrderItemsStoreRequest;
 use App\Http\Requests\OrderItemsUpdateRequest;
 use App\Http\Requests\OrderStatusUpdateRequest;
@@ -73,5 +74,15 @@ class OrderController extends Controller
         $order = $this->orderService->cancelForCustomer($uuid, (object) ['user' => $request->user()]);
 
         return $this->success(new OrderResource($order), 'Order cancelled');
+    }
+
+    public function resolveMyOrderItem(OrderItemResolveRequest $request, string $uuid, string $itemUuid)
+    {
+        $payload = (object) $request->validated();
+        $payload->user = $request->user();
+
+        $order = $this->orderService->resolveItem($uuid, $itemUuid, $payload);
+
+        return $this->success(new OrderResource($order), 'Order item updated');
     }
 }

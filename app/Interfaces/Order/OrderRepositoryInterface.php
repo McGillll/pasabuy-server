@@ -33,4 +33,8 @@ interface OrderRepositoryInterface
     public function addOrUpdateBonusItem(object $order, object $scheduleProduct);
 
     public function removeBonusItem(object $order, int $productId);
+
+    public function markItemRemoved(object $item);
+
+    public function revertToPendingIfResolved(object $order);
 }

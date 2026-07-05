@@ -119,4 +119,11 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 
         return $scheduleProduct->fresh('product');
     }
+
+    public function findScheduleProduct(int $scheduleId, int $productId)
+    {
+        return PasabuyScheduleProduct::where('pasabuy_schedule_id', $scheduleId)
+            ->where('product_id', $productId)
+            ->first();
+    }
 }

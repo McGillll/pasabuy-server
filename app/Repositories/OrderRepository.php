@@ -25,7 +25,7 @@ class OrderRepository implements OrderRepositoryInterface
     {
         return Order::where('user_id', $userId)
             ->where('pasabuy_schedule_id', $scheduleId)
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', Order::LIVE_STATUSES)
             ->first();
     }
 
@@ -93,7 +93,7 @@ class OrderRepository implements OrderRepositoryInterface
             ->when($excludeOrderId, fn ($query) => $query->where('order_id', '!=', $excludeOrderId))
             ->whereHas('order', function ($query) use ($scheduleId) {
                 $query->where('pasabuy_schedule_id', $scheduleId)
-                    ->whereIn('status', ['pending', 'confirmed']);
+                    ->whereIn('status', Order::LIVE_STATUSES);
             })
             ->sum('quantity');
     }
@@ -180,6 +180,29 @@ class OrderRepository implements OrderRepositoryInterface
     public function removeBonusItem(object $order, int $productId)
     {
         $order->items()->where('product_id', $productId)->where('is_bonus', true)->delete();
+    }
+
+    public function markItemRemoved(object $item)
+    {
+        $item->confirmation_status = 'removed';
+        $item->subtotal = 0;
+        $item->save();
+
+        $this->recalcTotal($item->order);
+
+        return $item->fresh();
+    }
+
+    public function revertToPendingIfResolved(object $order)
+    {
+        $hasPending = $order->items()->where('confirmation_status', 'pending')->exists();
+
+        if (! $hasPending && $order->status === 'needs_confirmation') {
+            $order->status = 'pending';
+            $order->save();
+        }
+
+        return $order->fresh(['items.product', 'pasabuySchedule']);
     }
 
     protected function recalcTotal(Order $order)

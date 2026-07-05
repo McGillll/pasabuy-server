@@ -161,6 +161,45 @@ class OrderService implements OrderServiceInterface
         return $summary;
     }
 
+    public function resolveItem(string $orderUuid, string $itemUuid, object $payload)
+    {
+        $order = $this->orderRepository->findOwnedByUuid($orderUuid, $payload->user->id);
+
+        if (! $order) {
+            throw new NotFoundException('Order not found.');
+        }
+
+        if ($order->status !== 'needs_confirmation') {
+            throw new InvalidPayloadException('This order has no pending confirmations.');
+        }
+
+        $item = $order->items->firstWhere('uuid', $itemUuid);
+
+        if (! $item || $item->confirmation_status !== 'pending') {
+            throw new NotFoundException('Order item not found or not pending confirmation.');
+        }
+
+        if ($payload->action === 'remove') {
+            $this->orderRepository->markItemRemoved($item);
+        } else {
+            $quantity = $payload->quantity ?? $item->quantity;
+            $scheduleProduct = $this->pasabuyScheduleRepository->findScheduleProduct($order->pasabuy_schedule_id, $item->product_id);
+
+            if ($scheduleProduct->max_quantity !== null) {
+                $alreadyOrdered = $this->orderRepository->orderedQuantity($order->pasabuy_schedule_id, $item->product_id, $order->id);
+
+                if ($alreadyOrdered + $quantity > $scheduleProduct->max_quantity) {
+                    $remaining = max(0, $scheduleProduct->max_quantity - $alreadyOrdered);
+                    throw new InvalidPayloadException("Only {$remaining} of \"{$item->product_name}\" remaining.");
+                }
+            }
+
+            $this->orderRepository->applyResolvedPrice($item, (float) $scheduleProduct->actual_price, $quantity);
+        }
+
+        return $this->orderRepository->revertToPendingIfResolved($order);
+    }
+
     protected function ensureScheduleIsOpen($schedule)
     {
         $isOpen = $schedule->status === 'open' && (! $schedule->cutoff_at || $schedule->cutoff_at->isFuture());

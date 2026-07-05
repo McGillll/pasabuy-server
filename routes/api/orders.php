@@ -13,4 +13,5 @@ Route::middleware(['auth:sanctum', 'abilities:customer', 'customer.approved'])->
     Route::get('/customer/orders/{uuid}', [OrderController::class, 'myOrderShow']);
     Route::put('/customer/orders/{uuid}', [OrderController::class, 'updateMyOrder']);
     Route::patch('/customer/orders/{uuid}/cancel', [OrderController::class, 'cancelMyOrder']);
+    Route::patch('/customer/orders/{uuid}/items/{itemUuid}/resolve', [OrderController::class, 'resolveMyOrderItem']);
 });

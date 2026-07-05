@@ -19,4 +19,6 @@ interface PasabuyScheduleRepositoryInterface
     public function orders(string $uuid);
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload);
+
+    public function findScheduleProduct(int $scheduleId, int $productId);
 }

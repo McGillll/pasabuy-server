@@ -17,4 +17,6 @@ interface OrderServiceInterface
     public function cancelForCustomer(string $uuid, object $payload);
 
     public function recalculateForScheduleProduct(object $scheduleProduct);
+
+    public function resolveItem(string $orderUuid, string $itemUuid, object $payload);
 }

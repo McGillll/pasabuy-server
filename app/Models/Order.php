@@ -13,6 +13,8 @@ class Order extends Model
 
     public const CONFIRMABLE_STATUSES = ['pending', 'needs_confirmation'];
 
+    public const LIVE_STATUSES = ['pending', 'needs_confirmation', 'confirmed'];
+
     protected static function booted()
     {
         static::creating(function (Order $order) {
