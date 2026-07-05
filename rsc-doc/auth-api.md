@@ -31,7 +31,8 @@ Every response — success or failure — uses:
 | Field          | Type          | Notes                          |
 |----------------|---------------|---------------------------------|
 | uuid           | string        | Public identifier, use this — never the internal `id` |
-| name           | string        |                                  |
+| first_name     | string        |                                  |
+| last_name      | string        |                                  |
 | email          | string        |                                  |
 | contact_number | string\|null  |                                  |
 | role           | string        | `"admin"` or `"customer"`        |
@@ -69,7 +70,8 @@ POST /api/auth/login
   "data": {
     "user": {
       "uuid": "97ba3fd3-3826-4814-a49a-896a443d490e",
-      "name": "Admin",
+      "first_name": "Admin",
+      "last_name": "User",
       "email": "admin@pasabuy.test",
       "role": "admin"
     },
@@ -122,7 +124,8 @@ Requires `Authorization: Bearer {token}`. Returns the currently authenticated us
   "message": "Authenticated user retrieved",
   "data": {
     "uuid": "97ba3fd3-3826-4814-a49a-896a443d490e",
-    "name": "Admin",
+    "first_name": "Admin",
+    "last_name": "User",
     "email": "admin@pasabuy.test",
     "role": "admin"
   }

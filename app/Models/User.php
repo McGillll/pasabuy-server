@@ -15,7 +15,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'contact_number', 'facebook_url'])]
+#[Fillable(['first_name', 'last_name', 'email', 'password', 'role', 'contact_number', 'messenger_name'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -32,6 +32,21 @@ class User extends Authenticatable
     public function modelFilter()
     {
         return $this->provideFilter(CustomerFilter::class);
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function fullName()
+    {
+        return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    public function getIsApprovedAttribute()
+    {
+        return $this->role === 'admin' || $this->approved_at !== null;
     }
 
     protected function casts()

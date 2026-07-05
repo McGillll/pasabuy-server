@@ -18,7 +18,7 @@ class OrderSeeder extends Seeder
             return;
         }
 
-        $customers = User::where('role', 'customer')->where('is_approved', true)->get();
+        $customers = User::where('role', 'customer')->whereNotNull('approved_at')->get();
 
         if ($customers->isEmpty()) {
             return;
@@ -37,7 +37,7 @@ class OrderSeeder extends Seeder
                 $order = new Order;
                 $order->pasabuy_schedule_id = $schedule->id;
                 $order->user_id = $customer->id;
-                $order->customer_name = $customer->name;
+                $order->customer_name = $customer->fullName();
                 $order->customer_contact = $customer->contact_number;
                 $order->status = self::STATUSES[$index] ?? 'pending';
                 $order->total_amount = 0;

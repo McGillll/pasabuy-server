@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CustomerResource;
+use App\Http\Resources\OrderResource;
 use App\Interfaces\Customer\CustomerServiceInterface;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
@@ -40,5 +41,12 @@ class CustomerController extends Controller
         $customer = $this->customerService->reject($uuid);
 
         return $this->success(new CustomerResource($customer), 'Customer rejected successfully');
+    }
+
+    public function orders(string $uuid)
+    {
+        $orders = $this->customerService->orders($uuid);
+
+        return $this->success(OrderResource::collection($orders));
     }
 }

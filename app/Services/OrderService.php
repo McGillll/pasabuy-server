@@ -44,7 +44,7 @@ class OrderService implements OrderServiceInterface
             $order = $this->orderRepository->create((object) [
                 'pasabuy_schedule_id' => $schedule->id,
                 'user_id' => $payload->user->id,
-                'customer_name' => $payload->user->name,
+                'customer_name' => $payload->user->fullName(),
                 'customer_contact' => $payload->user->contact_number,
             ]);
 

@@ -11,13 +11,14 @@ class CustomerFilter extends ModelFilter
     public function search($query)
     {
         return $this->where(function ($q) use ($query) {
-            $q->where('name', 'like', "%{$query}%")
+            $q->where('first_name', 'like', "%{$query}%")
+                ->orWhere('last_name', 'like', "%{$query}%")
                 ->orWhere('email', 'like', "%{$query}%");
         });
     }
 
     public function isApproved($value)
     {
-        return $this->where('is_approved', $value);
+        return $value ? $this->whereNotNull('approved_at') : $this->whereNull('approved_at');
     }
 }

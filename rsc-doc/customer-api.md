@@ -21,6 +21,7 @@ Customer registration, admin approval, and everything a logged-in customer can d
 | GET    | `/api/customer/product-requests`                              | Yes (customer, approved)  | List the authenticated customer's own product requests |
 | POST   | `/api/customer/product-requests`                              | Yes (customer, approved)  | Submit a product suggestion |
 | GET    | `/api/admin/customers`                                        | Yes (admin)                | List customers (paginated, filterable) |
+| GET    | `/api/admin/customers/{uuid}/orders`                           | Yes (admin)                | List every order placed by one customer |
 | POST   | `/api/admin/customers/{uuid}/approve`                          | Yes (admin)                | Approve a pending customer |
 | POST   | `/api/admin/customers/{uuid}/reject`                           | Yes (admin)                | Revoke a customer's approval |
 
@@ -37,12 +38,14 @@ Returned by admin-side customer endpoints (a customer is just a `User` with `rol
 | Field          | Type          | Notes                                    |
 |----------------|---------------|--------------------------------------------|
 | uuid           | string        | Public identifier                          |
-| name           | string        |                                              |
+| first_name     | string        |                                              |
+| last_name      | string        |                                              |
 | email          | string        |                                              |
 | contact_number | string\|null  |                                              |
-| facebook_url   | string\|null  |                                              |
+| messenger_name | string\|null  | Facebook Messenger display name             |
 | is_approved    | boolean       |                                              |
 | approved_at    | datetime\|null|                                              |
+| created_at     | datetime      | When the customer registered                |
 
 ## Order object
 
@@ -56,18 +59,20 @@ Same shape as the admin `Order` object in `order-api.md`, plus `is_editable` and
 
 | Field                 | Type   | Required | Notes                          |
 |-----------------------|--------|----------|-----------------------------------|
-| name                  | string | Yes      |                                     |
+| first_name            | string | Yes      |                                     |
+| last_name             | string | Yes      |                                     |
 | email                 | string | Yes      | Must be unique across all users    |
 | password              | string | Yes      | Min 8 chars, must be confirmed (`password_confirmation`) |
 | contact_number        | string | No       |                                     |
-| facebook_url          | string | No       | Must be a valid URL if provided    |
+| messenger_name        | string | No       | Facebook Messenger display name    |
 
 ### Example request
 
 ```json
 POST /api/public/customers/register
 {
-  "name": "Juan Dela Cruz",
+  "first_name": "Juan",
+  "last_name": "Dela Cruz",
   "email": "juan@example.com",
   "password": "password123",
   "password_confirmation": "password123",
@@ -81,7 +86,7 @@ POST /api/public/customers/register
 {
   "success": true,
   "message": "Registration submitted. Please wait for admin approval.",
-  "data": { "uuid": "...", "name": "Juan Dela Cruz", "email": "juan@example.com", "contact_number": "09171234567", "facebook_url": null, "is_approved": false, "approved_at": null }
+  "data": { "uuid": "...", "first_name": "Juan", "last_name": "Dela Cruz", "email": "juan@example.com", "contact_number": "09171234567", "messenger_name": null, "is_approved": false, "approved_at": null }
 }
 ```
 
@@ -234,13 +239,47 @@ Admin-only. Paginated list of customer accounts.
 
 | Field        | Type    | Required | Notes                          |
 |--------------|---------|----------|------------------------------------|
-| search       | string  | No       | Matches name or email (partial)     |
+| search       | string  | No       | Matches first/last name or email (partial) |
 | is_approved  | boolean | No       | Filter to pending (`false`) or approved (`true`) |
 | per_page     | int     | No       | Default 15                          |
 
 ### Success response — 200
 
 Paginator of `Customer` objects.
+
+---
+
+## GET /api/admin/customers/{uuid}/orders
+
+Admin-only. Every order the customer has ever placed, across all schedules, newest first — each with its `items` and `pasabuy_schedule` loaded.
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": [
+    {
+      "uuid": "36d53541-...",
+      "customer_name": "Juan Dela Cruz",
+      "customer_contact": "09171234567",
+      "status": "confirmed",
+      "total_amount": "50.00",
+      "is_editable": false,
+      "pasabuy_schedule": { "uuid": "e9400549-...", "title": "Grocery Run July", "status": "closed", "is_open": false, "created_at": "..." },
+      "items": [ { "uuid": "...", "product_uuid": "abe9e0a5-...", "product_name": "Instant Noodles", "product_price": "25.00", "quantity": 2, "subtotal": "50.00" } ],
+      "created_at": "..."
+    }
+  ]
+}
+```
+
+Not paginated — returns the customer's full order history in one array, same as `GET /api/admin/pasabuy-schedules/{uuid}/orders` in `pasabuy-schedule-api.md`.
+
+### Error responses
+
+- **404** — `"Customer not found."`
 
 ---
 
@@ -280,6 +319,6 @@ Sets `is_approved` back to `false` and clears `approved_at` — revokes access w
 |--------|------------------------------------------------|--------------------------------------------|
 | 401    | Missing/invalid/expired token                   | all authenticated endpoints                 |
 | 403    | Customer account pending admin approval          | all customer endpoints except registration  |
-| 404    | Resource not found or not owned                 | orders show/update, product-request schedule lookup, admin approve/reject |
+| 404    | Resource not found or not owned                 | orders show/update, product-request schedule lookup, admin approve/reject/orders |
 | 422    | Validation failure or business-rule rejection    | register, order placement/edit, product requests |
 | 429    | Rate limited                                     | register (5/min/IP)                         |

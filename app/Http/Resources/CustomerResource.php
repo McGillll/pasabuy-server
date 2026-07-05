@@ -11,12 +11,14 @@ class CustomerResource extends JsonResource
     {
         return [
             'uuid' => $this->uuid,
-            'name' => $this->name,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
             'email' => $this->email,
             'contact_number' => $this->contact_number,
-            'facebook_url' => $this->facebook_url,
+            'messenger_name' => $this->messenger_name,
             'is_approved' => $this->is_approved,
             'approved_at' => $this->approved_at,
+            'created_at' => $this->created_at,
         ];
     }
 }

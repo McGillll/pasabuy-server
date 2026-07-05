@@ -15,4 +15,6 @@ interface CustomerRepositoryInterface
     public function approve(string $uuid);
 
     public function reject(string $uuid);
+
+    public function orders(string $uuid);
 }

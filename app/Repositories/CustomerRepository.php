@@ -13,7 +13,8 @@ class CustomerRepository implements CustomerRepositoryInterface
     {
         return User::where('role', 'customer')
             ->filter((array) $payload)
-            ->orderBy('name')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
             ->paginate($payload->per_page ?? 15);
     }
 
@@ -30,13 +31,13 @@ class CustomerRepository implements CustomerRepositoryInterface
     public function create(object $payload)
     {
         $customer = new User;
-        $customer->name = $payload->name;
+        $customer->first_name = $payload->first_name;
+        $customer->last_name = $payload->last_name;
         $customer->email = $payload->email;
         $customer->contact_number = $payload->contact_number ?? null;
-        $customer->facebook_url = $payload->facebook_url ?? null;
+        $customer->messenger_name = $payload->messenger_name ?? null;
         $customer->password = Hash::make($payload->password);
         $customer->role = 'customer';
-        $customer->is_approved = false;
         $customer->save();
 
         return $customer;
@@ -45,7 +46,6 @@ class CustomerRepository implements CustomerRepositoryInterface
     public function approve(string $uuid)
     {
         $customer = $this->findByUuid($uuid);
-        $customer->is_approved = true;
         $customer->approved_at = Carbon::now();
         $customer->save();
 
@@ -55,10 +55,16 @@ class CustomerRepository implements CustomerRepositoryInterface
     public function reject(string $uuid)
     {
         $customer = $this->findByUuid($uuid);
-        $customer->is_approved = false;
         $customer->approved_at = null;
         $customer->save();
 
         return $customer;
+    }
+
+    public function orders(string $uuid)
+    {
+        $customer = $this->findByUuid($uuid);
+
+        return $customer->orders()->with('items.product', 'pasabuySchedule')->latest()->get();
     }
 }

@@ -51,4 +51,11 @@ class CustomerService implements CustomerServiceInterface
 
         return $this->customerRepository->reject($uuid);
     }
+
+    public function orders(string $uuid)
+    {
+        $this->findByUuid($uuid);
+
+        return $this->customerRepository->orders($uuid);
+    }
 }

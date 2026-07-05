@@ -14,10 +14,11 @@ class CustomerStoreRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'contact_number' => ['nullable', 'string', 'max:50'],
-            'facebook_url' => ['nullable', 'url', 'max:255'],
+            'messenger_name' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }
