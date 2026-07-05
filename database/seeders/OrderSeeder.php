@@ -46,14 +46,15 @@ class OrderSeeder extends Seeder
                 $total = 0;
                 foreach ($schedule->scheduleProducts->random(min(2, $schedule->scheduleProducts->count())) as $scheduleProduct) {
                     $quantity = fake()->numberBetween(1, 3);
-                    $subtotal = $scheduleProduct->price * $quantity;
+                    $subtotal = $scheduleProduct->estimated_price * $quantity;
                     $total += $subtotal;
 
                     $orderItem = new OrderItem;
                     $orderItem->order_id = $order->id;
                     $orderItem->product_id = $scheduleProduct->product_id;
                     $orderItem->product_name = $scheduleProduct->product->name;
-                    $orderItem->product_price = $scheduleProduct->price;
+                    $orderItem->estimated_price = $scheduleProduct->estimated_price;
+                    $orderItem->actual_price = $scheduleProduct->actual_price;
                     $orderItem->quantity = $quantity;
                     $orderItem->subtotal = $subtotal;
                     $orderItem->save();

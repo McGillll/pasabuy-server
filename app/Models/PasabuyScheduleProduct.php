@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-#[Fillable(['price', 'max_quantity', 'is_disabled'])]
+#[Fillable(['estimated_price', 'actual_price', 'promo_status', 'price_confirmed_at', 'max_quantity', 'is_disabled'])]
 class PasabuyScheduleProduct extends Model
 {
     protected static function booted()
@@ -20,6 +20,7 @@ class PasabuyScheduleProduct extends Model
     {
         return [
             'is_disabled' => 'boolean',
+            'price_confirmed_at' => 'datetime',
         ];
     }
 

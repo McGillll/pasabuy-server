@@ -11,6 +11,8 @@ class Order extends Model
 {
     public const EDITABLE_STATUSES = ['pending'];
 
+    public const CONFIRMABLE_STATUSES = ['pending', 'needs_confirmation'];
+
     protected static function booted()
     {
         static::creating(function (Order $order) {

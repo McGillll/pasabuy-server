@@ -16,7 +16,10 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->foreignId('pasabuy_schedule_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
-            $table->decimal('price', 10, 2);
+            $table->decimal('estimated_price', 10, 2);
+            $table->decimal('actual_price', 10, 2)->nullable();
+            $table->enum('promo_status', ['none', 'b1t1', 'out_of_stock'])->default('none');
+            $table->timestamp('price_confirmed_at')->nullable();
             $table->unsignedInteger('max_quantity')->nullable();
             $table->boolean('is_disabled')->default(false);
             $table->timestamps();

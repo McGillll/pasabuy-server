@@ -127,7 +127,7 @@ class OrderService implements OrderServiceInterface
             return [
                 'product_id' => $scheduleProduct->product_id,
                 'product_name' => $scheduleProduct->product->name,
-                'product_price' => $scheduleProduct->price,
+                'estimated_price' => $scheduleProduct->estimated_price,
                 'quantity' => $item['quantity'],
             ];
         })->all();

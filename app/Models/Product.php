@@ -27,4 +27,9 @@ class Product extends Model
             'is_active' => 'boolean',
         ];
     }
+
+    public function latestScheduleProduct()
+    {
+        return $this->hasOne(PasabuyScheduleProduct::class)->latestOfMany('updated_at');
+    }
 }

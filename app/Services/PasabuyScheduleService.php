@@ -61,13 +61,13 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
                 throw new NotFoundException("Product {$item['product_uuid']} not found.");
             }
 
-            if (! isset($item['price']) || $item['price'] < 0) {
+            if (! isset($item['estimated_price']) || $item['estimated_price'] < 0) {
                 throw new InvalidPayloadException("A valid price is required for product {$product->name}.");
             }
 
             return [
                 'product_id' => $product->id,
-                'price' => $item['price'],
+                'estimated_price' => $item['estimated_price'],
                 'max_quantity' => $item['max_quantity'] ?? null,
             ];
         })->all();

@@ -69,9 +69,9 @@ class OrderRepository implements OrderRepositoryInterface
             $orderItem->order_id = $order->id;
             $orderItem->product_id = $item['product_id'];
             $orderItem->product_name = $item['product_name'];
-            $orderItem->product_price = $item['product_price'];
+            $orderItem->estimated_price = $item['estimated_price'];
             $orderItem->quantity = $item['quantity'];
-            $orderItem->subtotal = $item['product_price'] * $item['quantity'];
+            $orderItem->subtotal = $item['estimated_price'] * $item['quantity'];
             $orderItem->save();
 
             $total += $orderItem->subtotal;

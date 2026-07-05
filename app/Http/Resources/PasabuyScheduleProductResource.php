@@ -11,7 +11,7 @@ class PasabuyScheduleProductResource extends JsonResource
     {
         return [
             'uuid' => $this->uuid,
-            'price' => $this->price,
+            'estimated_price' => $this->estimated_price,
             'max_quantity' => $this->max_quantity,
             'product' => new ProductResource($this->whenLoaded('product')),
         ];

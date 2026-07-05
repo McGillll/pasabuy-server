@@ -87,7 +87,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 
             $scheduleProduct->pasabuy_schedule_id = $schedule->id;
             $scheduleProduct->product_id = $product['product_id'];
-            $scheduleProduct->price = $product['price'];
+            $scheduleProduct->estimated_price = $product['estimated_price'];
             $scheduleProduct->max_quantity = $product['max_quantity'];
             $scheduleProduct->is_disabled = false;
             $scheduleProduct->save();
