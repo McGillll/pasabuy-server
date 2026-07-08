@@ -18,4 +18,11 @@ class ProductFilter extends ModelFilter
     {
         return $this->where('name', 'like', "%{$query}%");
     }
+
+    public function categoryUuid($uuid)
+    {
+        return $this->whereHas('category', function ($query) use ($uuid) {
+            $query->where('uuid', $uuid);
+        });
+    }
 }
