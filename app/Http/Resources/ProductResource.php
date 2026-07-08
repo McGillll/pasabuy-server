@@ -17,9 +17,10 @@ class ProductResource extends JsonResource
             'image_url' => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
             'is_active' => $this->is_active,
             'default_price' => $this->default_price,
+            'default_product_status' => $this->default_product_status,
             'category' => new ProductCategoryResource($this->whenLoaded('category')),
             'last_confirmed_price' => $this->whenLoaded('latestScheduleProduct', fn () => $this->latestScheduleProduct?->actual_price),
-            'last_promo_status' => $this->whenLoaded('latestScheduleProduct', fn () => $this->latestScheduleProduct?->promo_status),
+            'last_product_status' => $this->whenLoaded('latestScheduleProduct', fn () => $this->latestScheduleProduct?->product_status),
         ];
     }
 }

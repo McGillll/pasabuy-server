@@ -12,7 +12,7 @@ class PasabuyScheduleProductResource extends JsonResource
         return [
             'uuid' => $this->uuid,
             'actual_price' => $this->actual_price,
-            'promo_status' => $this->promo_status,
+            'product_status' => $this->product_status,
             'price_confirmed_at' => $this->price_confirmed_at,
             'product' => new ProductResource($this->whenLoaded('product')),
         ];

@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class PasabuyScheduleSyncProductsRequest extends FormRequest
+class PasabuyScheduleChecklistToggleRequest extends FormRequest
 {
     public function authorize()
     {
@@ -14,8 +14,7 @@ class PasabuyScheduleSyncProductsRequest extends FormRequest
     public function rules()
     {
         return [
-            'products' => ['sometimes', 'array'],
-            'products.*.product_uuid' => ['required', 'string'],
+            'is_checked' => ['required', 'boolean'],
         ];
     }
 }

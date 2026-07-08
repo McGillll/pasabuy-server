@@ -18,11 +18,15 @@ interface PasabuyScheduleServiceInterface
 
     public function reopen(string $uuid, int $userId);
 
-    public function syncProducts(string $uuid, object $payload);
-
     public function orders(string $uuid);
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload);
 
     public function summary(string $uuid);
+
+    public function productBuyers(string $scheduleUuid, string $productUuid);
+
+    public function checklist(string $uuid);
+
+    public function toggleChecklistItem(string $scheduleUuid, string $productUuid, object $payload);
 }

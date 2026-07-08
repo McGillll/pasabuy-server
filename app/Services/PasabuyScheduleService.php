@@ -66,7 +66,10 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         $this->ensureOwnership($schedule, $userId);
         $this->assertValidTransition($schedule, 'closed');
 
-        return $this->pasabuyScheduleRepository->updateStatus($uuid, 'closed');
+        $updated = $this->pasabuyScheduleRepository->updateStatus($uuid, 'closed');
+        $this->pasabuyScheduleRepository->syncChecklistOnClose($updated);
+
+        return $updated;
     }
 
     public function reopen(string $uuid, int $userId)
@@ -76,24 +79,6 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         $this->assertValidTransition($schedule, 'open');
 
         return $this->pasabuyScheduleRepository->updateStatus($uuid, 'open');
-    }
-
-    public function syncProducts(string $uuid, object $payload)
-    {
-        $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $payload->user_id);
-
-        $productIds = collect($payload->products ?? [])->map(function ($item) {
-            $product = $this->productRepository->findByUuid($item['product_uuid']);
-
-            if (! $product) {
-                throw new NotFoundException("Product {$item['product_uuid']} not found.");
-            }
-
-            return $product->id;
-        })->all();
-
-        return $this->pasabuyScheduleRepository->syncProducts($uuid, (object) ['products' => $productIds]);
     }
 
     public function orders(string $uuid)
@@ -108,7 +93,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         $schedule = $this->findByUuid($scheduleUuid);
         $this->ensureOwnership($schedule, $payload->user_id);
 
-        if ($payload->promo_status !== 'out_of_stock' && (! isset($payload->actual_price) || $payload->actual_price < 0)) {
+        if ($payload->product_status !== 'out_of_stock' && (! isset($payload->actual_price) || $payload->actual_price < 0)) {
             throw new InvalidPayloadException('A valid actual price is required unless marking the item out of stock.');
         }
 
@@ -128,6 +113,34 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         $this->findByUuid($uuid);
 
         return $this->pasabuyScheduleRepository->summary($uuid);
+    }
+
+    public function productBuyers(string $scheduleUuid, string $productUuid)
+    {
+        $this->findByUuid($scheduleUuid);
+
+        $product = $this->productRepository->findByUuid($productUuid);
+
+        if (! $product) {
+            throw new NotFoundException('Product not found.');
+        }
+
+        return $this->pasabuyScheduleRepository->productBuyers($scheduleUuid, $productUuid);
+    }
+
+    public function checklist(string $uuid)
+    {
+        $this->findByUuid($uuid);
+
+        return $this->pasabuyScheduleRepository->checklist($uuid);
+    }
+
+    public function toggleChecklistItem(string $scheduleUuid, string $productUuid, object $payload)
+    {
+        $schedule = $this->findByUuid($scheduleUuid);
+        $this->ensureOwnership($schedule, $payload->user_id);
+
+        return $this->pasabuyScheduleRepository->toggleChecklistItem($scheduleUuid, $productUuid, $payload->is_checked);
     }
 
     protected function ensureOwnership(PasabuySchedule $schedule, int $userId)

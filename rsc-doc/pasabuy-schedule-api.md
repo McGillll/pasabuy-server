@@ -1,10 +1,12 @@
 # Pasabuy Schedule API
 
-A pasabuy schedule is the seller's shareable "batch" — a subset of the global product catalog (pricing always comes from the product's own `default_price`, see `product-api.md`), plus a public link customers use to order. All endpoints here are admin-only and scoped to the schedule's owner (the admin who created it — see the 403 note below); the customer-facing read/order endpoints live in `public-pasabuy-api.md`.
+A pasabuy schedule is the seller's shareable "batch" — customers can order **any active catalog product** against it (pricing always starts from the product's own `default_price`, see `product-api.md`), plus a public link customers use to order. All endpoints here are admin-only and scoped to the schedule's owner (the admin who created it — see the 403 note below); the customer-facing read/order endpoints live in `public-pasabuy-api.md`.
 
-**Two-phase pricing.** A schedule-product's price is the product's `default_price` until the seller is physically in-store, at which point she calls `confirm-price` to set the real `actual_price` (and flag any promo like B1T1, or mark the item out of stock). Confirming a price triggers server-side recalculation of every live order referencing that product — see `order-api.md` for what happens to affected orders/items.
+**Products are attached reactively, not curated.** There is no "add products to this schedule" step. A `PasabuyScheduleProduct` row (the per-schedule pricing/promo state) is created automatically, the first time any customer (or the seller editing an order) orders that product on this schedule — seeded from the product's own `default_product_status`. The `products` array on a schedule therefore only ever contains products someone has actually ordered.
 
-**Closing is a dedicated action**, not a generic status update — use `close`/`reopen` rather than setting `status` via `PUT`. Closing only blocks customer-side ordering/editing (see `public-pasabuy-api.md`/`order-api.md`); it does **not** lock the seller out of managing products, prices, or (once closed) editing customer order items — see the seller order-items endpoint below.
+**Two-phase pricing.** A schedule-product's price is the product's `default_price` until the seller is physically in-store, at which point she calls `confirm-price` to set the real `actual_price` (and flag any status like B1T1, or mark the item out of stock). Confirming a price triggers server-side recalculation of every live order referencing that product — see `order-api.md` for what happens to affected orders/items.
+
+**Closing is a dedicated action**, not a generic status update — use `close`/`reopen` rather than setting `status` via `PUT`. Closing only blocks customer-side ordering/editing (see `public-pasabuy-api.md`/`order-api.md`); it does **not** lock the seller out of managing prices or editing customer order items. **Closing also (re)snapshots the shopping checklist** — see the checklist endpoints below.
 
 ## Endpoints overview
 
@@ -12,20 +14,22 @@ A pasabuy schedule is the seller's shareable "batch" — a subset of the global 
 |--------|--------------------------------------------------------|--------------------------------------------------|
 | GET    | `/api/admin/pasabuy-schedules`                          | List schedules (paginated)                      |
 | POST   | `/api/admin/pasabuy-schedules`                          | Create a schedule                                |
-| GET    | `/api/admin/pasabuy-schedules/{uuid}`                   | Get one schedule with its attached products      |
+| GET    | `/api/admin/pasabuy-schedules/{uuid}`                   | Get one schedule with its (reactively attached) products |
 | PUT    | `/api/admin/pasabuy-schedules/{uuid}`                   | Update schedule fields (title/description/cutoff; status only via a valid transition) |
 | DELETE | `/api/admin/pasabuy-schedules/{uuid}`                   | Delete a schedule                                |
-| POST   | `/api/admin/pasabuy-schedules/{uuid}/close`             | Close the schedule (`open` → `closed`)           |
+| POST   | `/api/admin/pasabuy-schedules/{uuid}/close`             | Close the schedule (`open` → `closed`); also (re)snapshots the checklist |
 | POST   | `/api/admin/pasabuy-schedules/{uuid}/reopen`            | Reopen the schedule (`closed` → `open`)          |
-| PUT    | `/api/admin/pasabuy-schedules/{uuid}/products`          | Replace the attached product set                 |
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/orders`            | List orders placed against this schedule         |
-| PATCH  | `/api/admin/pasabuy-schedules/{uuid}/schedule-products/{scheduleProductUuid}/confirm-price` | Seller sets the in-store actual price + promo status for one schedule product |
-| GET    | `/api/admin/pasabuy-schedules/{uuid}/summary`           | Aggregated per-product quantity checklist across all orders |
+| PATCH  | `/api/admin/pasabuy-schedules/{uuid}/schedule-products/{scheduleProductUuid}/confirm-price` | Seller sets the in-store actual price + product status for one schedule product |
+| GET    | `/api/admin/pasabuy-schedules/{uuid}/summary`           | Aggregated per-product quantity/subtotal across all live orders |
+| GET    | `/api/admin/pasabuy-schedules/{uuid}/products/{productUuid}/buyers` | Every buyer of one product on this schedule, for the Summary-row detail view |
+| GET    | `/api/admin/pasabuy-schedules/{uuid}/checklist`         | The seller's shopping checklist (empty until the schedule has been closed at least once) |
+| PATCH  | `/api/admin/pasabuy-schedules/{uuid}/checklist/{productUuid}` | Check/uncheck one checklist item                |
 | PUT    | `/api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items` | Seller edits a customer's order items (closed schedules only) |
 
-All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin ability). Bodies are JSON (no file uploads on this module, so `PUT`/`POST` action endpoints are sent as real verbs, no `_method` spoofing needed).
+All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin ability). Bodies are JSON (no file uploads on this module, so `PUT`/`POST`/`PATCH` action endpoints are sent as real verbs, no `_method` spoofing needed).
 
-**Ownership.** Every endpoint here (except `index`) requires the acting admin to be the schedule's creator. Acting on someone else's schedule returns **403**: `{ "success": false, "message": "You do not own this pasabuy schedule.", "data": null }`.
+**Ownership.** Every mutating endpoint here requires the acting admin to be the schedule's creator. Acting on someone else's schedule returns **403**: `{ "success": false, "message": "You do not own this pasabuy schedule.", "data": null }`. Read-only endpoints (`show`, `orders`, `summary`, `buyers`, `checklist` GET) are not ownership-gated.
 
 ## Schedule object
 
@@ -37,17 +41,17 @@ All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin
 | cutoff_at   | datetime\|null| Optional deadline; ordering is blocked once passed even if `status` is still `open` |
 | status      | string        | `draft` \| `open` \| `closed`. Only `open` (and before `cutoff_at`) accepts customer orders. Valid transitions: `draft`→`open`, `open`→`closed`, `closed`→`open` |
 | is_open     | boolean       | Computed: `status === 'open' && (!cutoff_at || cutoff_at is in the future)` — use this to gate the UI |
-| products    | array         | Only present when the schedule was loaded with products (`show`, `products` sync, and the public `GET`) — see schedule-product object below |
+| products    | array         | Only the products someone has actually ordered so far on this schedule — see schedule-product object below |
 | created_at  | datetime      |                                                                            |
 
 ### Schedule-product object (an entry in `products`)
 
 | Field              | Type         | Notes                                             |
 |--------------------|--------------|--------------------------------------------------------|
-| uuid               | string       | Pivot row's own identifier                            |
-| actual_price        | string\|null | Set once the seller confirms in-store; `null` until confirmed, or if `promo_status` is `out_of_stock` |
-| promo_status       | string       | `none` \| `b1t1` \| `out_of_stock` — only meaningful once `price_confirmed_at` is set |
-| price_confirmed_at | datetime\|null | `null` = still just the product's `default_price`; once set, `actual_price`/`promo_status` reflect the confirmed in-store truth |
+| uuid               | string       | Row's own identifier                            |
+| actual_price        | string\|null | Set once the seller confirms in-store; `null` until confirmed, or if `product_status` is `out_of_stock` |
+| product_status       | string       | `none` \| `b1t1` \| `out_of_stock` — seeded from the product's `default_product_status` when the row is first created; only meaningful for pricing once `price_confirmed_at` is set |
+| price_confirmed_at | datetime\|null | `null` = still just the product's `default_price`; once set, `actual_price`/`product_status` reflect the confirmed in-store truth |
 | product            | object       | The `Product` object (see `product-api.md`) — includes `default_price`, the price to display before confirmation |
 
 ---
@@ -76,6 +80,8 @@ Returns a standard Laravel paginator (see `product-api.md` for shape); items do 
 | cutoff_at   | datetime | No       | Any format `strtotime()`/Carbon accepts |
 | status      | string   | No       | `draft`\|`open`\|`closed`, default `draft` |
 
+No product-picking step — customers can order any active catalog product against this schedule as soon as it's `open`.
+
 ### Success response — 201
 
 ```json
@@ -90,7 +96,7 @@ Returns a standard Laravel paginator (see `product-api.md` for shape); items do 
 
 ## GET /api/admin/pasabuy-schedules/{uuid}
 
-Includes `products`. Use this to render the schedule-builder page.
+Includes `products` — only the ones actually ordered so far (see the module note at the top).
 
 ### Error responses
 
@@ -110,7 +116,7 @@ Same as `POST`, plus **403** (not owner), **404**, and **422** if `status` names
 
 ## DELETE /api/admin/pasabuy-schedules/{uuid}
 
-Hard-deletes the schedule and cascades to its attached products and its orders (`ON DELETE CASCADE`). There is no confirmation step server-side — confirm in the UI before calling this.
+Hard-deletes the schedule and cascades to its attached products, checklist, and its orders (`ON DELETE CASCADE`). There is no confirmation step server-side — confirm in the UI before calling this.
 
 ### Error responses
 
@@ -120,7 +126,11 @@ Hard-deletes the schedule and cascades to its attached products and its orders (
 
 ## POST /api/admin/pasabuy-schedules/{uuid}/close
 
-Transitions `open` → `closed`. No request body. Blocks customer-side ordering/editing (already enforced elsewhere); does not affect the seller's own ability to manage products/prices, or (now that it's closed) edit customer orders via the endpoint below.
+Transitions `open` → `closed`. No request body. Blocks customer-side ordering/editing (already enforced elsewhere); does not affect the seller's own ability to confirm prices, or (now that it's closed) edit customer orders via the endpoint below.
+
+**Also (re)snapshots the checklist** (see `GET .../checklist` below) from the current live order totals:
+- First close ever → creates one checklist row per product currently ordered, unchecked, `quantity` = current total ordered.
+- Any later close (after a reopen let more orders in) → unchecked rows just get `quantity` refreshed to the new total; checked rows keep their original `quantity` frozen and instead get `additional_quantity`/`return_quantity` populated with the delta against the new total.
 
 ### Success response — 200
 
@@ -136,37 +146,7 @@ Transitions `open` → `closed`. No request body. Blocks customer-side ordering/
 
 ## POST /api/admin/pasabuy-schedules/{uuid}/reopen
 
-Transitions `closed` → `open`. Same shape/errors as `close`.
-
----
-
-## PUT /api/admin/pasabuy-schedules/{uuid}/products
-
-Replaces the full attached-product set in one call — send every product you want attached, not just changes. Rows for products left out of the request are removed **unless** a customer has already ordered that product on this schedule, in which case the row is flagged `is_disabled` instead of deleted (so historical orders stay resolvable) and stops appearing in this endpoint's `products` array and in the public schedule view. Re-including that same `product_uuid` in a later `PUT` call reactivates (un-disables) the existing row rather than creating a duplicate. Pricing is never sent here — it always comes from the product's own `default_price`.
-
-### Request body
-
-| Field                       | Type   | Required | Notes                          |
-|-----------------------------|--------|----------|------------------------------------|
-| products                    | array  | No       | Omit entirely (or send empty) to detach all — as multipart/form-data, an empty array can't be represented by a literal key, so just send no `products[...]` entries |
-| products[].product_uuid     | string | Yes      | Must be an existing product's uuid |
-
-### Example request (form-encoded array)
-
-```
-_method=PUT
-products[0][product_uuid]=abe9e0a5-...
-```
-
-### Success response — 200
-
-Returns the full `PasabuyScheduleResource` with the updated `products` array.
-
-### Error responses
-
-- **403** (not owner)
-- **404** — schedule not found, or one of the `product_uuid`s doesn't exist (`"Product {uuid} not found."`).
-- **422** — basic field validation.
+Transitions `closed` → `open`. Same shape/errors as `close`. Does not touch the checklist — that only changes on `close`.
 
 ---
 
@@ -177,22 +157,22 @@ Called by the seller once she's physically in the store standing in front of the
 - **Price same or lower than the order's snapshotted `estimated_price`** → auto-applied; the order item's `actual_price`/`subtotal` update immediately, no customer action needed.
 - **Price higher, and the item has `auto_buy_if_under_max=true` with the new price `<= max_price`** → also auto-applied (evaluated synchronously here, not on a timer).
 - **Price higher, no matching auto-buy preference** → the item is flagged `confirmation_status: 'pending'` (its `actual_price` is set to the *proposed* price for display, but `subtotal`/`quantity` stay at the last-agreed values) and the order's `status` flips to `needs_confirmation`. See `order-api.md` for how the customer resolves this.
-- **`promo_status: 'out_of_stock'`** → every live item for this product is flagged `pending` regardless of price (no valid price to auto-apply); `actual_price` stays `null`.
-- **`promo_status: 'b1t1'`** → independent of the price branch above, one bonus `OrderItem` per live order is created/updated 1:1 with the paid item's quantity (`is_bonus: true`, price `0`, no confirmation needed) — removed automatically if a later confirm moves the promo off `b1t1`.
+- **`product_status: 'out_of_stock'`** → every live item for this product is flagged `pending` regardless of price (no valid price to auto-apply); `actual_price` stays `null`.
+- **`product_status: 'b1t1'`** → independent of the price branch above, one bonus `OrderItem` per live order is created/updated 1:1 with the paid item's quantity (`is_bonus: true`, price `0`, no confirmation needed) — removed automatically if a later confirm moves the status off `b1t1`.
 
 ### Request body
 
 | Field        | Type   | Required                          | Notes                                        |
 |--------------|--------|------------------------------------|---------------------------------------------|
-| actual_price | number | Yes, unless `promo_status=out_of_stock` | >= 0                                    |
-| promo_status | string | Yes                                 | `none` \| `b1t1` \| `out_of_stock`           |
+| actual_price | number | Yes, unless `product_status=out_of_stock` | >= 0                                    |
+| product_status | string | Yes                                 | `none` \| `b1t1` \| `out_of_stock`           |
 
 ### Example request
 
 ```
 _method=PATCH
 actual_price=130
-promo_status=none
+product_status=none
 ```
 
 ### Success response — 200
@@ -202,7 +182,7 @@ promo_status=none
   "success": true,
   "message": "Price confirmed",
   "data": {
-    "schedule_product": { "uuid": "...", "actual_price": "130.00", "promo_status": "none", "price_confirmed_at": "...", "product": { ... } },
+    "schedule_product": { "uuid": "...", "actual_price": "130.00", "product_status": "none", "price_confirmed_at": "...", "product": { ... } },
     "summary": { "auto_applied": 1, "needs_confirmation": 0, "bonus_applied": 0 }
   }
 }
@@ -214,7 +194,7 @@ promo_status=none
 
 - **403** (not owner)
 - **404** — schedule not found, or `scheduleProductUuid` doesn't belong to it: `{ "success": false, "message": "Schedule product not found.", "data": null }`.
-- **422** — `actual_price` missing/negative when `promo_status` isn't `out_of_stock`, or `promo_status` not one of the three allowed values.
+- **422** — `actual_price` missing/negative when `product_status` isn't `out_of_stock`, or `product_status` not one of the three allowed values.
 
 ---
 
@@ -230,7 +210,7 @@ Returns every order placed against this schedule, newest first, each with its `i
 
 ## GET /api/admin/pasabuy-schedules/{uuid}/summary
 
-The seller's shopping checklist — aggregates ordered quantity per product across every **live** order (`pending`/`needs_confirmation`/`confirmed`; cancelled orders and removed/bonus items are excluded) on this schedule. Use this right before heading to the store to know total quantities to buy.
+Aggregates ordered quantity per product across every **live** order (`pending`/`needs_confirmation`/`confirmed`; cancelled orders and removed/bonus items are excluded) on this schedule. This is the "Price & Totals" view — click through to `buyers` below for the per-buyer breakdown behind one row.
 
 ### Success response — 200
 
@@ -252,16 +232,84 @@ The seller's shopping checklist — aggregates ordered quantity per product acro
 
 ---
 
+## GET /api/admin/pasabuy-schedules/{uuid}/products/{productUuid}/buyers
+
+Every live order item for one product on this schedule — feeds the modal opened by clicking a Summary row, so the seller can see who ordered before confirming a price.
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": [
+    { "customer_name": "Jane Dela Cruz", "quantity": 3, "estimated_price": "25.00", "actual_price": null, "subtotal": "75.00", "status": "pending" }
+  ]
+}
+```
+
+### Error responses
+
+- **404** — schedule not found, or product not found.
+
+---
+
+## GET /api/admin/pasabuy-schedules/{uuid}/checklist
+
+The seller's shopping checklist. **Empty until the schedule has been closed at least once** — see `close` above for how/when it's populated. Once populated, items persist across reopen/close cycles per the merge rules described there.
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": [
+    { "product_uuid": "...", "product_name": "Instant Noodles", "category_name": "Noodles & Canned Goods", "quantity": 8, "is_checked": false, "checked_at": null, "additional_quantity": 0, "return_quantity": 0 }
+  ]
+}
+```
+
+`quantity` is the amount to buy while unchecked; once checked it freezes at whatever quantity it was checked at. `additional_quantity`/`return_quantity` are only ever populated on a checked item, by a later `close` recalculation — buy `additional_quantity` more, or return `return_quantity` of what was already bought.
+
+### Error responses
+
+- **404** — schedule not found.
+
+---
+
+## PATCH /api/admin/pasabuy-schedules/{uuid}/checklist/{productUuid}
+
+Check or uncheck one item. Nothing in the system auto-unchecks an item — this is the only way `is_checked` changes.
+
+### Request body
+
+| Field      | Type    | Required | Notes |
+|------------|---------|----------|-------|
+| is_checked | boolean | Yes      |       |
+
+### Success response — 200
+
+Returns the updated checklist item (same shape as one entry above).
+
+### Error responses
+
+- **403** (not owner)
+- **404** — schedule not found, or no checklist item exists yet for that product (schedule never closed, or product never ordered).
+- **422** — `is_checked` missing/not boolean.
+
+---
+
 ## PUT /api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items
 
-Seller-side order correction tool — full replace of one customer's order items (add, remove, change quantity). Only allowed once the schedule's `status` is `closed`; no quantity cap is enforced (the seller is trusted to know real-world stock). Recalculates the order's `subtotal`/`total_amount` the same way customer edits do, sourcing price from the schedule-product's confirmed `actual_price` if set, else the product's `default_price`.
+Seller-side order correction tool — full replace of one customer's order items (add, remove, change quantity). Only allowed once the schedule's `status` is `closed`; no quantity cap is enforced (the seller is trusted to know real-world stock). Recalculates the order's `subtotal`/`total_amount` the same way customer edits do, sourcing price from the schedule-product's confirmed `actual_price` if set, else the product's `default_price`. Adding a product not yet ordered on this schedule creates its `PasabuyScheduleProduct` row on the fly, same as a customer ordering it for the first time.
 
 ### Request body
 
 | Field                  | Type   | Required | Notes                          |
 |------------------------|--------|----------|------------------------------------|
 | items                  | array  | Yes      | Min 1 — full replacement list, not a diff |
-| items[].product_uuid   | string | Yes      | Must be attached to this schedule   |
+| items[].product_uuid   | string | Yes      | Must be an active catalog product   |
 | items[].quantity       | int    | Yes      | >= 1                                 |
 
 ### Success response — 200
@@ -270,7 +318,7 @@ Returns the updated `OrderResource` (see `order-api.md`).
 
 ### Error responses
 
-- **404** — schedule not found, order not found (or doesn't belong to this schedule), or a `product_uuid` isn't attached to this schedule.
+- **404** — schedule not found, order not found (or doesn't belong to this schedule), or a `product_uuid` doesn't exist / isn't active.
 - **422** — schedule isn't `closed` (`"Order items can only be edited by the seller while the schedule is closed."`), or basic field validation.
 
 ## Error status summary
@@ -278,6 +326,6 @@ Returns the updated `OrderResource` (see `order-api.md`).
 | Status | Meaning              | Applies to                        |
 |--------|-----------------------|-------------------------------------|
 | 401    | Missing/invalid token | all endpoints                        |
-| 403    | Not the schedule's owner | update, destroy, close, reopen, products, confirm-price |
-| 404    | Not found             | show, update, destroy, close, reopen, products, orders, confirm-price, summary, order items |
-| 422    | Validation failure    | store, update, close, reopen, products, confirm-price, order items |
+| 403    | Not the schedule's owner | update, destroy, close, reopen, confirm-price, checklist toggle |
+| 404    | Not found             | show, update, destroy, close, reopen, orders, confirm-price, summary, buyers, checklist, order items |
+| 422    | Validation failure    | store, update, close, reopen, confirm-price, checklist toggle, order items |

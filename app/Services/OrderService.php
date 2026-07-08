@@ -7,6 +7,7 @@ use App\Exceptions\NotFoundException;
 use App\Interfaces\Order\OrderRepositoryInterface;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
+use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,7 @@ class OrderService implements OrderServiceInterface
     public function __construct(
         protected OrderRepositoryInterface $orderRepository,
         protected PasabuyScheduleRepositoryInterface $pasabuyScheduleRepository,
+        protected ProductRepositoryInterface $productRepository,
     ) {}
 
     public function updateStatus(string $uuid, object $payload)
@@ -122,7 +124,7 @@ class OrderService implements OrderServiceInterface
 
         DB::transaction(function () use ($items, $scheduleProduct, $summary) {
             foreach ($items as $item) {
-                if ($scheduleProduct->promo_status === 'out_of_stock') {
+                if ($scheduleProduct->product_status === 'out_of_stock') {
                     $this->orderRepository->flagNeedsConfirmation($item, null);
                     $summary->needs_confirmation++;
 
@@ -152,7 +154,7 @@ class OrderService implements OrderServiceInterface
             $orders = $items->pluck('order')->unique('id');
 
             foreach ($orders as $order) {
-                if ($scheduleProduct->promo_status === 'b1t1') {
+                if ($scheduleProduct->product_status === 'b1t1') {
                     if ($this->orderRepository->addOrUpdateBonusItem($order, $scheduleProduct)) {
                         $summary->bonus_applied++;
                     }
@@ -231,21 +233,21 @@ class OrderService implements OrderServiceInterface
 
     protected function resolveItems($schedule, array $items)
     {
-        $scheduleProductsByProductUuid = $schedule->scheduleProducts->keyBy(fn ($scheduleProduct) => $scheduleProduct->product->uuid);
+        return collect($items)->map(function ($item) use ($schedule) {
+            $product = $this->productRepository->findByUuid($item['product_uuid']);
 
-        return collect($items)->map(function ($item) use ($scheduleProductsByProductUuid) {
-            $scheduleProduct = $scheduleProductsByProductUuid->get($item['product_uuid']);
-
-            if (! $scheduleProduct) {
-                throw new InvalidPayloadException("Product {$item['product_uuid']} is not available in this pasabuy.");
+            if (! $product || ! $product->is_active) {
+                throw new InvalidPayloadException("Product {$item['product_uuid']} is not available.");
             }
 
+            $scheduleProduct = $this->pasabuyScheduleRepository->findOrCreateScheduleProduct($schedule, $product);
+
             return [
-                'product_id' => $scheduleProduct->product_id,
-                'product_name' => $scheduleProduct->product->name,
-                'estimated_price' => $scheduleProduct->product->default_price,
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'estimated_price' => $product->default_price,
                 'actual_price' => $scheduleProduct->actual_price,
-                'confirmation_status' => $scheduleProduct->promo_status === 'out_of_stock' ? 'pending' : 'none',
+                'confirmation_status' => $scheduleProduct->product_status === 'out_of_stock' ? 'pending' : 'none',
                 'quantity' => $item['quantity'],
                 'max_price' => $item['max_price'] ?? null,
                 'auto_buy_if_under_max' => $item['auto_buy_if_under_max'] ?? false,
@@ -255,21 +257,21 @@ class OrderService implements OrderServiceInterface
 
     protected function resolveSellerItems($schedule, array $items)
     {
-        $scheduleProductsByProductUuid = $schedule->scheduleProducts->keyBy(fn ($scheduleProduct) => $scheduleProduct->product->uuid);
+        return collect($items)->map(function ($item) use ($schedule) {
+            $product = $this->productRepository->findByUuid($item['product_uuid']);
 
-        return collect($items)->map(function ($item) use ($scheduleProductsByProductUuid) {
-            $scheduleProduct = $scheduleProductsByProductUuid->get($item['product_uuid']);
-
-            if (! $scheduleProduct) {
-                throw new InvalidPayloadException("Product {$item['product_uuid']} is not available in this pasabuy.");
+            if (! $product || ! $product->is_active) {
+                throw new InvalidPayloadException("Product {$item['product_uuid']} is not available.");
             }
 
+            $scheduleProduct = $this->pasabuyScheduleRepository->findOrCreateScheduleProduct($schedule, $product);
+
             return [
-                'product_id' => $scheduleProduct->product_id,
-                'product_name' => $scheduleProduct->product->name,
-                'estimated_price' => $scheduleProduct->product->default_price,
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'estimated_price' => $product->default_price,
                 'actual_price' => $scheduleProduct->price_confirmed_at ? $scheduleProduct->actual_price : null,
-                'confirmation_status' => $scheduleProduct->promo_status === 'out_of_stock' ? 'pending' : 'none',
+                'confirmation_status' => $scheduleProduct->product_status === 'out_of_stock' ? 'pending' : 'none',
                 'quantity' => $item['quantity'],
                 'max_price' => null,
                 'auto_buy_if_under_max' => false,

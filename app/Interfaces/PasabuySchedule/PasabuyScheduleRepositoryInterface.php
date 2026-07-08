@@ -2,6 +2,9 @@
 
 namespace App\Interfaces\PasabuySchedule;
 
+use App\Models\PasabuySchedule;
+use App\Models\Product;
+
 interface PasabuyScheduleRepositoryInterface
 {
     public function all(object $payload);
@@ -16,13 +19,21 @@ interface PasabuyScheduleRepositoryInterface
 
     public function updateStatus(string $uuid, string $status);
 
-    public function syncProducts(string $uuid, object $payload);
-
     public function orders(string $uuid);
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload);
 
     public function findScheduleProduct(int $scheduleId, int $productId);
 
+    public function findOrCreateScheduleProduct(PasabuySchedule $schedule, Product $product);
+
     public function summary(string $uuid);
+
+    public function productBuyers(string $scheduleUuid, string $productUuid);
+
+    public function checklist(string $uuid);
+
+    public function toggleChecklistItem(string $scheduleUuid, string $productUuid, bool $isChecked);
+
+    public function syncChecklistOnClose(PasabuySchedule $schedule);
 }

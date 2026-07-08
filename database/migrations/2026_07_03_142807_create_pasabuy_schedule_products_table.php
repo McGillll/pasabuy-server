@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('pasabuy_schedule_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->decimal('actual_price', 10, 2)->nullable();
-            $table->enum('promo_status', ['none', 'b1t1', 'out_of_stock'])->default('none');
+            $table->enum('product_status', ['none', 'b1t1', 'out_of_stock'])->default('none');
             $table->timestamp('price_confirmed_at')->nullable();
             $table->boolean('is_disabled')->default(false);
             $table->timestamps();

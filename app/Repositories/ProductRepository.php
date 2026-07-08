@@ -15,6 +15,15 @@ class ProductRepository implements ProductRepositoryInterface
             ->paginate($payload->per_page ?? 15);
     }
 
+    public function publicCatalog(object $payload)
+    {
+        return Product::filter((array) $payload)
+            ->where('is_active', true)
+            ->with('category')
+            ->orderBy('name')
+            ->paginate($payload->per_page ?? 200);
+    }
+
     public function findByUuid(string $uuid)
     {
         return Product::with('category')->where('uuid', $uuid)->first();
@@ -29,6 +38,7 @@ class ProductRepository implements ProductRepositoryInterface
         $product->is_active = $payload->is_active ?? true;
         $product->category_id = $payload->category_id ?? null;
         $product->default_price = $payload->default_price;
+        $product->default_product_status = $payload->default_product_status ?? 'none';
         $product->save();
 
         return $product;
@@ -46,6 +56,7 @@ class ProductRepository implements ProductRepositoryInterface
         $product->is_active = $payload->is_active ?? $product->is_active;
         $product->category_id = $payload->category_id ?? null;
         $product->default_price = $payload->default_price;
+        $product->default_product_status = $payload->default_product_status ?? $product->default_product_status;
         $product->save();
 
         return $product;

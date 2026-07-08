@@ -8,8 +8,6 @@ use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
-    protected const CATEGORIES = ['Noodles & Canned Goods', 'Beverages', 'Pantry Staples', 'Household'];
-
     protected const PRODUCTS = [
         ['name' => 'Instant Pancit Canton', 'description' => 'Spicy calamansi flavor, 60g pack', 'category' => 'Noodles & Canned Goods', 'default_price' => 18.00],
         ['name' => 'Corned Beef 210g', 'description' => 'Classic beef in can', 'category' => 'Noodles & Canned Goods', 'default_price' => 85.00],
@@ -29,14 +27,7 @@ class ProductSeeder extends Seeder
             return;
         }
 
-        $categories = collect(self::CATEGORIES)->mapWithKeys(function ($name) {
-            $category = new ProductCategory;
-            $category->name = $name;
-            $category->is_active = true;
-            $category->save();
-
-            return [$name => $category->id];
-        });
+        $categories = ProductCategory::pluck('id', 'name');
 
         foreach (self::PRODUCTS as $item) {
             $product = new Product;

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PasabuyScheduleChecklistToggleRequest;
 use App\Http\Requests\PasabuyScheduleProductConfirmPriceRequest;
 use App\Http\Requests\PasabuyScheduleOrderItemsUpdateRequest;
 use App\Http\Requests\PasabuyScheduleStoreRequest;
-use App\Http\Requests\PasabuyScheduleSyncProductsRequest;
 use App\Http\Requests\PasabuyScheduleUpdateRequest;
 use App\Http\Resources\OrderResource;
+use App\Http\Resources\PasabuyScheduleChecklistItemResource;
+use App\Http\Resources\PasabuyScheduleProductBuyerResource;
 use App\Http\Resources\PasabuyScheduleProductResource;
 use App\Http\Resources\PasabuyScheduleResource;
 use App\Http\Resources\PasabuyScheduleSummaryItemResource;
@@ -86,16 +88,6 @@ class PasabuyScheduleController extends Controller
         return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule reopened');
     }
 
-    public function syncProducts(PasabuyScheduleSyncProductsRequest $request, string $uuid)
-    {
-        $payload = (object) $request->validated();
-        $payload->user_id = $request->user()->id;
-
-        $schedule = $this->pasabuyScheduleService->syncProducts($uuid, $payload);
-
-        return $this->success(new PasabuyScheduleResource($schedule), 'Products updated successfully');
-    }
-
     public function orders(string $uuid)
     {
         $orders = $this->pasabuyScheduleService->orders($uuid);
@@ -121,6 +113,30 @@ class PasabuyScheduleController extends Controller
         $items = $this->pasabuyScheduleService->summary($uuid);
 
         return $this->success(PasabuyScheduleSummaryItemResource::collection($items));
+    }
+
+    public function productBuyers(string $uuid, string $productUuid)
+    {
+        $buyers = $this->pasabuyScheduleService->productBuyers($uuid, $productUuid);
+
+        return $this->success(PasabuyScheduleProductBuyerResource::collection($buyers));
+    }
+
+    public function checklist(string $uuid)
+    {
+        $items = $this->pasabuyScheduleService->checklist($uuid);
+
+        return $this->success(PasabuyScheduleChecklistItemResource::collection($items));
+    }
+
+    public function toggleChecklistItem(PasabuyScheduleChecklistToggleRequest $request, string $uuid, string $productUuid)
+    {
+        $payload = (object) $request->validated();
+        $payload->user_id = $request->user()->id;
+
+        $item = $this->pasabuyScheduleService->toggleChecklistItem($uuid, $productUuid, $payload);
+
+        return $this->success(new PasabuyScheduleChecklistItemResource($item), 'Checklist item updated');
     }
 
     public function updateOrderItems(PasabuyScheduleOrderItemsUpdateRequest $request, string $uuid, string $orderUuid)

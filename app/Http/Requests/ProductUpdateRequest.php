@@ -19,6 +19,7 @@ class ProductUpdateRequest extends FormRequest
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['sometimes', 'boolean'],
             'default_price' => ['required', 'numeric', 'min:0'],
+            'default_product_status' => ['sometimes', 'in:none,b1t1,out_of_stock'],
             'category_uuid' => ['nullable', 'string', 'exists:product_categories,uuid'],
         ];
     }

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'description', 'image_path', 'is_active', 'category_id', 'default_price'])]
+#[Fillable(['name', 'description', 'image_path', 'is_active', 'category_id', 'default_price', 'default_product_status'])]
 class Product extends Model
 {
     use Filterable, HasFactory, SoftDeletes;

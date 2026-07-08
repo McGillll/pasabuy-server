@@ -6,7 +6,10 @@ use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PasabuySchedule;
+use App\Models\PasabuyScheduleChecklistItem;
 use App\Models\PasabuyScheduleProduct;
+use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 
 class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 {
@@ -71,43 +74,12 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         return $schedule;
     }
 
-    public function syncProducts(string $uuid, object $payload)
+    public function findOrCreateScheduleProduct(PasabuySchedule $schedule, Product $product)
     {
-        $schedule = PasabuySchedule::where('uuid', $uuid)->first();
-        $requestedProductIds = $payload->products;
-
-        $schedule->scheduleProducts()
-            ->whereNotIn('product_id', $requestedProductIds)
-            ->where('is_disabled', false)
-            ->get()
-            ->each(function ($scheduleProduct) use ($schedule) {
-                $isReferenced = OrderItem::where('product_id', $scheduleProduct->product_id)
-                    ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id))
-                    ->exists();
-
-                if ($isReferenced) {
-                    $scheduleProduct->is_disabled = true;
-                    $scheduleProduct->save();
-                } else {
-                    $scheduleProduct->delete();
-                }
-            });
-
-        foreach ($requestedProductIds as $productId) {
-            $scheduleProduct = $schedule->scheduleProducts()
-                ->where('product_id', $productId)
-                ->first() ?? new PasabuyScheduleProduct;
-
-            $scheduleProduct->pasabuy_schedule_id = $schedule->id;
-            $scheduleProduct->product_id = $productId;
-            $scheduleProduct->is_disabled = false;
-            $scheduleProduct->save();
-        }
-
-        return $schedule->fresh([
-            'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
-            'scheduleProducts.product.category',
-        ]);
+        return PasabuyScheduleProduct::firstOrCreate(
+            ['pasabuy_schedule_id' => $schedule->id, 'product_id' => $product->id],
+            ['product_status' => $product->default_product_status, 'actual_price' => null, 'is_disabled' => false],
+        );
     }
 
     public function orders(string $uuid)
@@ -127,8 +99,8 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             return null;
         }
 
-        $scheduleProduct->actual_price = $payload->promo_status === 'out_of_stock' ? null : $payload->actual_price;
-        $scheduleProduct->promo_status = $payload->promo_status;
+        $scheduleProduct->actual_price = $payload->product_status === 'out_of_stock' ? null : $payload->actual_price;
+        $scheduleProduct->product_status = $payload->product_status;
         $scheduleProduct->price_confirmed_at = now();
         $scheduleProduct->save();
 
@@ -154,5 +126,101 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             ->groupBy('product_id')
             ->with('product.category')
             ->get();
+    }
+
+    public function productBuyers(string $scheduleUuid, string $productUuid)
+    {
+        $schedule = PasabuySchedule::where('uuid', $scheduleUuid)->first();
+        $product = Product::where('uuid', $productUuid)->first();
+
+        return OrderItem::where('product_id', $product->id)
+            ->where('is_bonus', false)
+            ->where('confirmation_status', '!=', 'removed')
+            ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id)
+                ->whereIn('status', Order::LIVE_STATUSES))
+            ->with('order')
+            ->get();
+    }
+
+    public function checklist(string $uuid)
+    {
+        $schedule = PasabuySchedule::where('uuid', $uuid)->first();
+
+        return PasabuyScheduleChecklistItem::where('pasabuy_schedule_id', $schedule->id)
+            ->with('product.category')
+            ->orderBy('product_name')
+            ->get();
+    }
+
+    public function toggleChecklistItem(string $scheduleUuid, string $productUuid, bool $isChecked)
+    {
+        $schedule = PasabuySchedule::where('uuid', $scheduleUuid)->first();
+        $product = Product::where('uuid', $productUuid)->first();
+
+        $item = PasabuyScheduleChecklistItem::where('pasabuy_schedule_id', $schedule->id)
+            ->where('product_id', $product->id)
+            ->first();
+
+        if (! $item) {
+            return null;
+        }
+
+        $item->is_checked = $isChecked;
+        $item->checked_at = $isChecked ? now() : null;
+        $item->save();
+
+        return $item->fresh('product.category');
+    }
+
+    public function syncChecklistOnClose(PasabuySchedule $schedule)
+    {
+        $summaryRows = $this->summary($schedule->uuid);
+        $seenProductIds = [];
+
+        DB::transaction(function () use ($schedule, $summaryRows, &$seenProductIds) {
+            foreach ($summaryRows as $row) {
+                $seenProductIds[] = $row->product_id;
+
+                $item = PasabuyScheduleChecklistItem::firstOrNew([
+                    'pasabuy_schedule_id' => $schedule->id,
+                    'product_id' => $row->product_id,
+                ]);
+
+                if (! $item->exists) {
+                    $item->product_name = $row->product->name;
+                    $item->quantity = $row->total_quantity;
+                    $item->is_checked = false;
+                    $item->additional_quantity = 0;
+                    $item->return_quantity = 0;
+                } elseif (! $item->is_checked) {
+                    $item->product_name = $row->product->name;
+                    $item->quantity = $row->total_quantity;
+                    $item->additional_quantity = 0;
+                    $item->return_quantity = 0;
+                } else {
+                    $delta = $row->total_quantity - $item->quantity;
+                    $item->additional_quantity = $delta > 0 ? $delta : 0;
+                    $item->return_quantity = $delta < 0 ? abs($delta) : 0;
+                }
+
+                $item->save();
+            }
+
+            PasabuyScheduleChecklistItem::where('pasabuy_schedule_id', $schedule->id)
+                ->whereNotIn('product_id', $seenProductIds)
+                ->get()
+                ->each(function (PasabuyScheduleChecklistItem $item) {
+                    if (! $item->is_checked) {
+                        $item->quantity = 0;
+                        $item->additional_quantity = 0;
+                        $item->return_quantity = 0;
+                    } else {
+                        $item->return_quantity = $item->quantity;
+                        $item->additional_quantity = 0;
+                    }
+
+                    $item->save();
+                });
+        });
     }
 }

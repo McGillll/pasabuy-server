@@ -20,6 +20,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->foreignId('category_id')->nullable();
             $table->decimal('default_price', 10, 2);
+            $table->enum('default_product_status', ['none', 'b1t1', 'out_of_stock'])->default('none');
             $table->timestamps();
             $table->softDeletes();
         });

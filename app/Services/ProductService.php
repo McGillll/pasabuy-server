@@ -19,6 +19,11 @@ class ProductService implements ProductServiceInterface
         return $this->productRepository->all($payload);
     }
 
+    public function publicCatalog(object $payload)
+    {
+        return $this->productRepository->publicCatalog($payload);
+    }
+
     public function findByUuid(string $uuid)
     {
         $product = $this->productRepository->findByUuid($uuid);
