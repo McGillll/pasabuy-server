@@ -13,7 +13,7 @@ class UserSeeder extends Seeder
             return;
         }
 
-        User::factory()->create([
+        User::create([
             'first_name' => 'Admin',
             'last_name' => 'User',
             'email' => 'admin@pasabuy.test',
