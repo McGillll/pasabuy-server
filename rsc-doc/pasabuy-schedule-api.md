@@ -2,6 +2,8 @@
 
 A pasabuy schedule is the seller's shareable "batch" — a subset of the global product catalog, each with a price and optional stock cap for that specific run, plus a public link customers use to order. All endpoints here are admin-only; the customer-facing read/order endpoints live in `public-pasabuy-api.md`.
 
+**Two-phase pricing.** A schedule-product's price starts as an `estimated_price`, set by the seller at listing time before she's physically been to the store — it is never guaranteed. Once she's in-store, she calls the `confirm-price` endpoint to set the real `actual_price` (and flag any promo like B1T1, or mark the item out of stock). Confirming a price triggers server-side recalculation of every live order referencing that product — see `order-api.md` for what happens to affected orders/items.
+
 ## Endpoints overview
 
 | Method | Endpoint                                              | Description                                    |
@@ -13,6 +15,7 @@ A pasabuy schedule is the seller's shareable "batch" — a subset of the global 
 | DELETE | `/api/admin/pasabuy-schedules/{uuid}`                   | Delete a schedule                                |
 | PUT    | `/api/admin/pasabuy-schedules/{uuid}/products`          | Replace the attached product set                 |
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/orders`            | List orders placed against this schedule         |
+| PATCH  | `/api/admin/pasabuy-schedules/{uuid}/schedule-products/{scheduleProductUuid}/confirm-price` | Seller sets the in-store actual price + promo status for one schedule product |
 
 All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin ability). Bodies are JSON (no file uploads on this module, so `PUT` is sent as a real `PUT`).
 
@@ -31,12 +34,15 @@ All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin
 
 ### Schedule-product object (an entry in `products`)
 
-| Field        | Type         | Notes                                             |
-|--------------|--------------|------------------------------------------------------|
-| uuid         | string       | Pivot row's own identifier                            |
-| price        | string       | Decimal string, e.g. `"25.00"` — the price for this schedule, independent of any other schedule |
-| max_quantity | int\|null    | `null` = unlimited                                     |
-| product      | object       | The `Product` object (see `product-api.md`) — `uuid`, `name`, `description`, `image_url`, `is_active` |
+| Field              | Type         | Notes                                             |
+|--------------------|--------------|------------------------------------------------------|
+| uuid               | string       | Pivot row's own identifier                            |
+| estimated_price    | string       | Decimal string, e.g. `"25.00"` — the seller's listing-time guess, independent of any other schedule |
+| actual_price        | string\|null | Set once the seller confirms in-store; `null` until confirmed, or if `promo_status` is `out_of_stock` |
+| promo_status       | string       | `none` \| `b1t1` \| `out_of_stock` — only meaningful once `price_confirmed_at` is set |
+| price_confirmed_at | datetime\|null | `null` = still just an estimate; once set, `actual_price`/`promo_status` reflect the confirmed in-store truth |
+| max_quantity       | int\|null    | `null` = unlimited                                     |
+| product            | object       | The `Product` object (see `product-api.md`) — `uuid`, `name`, `description`, `image_url`, `is_active` |
 
 ---
 
@@ -116,7 +122,7 @@ Replaces the full attached-product set in one call — send every product you wa
 |-----------------------------|--------|----------|------------------------------------|
 | products                    | array  | No       | Omit entirely (or send empty) to detach all — as multipart/form-data, an empty array can't be represented by a literal key, so just send no `products[...]` entries |
 | products[].product_uuid     | string | Yes      | Must be an existing product's uuid |
-| products[].price            | number | Yes      | >= 0                                |
+| products[].estimated_price  | number | Yes      | >= 0 — this only ever sets the *estimate*; use `confirm-price` below to set the in-store actual price |
 | products[].max_quantity     | int    | No       | >= 1, omit/null for unlimited       |
 
 ### Example request (form-encoded array)
@@ -124,7 +130,7 @@ Replaces the full attached-product set in one call — send every product you wa
 ```
 _method=PUT
 products[0][product_uuid]=abe9e0a5-...
-products[0][price]=25
+products[0][estimated_price]=25
 products[0][max_quantity]=2
 ```
 
@@ -136,6 +142,53 @@ Returns the full `PasabuyScheduleResource` with the updated `products` array.
 
 - **404** — schedule not found, or one of the `product_uuid`s doesn't exist (`"Product {uuid} not found."`).
 - **422** — a `price` is missing/negative (`"A valid price is required for product {name}."`), or basic field validation (`products.*.quantity` etc.).
+
+---
+
+## PATCH /api/admin/pasabuy-schedules/{uuid}/schedule-products/{scheduleProductUuid}/confirm-price
+
+Called by the seller once she's physically in the store standing in front of the item. Not gated by schedule status (works while `draft`/`open`/`closed`) — she can confirm truth for individual items while still shopping. Setting this triggers server-side recalculation of every **live** (`pending`/`needs_confirmation`) order that references this product on this schedule:
+
+- **Price same or lower than the order's snapshotted `estimated_price`** → auto-applied; the order item's `actual_price`/`subtotal` update immediately, no customer action needed.
+- **Price higher, and the item has `auto_buy_if_under_max=true` with the new price `<= max_price`** → also auto-applied (evaluated synchronously here, not on a timer).
+- **Price higher, no matching auto-buy preference** → the item is flagged `confirmation_status: 'pending'` (its `actual_price` is set to the *proposed* price for display, but `subtotal`/`quantity` stay at the last-agreed values) and the order's `status` flips to `needs_confirmation`. See `order-api.md` for how the customer resolves this.
+- **`promo_status: 'out_of_stock'`** → every live item for this product is flagged `pending` regardless of price (no valid price to auto-apply); `actual_price` stays `null`.
+- **`promo_status: 'b1t1'`** → independent of the price branch above, one bonus `OrderItem` per live order is created/updated 1:1 with the paid item's quantity (`is_bonus: true`, price `0`, no confirmation needed) — removed automatically if a later confirm moves the promo off `b1t1`.
+
+### Request body
+
+| Field        | Type   | Required                          | Notes                                        |
+|--------------|--------|------------------------------------|---------------------------------------------|
+| actual_price | number | Yes, unless `promo_status=out_of_stock` | >= 0                                    |
+| promo_status | string | Yes                                 | `none` \| `b1t1` \| `out_of_stock`           |
+
+### Example request
+
+```
+_method=PATCH
+actual_price=130
+promo_status=none
+```
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": "Price confirmed",
+  "data": {
+    "schedule_product": { "uuid": "...", "estimated_price": "100.00", "actual_price": "130.00", "promo_status": "none", "price_confirmed_at": "...", "max_quantity": 10, "product": { ... } },
+    "summary": { "auto_applied": 1, "needs_confirmation": 0, "bonus_applied": 0 }
+  }
+}
+```
+
+`summary` counts, across every live order touched, how many items were auto-applied, how many now need the customer's confirmation, and how many got a B1T1 bonus line — use it to show the seller immediate feedback.
+
+### Error responses
+
+- **404** — schedule not found, or `scheduleProductUuid` doesn't belong to it: `{ "success": false, "message": "Schedule product not found.", "data": null }`.
+- **422** — `actual_price` missing/negative when `promo_status` isn't `out_of_stock`, or `promo_status` not one of the three allowed values.
 
 ---
 
@@ -152,5 +205,5 @@ Returns every order placed against this schedule, newest first, each with its `i
 | Status | Meaning              | Applies to                        |
 |--------|-----------------------|-------------------------------------|
 | 401    | Missing/invalid token | all endpoints                        |
-| 404    | Not found             | show, update, destroy, products, orders |
-| 422    | Validation failure    | store, update, products              |
+| 404    | Not found             | show, update, destroy, products, orders, confirm-price |
+| 422    | Validation failure    | store, update, products, confirm-price |

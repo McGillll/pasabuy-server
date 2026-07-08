@@ -25,6 +25,10 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
+        if ($payload->status === 'confirmed' && $order->status === 'needs_confirmation') {
+            throw new InvalidPayloadException('This order still has items awaiting the customer\'s confirmation.');
+        }
+
         return $this->orderRepository->updateStatus($uuid, $payload);
     }
 
