@@ -27,6 +27,8 @@ Standard `{success, message, data}` envelope (see `auth-api.md`).
 | description | string\|null    |                                              |
 | image_url   | string\|null    | Full public URL, or `null` if no image set |
 | is_active   | boolean         | Informational only — inactive products can still be attached to a schedule; use it to hide discontinued items from your own catalog view |
+| last_known_price        | string\|null | Most recent known price for this product across all past pasabuy schedules (prefers a confirmed `actual_price`, falls back to `estimated_price`). Only present on `GET /api/admin/products` (list); omitted on `show`/`store`/`update` responses. `null` if the product has no schedule history yet. |
+| last_known_price_source | string\|null | `"actual"` if `last_known_price` came from a confirmed price, `"estimated"` if it's still just an estimate, `null` if there's no schedule history. Same availability caveat as `last_known_price`. |
 
 Soft-deleted products are excluded from `index`/`show` automatically but remain referenced (by name/price snapshot) on any historical `order_items`.
 
@@ -48,7 +50,7 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
   "success": true,
   "message": "Success",
   "data": {
-    "data": [ { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true } ],
+    "data": [ { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "last_known_price": "25.00", "last_known_price_source": "actual" } ],
     "current_page": 1,
     "last_page": 1,
     "total": 1

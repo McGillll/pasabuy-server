@@ -10,6 +10,7 @@ class ProductRepository implements ProductRepositoryInterface
     public function all(object $payload)
     {
         return Product::filter((array) $payload)
+            ->with('latestScheduleProduct')
             ->orderBy('name')
             ->paginate($payload->per_page ?? 15);
     }
