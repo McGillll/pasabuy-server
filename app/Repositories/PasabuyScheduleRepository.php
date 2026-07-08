@@ -47,7 +47,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $schedule->title = $payload->title;
         $schedule->description = $payload->description ?? null;
         $schedule->cutoff_at = $payload->cutoff_at ?? null;
-        $schedule->status = $payload->status ?? 'draft';
+        $schedule->status = $payload->status ?? 'open';
         $schedule->save();
 
         return $schedule;

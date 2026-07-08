@@ -12,9 +12,9 @@ use Illuminate\Database\Seeder;
 class PasabuyScheduleSeeder extends Seeder
 {
     protected const SCHEDULES = [
+        ['title' => 'Grocery Run - June Week 4', 'description' => 'Fully delivered batch from June', 'status' => 'finished', 'cutoff_days' => -14],
         ['title' => 'Grocery Run - July Week 1', 'description' => 'First batch for July', 'status' => 'closed', 'cutoff_days' => -7],
         ['title' => 'Grocery Run - July Week 2', 'description' => 'Second batch for July', 'status' => 'open', 'cutoff_days' => 3],
-        ['title' => 'Grocery Run - July Week 3', 'description' => 'Draft batch, not yet published', 'status' => 'draft', 'cutoff_days' => 10],
     ];
 
     public function run()
@@ -41,7 +41,7 @@ class PasabuyScheduleSeeder extends Seeder
                 $scheduleProduct->product_id = $product->id;
                 $scheduleProduct->is_disabled = false;
 
-                if ($item['status'] === 'closed') {
+                if (in_array($item['status'], ['closed', 'finished'], true)) {
                     $scheduleProduct->actual_price = $product->default_price;
                     $scheduleProduct->price_confirmed_at = Carbon::now()->subDays(abs($item['cutoff_days']) - 1);
                 }

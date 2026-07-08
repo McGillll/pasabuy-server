@@ -88,6 +88,13 @@ class PasabuyScheduleController extends Controller
         return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule reopened');
     }
 
+    public function finish(Request $request, string $uuid)
+    {
+        $schedule = $this->pasabuyScheduleService->finish($uuid, $request->user()->id);
+
+        return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule finished');
+    }
+
     public function orders(string $uuid)
     {
         $orders = $this->pasabuyScheduleService->orders($uuid);

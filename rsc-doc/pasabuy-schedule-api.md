@@ -19,6 +19,7 @@ A pasabuy schedule is the seller's shareable "batch" — customers can order **a
 | DELETE | `/api/admin/pasabuy-schedules/{uuid}`                   | Delete a schedule                                |
 | POST   | `/api/admin/pasabuy-schedules/{uuid}/close`             | Close the schedule (`open` → `closed`); also (re)snapshots the checklist |
 | POST   | `/api/admin/pasabuy-schedules/{uuid}/reopen`            | Reopen the schedule (`closed` → `open`)          |
+| POST   | `/api/admin/pasabuy-schedules/{uuid}/finish`            | Mark the schedule finished (`closed` → `finished`, terminal — no transitions out) |
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/orders`            | List orders placed against this schedule         |
 | PATCH  | `/api/admin/pasabuy-schedules/{uuid}/schedule-products/{scheduleProductUuid}/confirm-price` | Seller sets the in-store actual price + product status for one schedule product |
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/summary`           | Aggregated per-product quantity/subtotal across all live orders |
@@ -39,7 +40,7 @@ All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin
 | title       | string        |                                                                            |
 | description | string\|null  |                                                                            |
 | cutoff_at   | datetime\|null| Optional deadline; ordering is blocked once passed even if `status` is still `open` |
-| status      | string        | `draft` \| `open` \| `closed`. Only `open` (and before `cutoff_at`) accepts customer orders. Valid transitions: `draft`→`open`, `open`→`closed`, `closed`→`open` |
+| status      | string        | `open` \| `closed` \| `finished`, default `open`. Only `open` (and before `cutoff_at`) accepts customer orders. Valid transitions: `open`→`closed`, `closed`→`open`, `closed`→`finished`. `finished` is terminal. |
 | is_open     | boolean       | Computed: `status === 'open' && (!cutoff_at || cutoff_at is in the future)` — use this to gate the UI |
 | products    | array         | Only the products someone has actually ordered so far on this schedule — see schedule-product object below |
 | created_at  | datetime      |                                                                            |
@@ -78,7 +79,7 @@ Returns a standard Laravel paginator (see `product-api.md` for shape); items do 
 | title       | string   | Yes      |                                          |
 | description | string   | No       |                                          |
 | cutoff_at   | datetime | No       | Any format `strtotime()`/Carbon accepts |
-| status      | string   | No       | `draft`\|`open`\|`closed`, default `draft` |
+| status      | string   | No       | `open`\|`closed`\|`finished`, default `open` |
 
 No product-picking step — customers can order any active catalog product against this schedule as soon as it's `open`.
 
@@ -140,7 +141,7 @@ Transitions `open` → `closed`. No request body. Blocks customer-side ordering/
 
 ### Error responses
 
-- **403** (not owner), **404**, **422** — invalid transition (e.g. already closed, or still `draft`).
+- **403** (not owner), **404**, **422** — invalid transition (e.g. already closed, or already `finished`).
 
 ---
 
@@ -150,9 +151,25 @@ Transitions `closed` → `open`. Same shape/errors as `close`. Does not touch th
 
 ---
 
+## POST /api/admin/pasabuy-schedules/{uuid}/finish
+
+Transitions `closed` → `finished`. No request body. `finished` is a terminal state — there is no transition back to `open`/`closed` from it. Use this once the batch has been fully delivered/settled. Does not touch the checklist or pricing.
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Pasabuy schedule finished", "data": { "uuid": "...", "status": "finished", ... } }
+```
+
+### Error responses
+
+- **403** (not owner), **404**, **422** — invalid transition (e.g. schedule isn't `closed` yet).
+
+---
+
 ## PATCH /api/admin/pasabuy-schedules/{uuid}/schedule-products/{scheduleProductUuid}/confirm-price
 
-Called by the seller once she's physically in the store standing in front of the item. Not gated by schedule status (works while `draft`/`open`/`closed`) — she can confirm truth for individual items while still shopping. Setting this triggers server-side recalculation of every **live** (`pending`/`needs_confirmation`) order that references this product on this schedule:
+Called by the seller once she's physically in the store standing in front of the item. Not gated by schedule status (works while `open`/`closed`/`finished`) — she can confirm truth for individual items while still shopping. Setting this triggers server-side recalculation of every **live** (`pending`/`needs_confirmation`) order that references this product on this schedule:
 
 - **Price same or lower than the order's snapshotted `estimated_price`** → auto-applied; the order item's `actual_price`/`subtotal` update immediately, no customer action needed.
 - **Price higher, and the item has `auto_buy_if_under_max=true` with the new price `<= max_price`** → also auto-applied (evaluated synchronously here, not on a timer).
@@ -326,6 +343,6 @@ Returns the updated `OrderResource` (see `order-api.md`).
 | Status | Meaning              | Applies to                        |
 |--------|-----------------------|-------------------------------------|
 | 401    | Missing/invalid token | all endpoints                        |
-| 403    | Not the schedule's owner | update, destroy, close, reopen, confirm-price, checklist toggle |
-| 404    | Not found             | show, update, destroy, close, reopen, orders, confirm-price, summary, buyers, checklist, order items |
-| 422    | Validation failure    | store, update, close, reopen, confirm-price, checklist toggle, order items |
+| 403    | Not the schedule's owner | update, destroy, close, reopen, finish, confirm-price, checklist toggle |
+| 404    | Not found             | show, update, destroy, close, reopen, finish, orders, confirm-price, summary, buyers, checklist, order items |
+| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, order items |

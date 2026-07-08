@@ -13,9 +13,9 @@ class PasabuySchedule extends Model
     use Filterable;
 
     public const ALLOWED_STATUS_TRANSITIONS = [
-        'draft' => ['open'],
         'open' => ['closed'],
-        'closed' => ['open'],
+        'closed' => ['open', 'finished'],
+        'finished' => [],
     ];
 
     protected static function booted()

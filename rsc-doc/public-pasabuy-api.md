@@ -20,7 +20,7 @@ Standard `{success, message, data}` (see `auth-api.md`).
 
 ## GET /api/public/pasabuy-schedules/{uuid}
 
-Returns the schedule regardless of its `status` — a `draft` or `closed` link still resolves so the frontend can show a friendly "not open" message instead of a dead link. **Check `data.is_open` before showing the login/order form.**
+Returns the schedule regardless of its `status` — a `closed` or `finished` link still resolves so the frontend can show a friendly "not open" message instead of a dead link. **Check `data.is_open` before showing the login/order form.**
 
 ### Success response — 200
 

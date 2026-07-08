@@ -81,6 +81,15 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         return $this->pasabuyScheduleRepository->updateStatus($uuid, 'open');
     }
 
+    public function finish(string $uuid, int $userId)
+    {
+        $schedule = $this->findByUuid($uuid);
+        $this->ensureOwnership($schedule, $userId);
+        $this->assertValidTransition($schedule, 'finished');
+
+        return $this->pasabuyScheduleRepository->updateStatus($uuid, 'finished');
+    }
+
     public function orders(string $uuid)
     {
         $this->findByUuid($uuid);
