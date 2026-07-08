@@ -134,7 +134,7 @@ POST /api/customer/pasabuy-schedules/e9400549-.../orders
 
 - **403** — `"Your account is pending admin approval."`
 - **404** — no schedule with that uuid.
-- **422** — `"This pasabuy is closed for orders."` / `"You already have an order for this pasabuy. Edit your existing order instead."` / `"Product {uuid} is not available in this pasabuy."` / `"Only {n} of \"{product name}\" remaining."` / standard field validation.
+- **422** — `"This pasabuy is closed for orders."` / `"You already have an order for this pasabuy. Edit your existing order instead."` / `"Product {uuid} is not available in this pasabuy."` / standard field validation.
 
 ---
 
@@ -166,7 +166,7 @@ One `Order` object (only if it belongs to the authenticated customer).
 
 ## PUT /api/customer/orders/{uuid}
 
-Full edit: replaces every item on the order (add/remove/change quantity) in one call, same validation/stock-cap rules as placing a new order — except this order's own current quantities are excluded from the stock-cap tally against itself.
+Full edit: replaces every item on the order (add/remove/change quantity) in one call, same validation as placing a new order.
 
 Only allowed while `status` is `pending` **and** the parent schedule is still open and before cutoff (matches `is_editable` on the order object). Once the schedule closes, this always returns 422 — the customer's list is final.
 
@@ -191,13 +191,13 @@ PUT /api/customer/orders/36d53541-.../
 
 - **403** — `"Your account is pending admin approval."`
 - **404** — `"Order not found."` (doesn't exist, or not owned by this customer).
-- **422** — `"This order can no longer be edited."` / `"This pasabuy is closed for orders."` / product-availability and stock-cap messages (same as order placement).
+- **422** — `"This order can no longer be edited."` / `"This pasabuy is closed for orders."` / product-availability messages (same as order placement).
 
 ---
 
 ## PATCH /api/customer/orders/{uuid}/cancel
 
-Cancels the order outright — the first customer-initiated cancel action (previously only admins could cancel). Allowed while `status` is `pending` or `needs_confirmation` (i.e. whenever `is_cancellable` is `true`); frees up the order's items against the schedule's `max_quantity` stock cap immediately.
+Cancels the order outright — the first customer-initiated cancel action (previously only admins could cancel). Allowed while `status` is `pending` or `needs_confirmation` (i.e. whenever `is_cancellable` is `true`).
 
 No request body.
 
@@ -229,7 +229,7 @@ Resolves one item flagged `confirmation_status: 'pending'` after the seller conf
 | Field    | Type    | Required | Notes                                        |
 |----------|---------|----------|---------------------------------------------|
 | action   | string  | Yes      | `accept` \| `remove`                          |
-| quantity | int     | No       | Only meaningful with `accept` — lets the customer reduce (or otherwise change) the quantity while accepting the new price; defaults to the item's current quantity if omitted. Still validated against the product's `max_quantity` stock cap |
+| quantity | int     | No       | Only meaningful with `accept` — lets the customer reduce (or otherwise change) the quantity while accepting the new price; defaults to the item's current quantity if omitted |
 
 - **`accept`** — locks in the seller's confirmed `actual_price` (at the given or existing quantity), sets `confirmation_status: 'accepted'`, and recomputes `subtotal`/`total_amount`.
 - **`remove`** — sets `confirmation_status: 'removed'`, zeroes the item's `subtotal`, and recomputes `total_amount`. The item stays on the order (for history) but no longer contributes to the total.
@@ -250,7 +250,7 @@ PATCH /api/customer/orders/36d53541-.../items/91057f89-.../resolve
 ### Error responses
 
 - **404** — `"Order not found."` (doesn't exist, or not owned by this customer), or `"Order item not found or not pending confirmation."`.
-- **422** — `"This order has no pending confirmations."` (order isn't `needs_confirmation`), or `"Only {n} of \"{product name}\" remaining."` (the requested `quantity` on accept exceeds the stock cap).
+- **422** — `"This order has no pending confirmations."` (order isn't `needs_confirmation`).
 
 ---
 

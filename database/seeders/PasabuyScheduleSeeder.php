@@ -39,12 +39,10 @@ class PasabuyScheduleSeeder extends Seeder
                 $scheduleProduct = new PasabuyScheduleProduct;
                 $scheduleProduct->pasabuy_schedule_id = $schedule->id;
                 $scheduleProduct->product_id = $product->id;
-                $scheduleProduct->estimated_price = fake()->randomFloat(2, 20, 500);
-                $scheduleProduct->max_quantity = fake()->numberBetween(10, 50);
                 $scheduleProduct->is_disabled = false;
 
                 if ($item['status'] === 'closed') {
-                    $scheduleProduct->actual_price = $scheduleProduct->estimated_price;
+                    $scheduleProduct->actual_price = $product->default_price;
                     $scheduleProduct->price_confirmed_at = Carbon::now()->subDays(abs($item['cutoff_days']) - 1);
                 }
 

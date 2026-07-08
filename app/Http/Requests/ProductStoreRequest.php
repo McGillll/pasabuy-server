@@ -18,6 +18,8 @@ class ProductStoreRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['sometimes', 'boolean'],
+            'default_price' => ['required', 'numeric', 'min:0'],
+            'category_uuid' => ['nullable', 'string', 'exists:product_categories,uuid'],
         ];
     }
 }

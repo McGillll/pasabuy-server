@@ -18,6 +18,8 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('image_path')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->foreignId('category_id')->nullable();
+            $table->decimal('default_price', 10, 2);
             $table->timestamps();
             $table->softDeletes();
         });

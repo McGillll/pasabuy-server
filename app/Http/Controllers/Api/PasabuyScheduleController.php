@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PasabuyScheduleProductConfirmPriceRequest;
+use App\Http\Requests\PasabuyScheduleOrderItemsUpdateRequest;
 use App\Http\Requests\PasabuyScheduleStoreRequest;
 use App\Http\Requests\PasabuyScheduleSyncProductsRequest;
 use App\Http\Requests\PasabuyScheduleUpdateRequest;
 use App\Http\Resources\OrderResource;
 use App\Http\Resources\PasabuyScheduleProductResource;
 use App\Http\Resources\PasabuyScheduleResource;
+use App\Http\Resources\PasabuyScheduleSummaryItemResource;
+use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
@@ -20,6 +23,7 @@ class PasabuyScheduleController extends Controller
 
     public function __construct(
         protected PasabuyScheduleServiceInterface $pasabuyScheduleService,
+        protected OrderServiceInterface $orderService,
     ) {}
 
     public function index(Request $request)
@@ -53,21 +57,41 @@ class PasabuyScheduleController extends Controller
 
     public function update(PasabuyScheduleUpdateRequest $request, string $uuid)
     {
-        $schedule = $this->pasabuyScheduleService->update($uuid, (object) $request->validated());
+        $payload = (object) $request->validated();
+        $payload->user_id = $request->user()->id;
+
+        $schedule = $this->pasabuyScheduleService->update($uuid, $payload);
 
         return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule updated successfully');
     }
 
-    public function destroy(string $uuid)
+    public function destroy(Request $request, string $uuid)
     {
-        $this->pasabuyScheduleService->delete($uuid);
+        $this->pasabuyScheduleService->delete($uuid, $request->user()->id);
 
         return $this->success(null, 'Pasabuy schedule deleted successfully');
     }
 
+    public function close(Request $request, string $uuid)
+    {
+        $schedule = $this->pasabuyScheduleService->close($uuid, $request->user()->id);
+
+        return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule closed');
+    }
+
+    public function reopen(Request $request, string $uuid)
+    {
+        $schedule = $this->pasabuyScheduleService->reopen($uuid, $request->user()->id);
+
+        return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule reopened');
+    }
+
     public function syncProducts(PasabuyScheduleSyncProductsRequest $request, string $uuid)
     {
-        $schedule = $this->pasabuyScheduleService->syncProducts($uuid, (object) $request->validated());
+        $payload = (object) $request->validated();
+        $payload->user_id = $request->user()->id;
+
+        $schedule = $this->pasabuyScheduleService->syncProducts($uuid, $payload);
 
         return $this->success(new PasabuyScheduleResource($schedule), 'Products updated successfully');
     }
@@ -81,11 +105,28 @@ class PasabuyScheduleController extends Controller
 
     public function confirmProductPrice(PasabuyScheduleProductConfirmPriceRequest $request, string $uuid, string $scheduleProductUuid)
     {
-        $result = $this->pasabuyScheduleService->confirmProductPrice($uuid, $scheduleProductUuid, (object) $request->validated());
+        $payload = (object) $request->validated();
+        $payload->user_id = $request->user()->id;
+
+        $result = $this->pasabuyScheduleService->confirmProductPrice($uuid, $scheduleProductUuid, $payload);
 
         return $this->success([
             'schedule_product' => new PasabuyScheduleProductResource($result->schedule_product),
             'summary' => $result->summary,
         ], 'Price confirmed');
+    }
+
+    public function summary(string $uuid)
+    {
+        $items = $this->pasabuyScheduleService->summary($uuid);
+
+        return $this->success(PasabuyScheduleSummaryItemResource::collection($items));
+    }
+
+    public function updateOrderItems(PasabuyScheduleOrderItemsUpdateRequest $request, string $uuid, string $orderUuid)
+    {
+        $order = $this->orderService->updateItemsForSeller($uuid, $orderUuid, (object) $request->validated());
+
+        return $this->success(new OrderResource($order), 'Order items updated');
     }
 }

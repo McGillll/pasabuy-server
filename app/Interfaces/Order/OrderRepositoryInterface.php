@@ -8,6 +8,8 @@ interface OrderRepositoryInterface
 
     public function findOwnedByUuid(string $uuid, int $userId);
 
+    public function findByUuidForSchedule(string $uuid, int $scheduleId);
+
     public function findActiveForSchedule(int $userId, int $scheduleId);
 
     public function myOrders(int $userId, object $payload);
@@ -19,8 +21,6 @@ interface OrderRepositoryInterface
     public function addItems(object $order, object $payload);
 
     public function replaceItems(object $order, object $payload);
-
-    public function orderedQuantity(int $scheduleId, int $productId, ?int $excludeOrderId = null);
 
     public function cancel(object $order);
 

@@ -81,7 +81,9 @@ PATCH /api/admin/orders/36d53541-.../status
 - **404** — no order with that uuid: `{ "success": false, "message": "Order not found.", "data": null }`
 - **422** — `status` missing or not one of `confirmed`/`cancelled`, **or** trying to set `confirmed` while the order's current status is `needs_confirmation`: `{ "success": false, "message": "This order still has items awaiting the customer's confirmation.", "data": null }`
 
-Note: cancelling an order frees up its quantity against the schedule's `max_quantity` stock cap for future orders — `pending`, `needs_confirmation`, and `confirmed` orders all count against stock (see `public-pasabuy-api.md`).
+## Seller order-item editor
+
+Sellers correct a customer's order (add/remove items, change quantities) once the schedule is `closed`, via `PUT /api/admin/pasabuy-schedules/{scheduleUuid}/orders/{orderUuid}/items` — see `pasabuy-schedule-api.md` for the full request/response shape and error cases.
 
 ## Error status summary
 

@@ -1,6 +1,6 @@
 # Product API
 
-Global product catalog, managed by the seller/admin. Products have no price of their own — price is set per pasabuy schedule (see `pasabuy-schedule-api.md`).
+Global product catalog, managed by the seller/admin. Each product has its own authoritative `default_price` and an optional `category` (see `product-category-api.md`) — pasabuy schedules no longer set their own price estimate; they just reference the product's `default_price`.
 
 ## Endpoints overview
 
@@ -27,8 +27,10 @@ Standard `{success, message, data}` envelope (see `auth-api.md`).
 | description | string\|null    |                                              |
 | image_url   | string\|null    | Full public URL, or `null` if no image set |
 | is_active   | boolean         | Informational only — inactive products can still be attached to a schedule; use it to hide discontinued items from your own catalog view |
-| last_known_price        | string\|null | Most recent known price for this product across all past pasabuy schedules (prefers a confirmed `actual_price`, falls back to `estimated_price`). Only present on `GET /api/admin/products` (list); omitted on `show`/`store`/`update` responses. `null` if the product has no schedule history yet. |
-| last_known_price_source | string\|null | `"actual"` if `last_known_price` came from a confirmed price, `"estimated"` if it's still just an estimate, `null` if there's no schedule history. Same availability caveat as `last_known_price`. |
+| default_price | string        | Decimal string, e.g. `"25.00"` — the authoritative catalog price, used everywhere the product is scheduled/ordered/summarized |
+| category    | object\|null    | The `ProductCategory` object (see `product-category-api.md`), or `null` if uncategorized |
+| last_confirmed_price | string\|null | The most recent in-store `actual_price` confirmed for this product on any past pasabuy schedule. Only present on `GET /api/admin/products` (list); omitted on `show`/`store`/`update` responses. `null` if never confirmed. Purely informational history — does not affect `default_price`. |
+| last_promo_status | string\|null | The promo status (`none`\|`b1t1`\|`out_of_stock`) tied to `last_confirmed_price`. Same availability caveat. |
 
 Soft-deleted products are excluded from `index`/`show` automatically but remain referenced (by name/price snapshot) on any historical `order_items`.
 
@@ -50,7 +52,7 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
   "success": true,
   "message": "Success",
   "data": {
-    "data": [ { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "last_known_price": "25.00", "last_known_price_source": "actual" } ],
+    "data": [ { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "default_price": "25.00", "category": { "uuid": "...", "name": "Noodles & Canned Goods", "description": null, "is_active": true }, "last_confirmed_price": "25.00", "last_promo_status": "none" } ],
     "current_page": 1,
     "last_page": 1,
     "total": 1
@@ -66,22 +68,25 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
 
 ### Request body (multipart/form-data)
 
-| Field       | Type   | Required | Notes                    |
-|-------------|--------|----------|----------------------------|
-| name        | string | Yes      |                             |
-| description | string | No       |                             |
-| image       | file   | No       | Image file, max 4MB        |
-| is_active   | bool   | No       | Defaults to `true`          |
+| Field         | Type   | Required | Notes                    |
+|---------------|--------|----------|----------------------------|
+| name          | string | Yes      |                             |
+| description   | string | No       |                             |
+| image         | file   | No       | Image file, max 4MB        |
+| is_active     | bool   | No       | Defaults to `true`          |
+| default_price | number | Yes      | >= 0                        |
+| category_uuid | string | No       | Must be an existing `ProductCategory` uuid; omit for uncategorized |
 
 ### Success response — 201
 
 ```json
-{ "success": true, "message": "Product created successfully", "data": { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true } }
+{ "success": true, "message": "Product created successfully", "data": { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "default_price": "25.00", "category": null } }
 ```
 
 ### Error responses
 
-- **422** — validation failure (missing `name`, or `image` not a valid image).
+- **404** — `category_uuid` doesn't match an existing category.
+- **422** — validation failure (missing `name`/`default_price`, or `image` not a valid image).
 
 ---
 
@@ -132,5 +137,5 @@ Soft-deletes the product (reversible in the database — no restore endpoint is 
 | Status | Meaning               | Applies to                  |
 |--------|------------------------|-------------------------------|
 | 401    | Missing/invalid token  | all endpoints                  |
-| 404    | Product not found      | show, update, destroy          |
+| 404    | Product or category not found | show, update, destroy, store, update |
 | 422    | Validation failure     | store, update                  |

@@ -12,6 +12,12 @@ class PasabuySchedule extends Model
 {
     use Filterable;
 
+    public const ALLOWED_STATUS_TRANSITIONS = [
+        'draft' => ['open'],
+        'open' => ['closed'],
+        'closed' => ['open'],
+    ];
+
     protected static function booted()
     {
         static::creating(function (PasabuySchedule $schedule) {

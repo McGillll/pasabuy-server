@@ -16,8 +16,6 @@ class PasabuyScheduleSyncProductsRequest extends FormRequest
         return [
             'products' => ['sometimes', 'array'],
             'products.*.product_uuid' => ['required', 'string'],
-            'products.*.estimated_price' => ['required', 'numeric', 'min:0'],
-            'products.*.max_quantity' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }

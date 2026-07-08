@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PasabuySchedule;
 use App\Models\PasabuyScheduleProduct;
@@ -20,8 +21,20 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     {
         return PasabuySchedule::with([
             'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
-            'scheduleProducts.product',
+            'scheduleProducts.product.category',
         ])->where('uuid', $uuid)->first();
+    }
+
+    public function updateStatus(string $uuid, string $status)
+    {
+        $schedule = PasabuySchedule::where('uuid', $uuid)->first();
+        $schedule->status = $status;
+        $schedule->save();
+
+        return $schedule->fresh([
+            'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
+            'scheduleProducts.product.category',
+        ]);
     }
 
     public function create(object $payload)
@@ -61,7 +74,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     public function syncProducts(string $uuid, object $payload)
     {
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
-        $requestedProductIds = collect($payload->products)->pluck('product_id')->all();
+        $requestedProductIds = $payload->products;
 
         $schedule->scheduleProducts()
             ->whereNotIn('product_id', $requestedProductIds)
@@ -80,22 +93,20 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
                 }
             });
 
-        foreach ($payload->products as $product) {
+        foreach ($requestedProductIds as $productId) {
             $scheduleProduct = $schedule->scheduleProducts()
-                ->where('product_id', $product['product_id'])
+                ->where('product_id', $productId)
                 ->first() ?? new PasabuyScheduleProduct;
 
             $scheduleProduct->pasabuy_schedule_id = $schedule->id;
-            $scheduleProduct->product_id = $product['product_id'];
-            $scheduleProduct->estimated_price = $product['estimated_price'];
-            $scheduleProduct->max_quantity = $product['max_quantity'];
+            $scheduleProduct->product_id = $productId;
             $scheduleProduct->is_disabled = false;
             $scheduleProduct->save();
         }
 
         return $schedule->fresh([
             'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
-            'scheduleProducts.product',
+            'scheduleProducts.product.category',
         ]);
     }
 
@@ -103,7 +114,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     {
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
 
-        return $schedule->orders()->with('items')->latest()->get();
+        return $schedule->orders()->with('items.product')->latest()->get();
     }
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload)
@@ -129,5 +140,19 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         return PasabuyScheduleProduct::where('pasabuy_schedule_id', $scheduleId)
             ->where('product_id', $productId)
             ->first();
+    }
+
+    public function summary(string $uuid)
+    {
+        $schedule = PasabuySchedule::where('uuid', $uuid)->first();
+
+        return OrderItem::selectRaw('product_id, SUM(quantity) as total_quantity')
+            ->where('is_bonus', false)
+            ->where('confirmation_status', '!=', 'removed')
+            ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id)
+                ->whereIn('status', Order::LIVE_STATUSES))
+            ->groupBy('product_id')
+            ->with('product.category')
+            ->get();
     }
 }

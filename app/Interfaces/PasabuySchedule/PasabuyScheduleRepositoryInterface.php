@@ -14,6 +14,8 @@ interface PasabuyScheduleRepositoryInterface
 
     public function delete(string $uuid);
 
+    public function updateStatus(string $uuid, string $status);
+
     public function syncProducts(string $uuid, object $payload);
 
     public function orders(string $uuid);
@@ -21,4 +23,6 @@ interface PasabuyScheduleRepositoryInterface
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload);
 
     public function findScheduleProduct(int $scheduleId, int $productId);
+
+    public function summary(string $uuid);
 }

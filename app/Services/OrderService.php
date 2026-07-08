@@ -76,7 +76,7 @@ class OrderService implements OrderServiceInterface
 
         $this->ensureScheduleIsOpen($schedule);
 
-        $resolvedItems = $this->resolveItems($schedule, $payload->items, $order->id);
+        $resolvedItems = $this->resolveItems($schedule, $payload->items);
 
         return DB::transaction(function () use ($order, $resolvedItems) {
             return $this->orderRepository->replaceItems($order, (object) ['items' => $resolvedItems]);
@@ -189,19 +189,35 @@ class OrderService implements OrderServiceInterface
             $quantity = $payload->quantity ?? $item->quantity;
             $scheduleProduct = $this->pasabuyScheduleRepository->findScheduleProduct($order->pasabuy_schedule_id, $item->product_id);
 
-            if ($scheduleProduct->max_quantity !== null) {
-                $alreadyOrdered = $this->orderRepository->orderedQuantity($order->pasabuy_schedule_id, $item->product_id, $order->id);
-
-                if ($alreadyOrdered + $quantity > $scheduleProduct->max_quantity) {
-                    $remaining = max(0, $scheduleProduct->max_quantity - $alreadyOrdered);
-                    throw new InvalidPayloadException("Only {$remaining} of \"{$item->product_name}\" remaining.");
-                }
-            }
-
             $this->orderRepository->applyResolvedPrice($item, (float) $scheduleProduct->actual_price, $quantity);
         }
 
         return $this->orderRepository->revertToPendingIfResolved($order);
+    }
+
+    public function updateItemsForSeller(string $scheduleUuid, string $orderUuid, object $payload)
+    {
+        $schedule = $this->pasabuyScheduleRepository->findByUuid($scheduleUuid);
+
+        if (! $schedule) {
+            throw new NotFoundException('Pasabuy schedule not found.');
+        }
+
+        if ($schedule->status !== 'closed') {
+            throw new InvalidPayloadException('Order items can only be edited by the seller while the schedule is closed.');
+        }
+
+        $order = $this->orderRepository->findByUuidForSchedule($orderUuid, $schedule->id);
+
+        if (! $order) {
+            throw new NotFoundException('Order not found.');
+        }
+
+        $resolvedItems = $this->resolveSellerItems($schedule, $payload->items);
+
+        return DB::transaction(function () use ($order, $resolvedItems) {
+            return $this->orderRepository->replaceItems($order, (object) ['items' => $resolvedItems]);
+        });
     }
 
     protected function ensureScheduleIsOpen($schedule)
@@ -213,35 +229,50 @@ class OrderService implements OrderServiceInterface
         }
     }
 
-    protected function resolveItems($schedule, array $items, ?int $excludeOrderId = null)
+    protected function resolveItems($schedule, array $items)
     {
         $scheduleProductsByProductUuid = $schedule->scheduleProducts->keyBy(fn ($scheduleProduct) => $scheduleProduct->product->uuid);
 
-        return collect($items)->map(function ($item) use ($scheduleProductsByProductUuid, $schedule, $excludeOrderId) {
+        return collect($items)->map(function ($item) use ($scheduleProductsByProductUuid) {
             $scheduleProduct = $scheduleProductsByProductUuid->get($item['product_uuid']);
 
             if (! $scheduleProduct) {
                 throw new InvalidPayloadException("Product {$item['product_uuid']} is not available in this pasabuy.");
             }
 
-            if ($scheduleProduct->max_quantity !== null) {
-                $alreadyOrdered = $this->orderRepository->orderedQuantity($schedule->id, $scheduleProduct->product_id, $excludeOrderId);
-
-                if ($alreadyOrdered + $item['quantity'] > $scheduleProduct->max_quantity) {
-                    $remaining = max(0, $scheduleProduct->max_quantity - $alreadyOrdered);
-                    throw new InvalidPayloadException("Only {$remaining} of \"{$scheduleProduct->product->name}\" remaining.");
-                }
-            }
-
             return [
                 'product_id' => $scheduleProduct->product_id,
                 'product_name' => $scheduleProduct->product->name,
-                'estimated_price' => $scheduleProduct->estimated_price,
+                'estimated_price' => $scheduleProduct->product->default_price,
                 'actual_price' => $scheduleProduct->actual_price,
                 'confirmation_status' => $scheduleProduct->promo_status === 'out_of_stock' ? 'pending' : 'none',
                 'quantity' => $item['quantity'],
                 'max_price' => $item['max_price'] ?? null,
                 'auto_buy_if_under_max' => $item['auto_buy_if_under_max'] ?? false,
+            ];
+        })->all();
+    }
+
+    protected function resolveSellerItems($schedule, array $items)
+    {
+        $scheduleProductsByProductUuid = $schedule->scheduleProducts->keyBy(fn ($scheduleProduct) => $scheduleProduct->product->uuid);
+
+        return collect($items)->map(function ($item) use ($scheduleProductsByProductUuid) {
+            $scheduleProduct = $scheduleProductsByProductUuid->get($item['product_uuid']);
+
+            if (! $scheduleProduct) {
+                throw new InvalidPayloadException("Product {$item['product_uuid']} is not available in this pasabuy.");
+            }
+
+            return [
+                'product_id' => $scheduleProduct->product_id,
+                'product_name' => $scheduleProduct->product->name,
+                'estimated_price' => $scheduleProduct->product->default_price,
+                'actual_price' => $scheduleProduct->price_confirmed_at ? $scheduleProduct->actual_price : null,
+                'confirmation_status' => $scheduleProduct->promo_status === 'out_of_stock' ? 'pending' : 'none',
+                'quantity' => $item['quantity'],
+                'max_price' => null,
+                'auto_buy_if_under_max' => false,
             ];
         })->all();
     }

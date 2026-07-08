@@ -36,12 +36,10 @@ Returns the schedule regardless of its `status` — a `draft` or `closed` link s
     "products": [
       {
         "uuid": "a5a95025-...",
-        "estimated_price": "25.00",
         "actual_price": null,
         "promo_status": "none",
         "price_confirmed_at": null,
-        "max_quantity": 2,
-        "product": { "uuid": "abe9e0a5-...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true }
+        "product": { "uuid": "abe9e0a5-...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "default_price": "25.00", "category": { "uuid": "...", "name": "Noodles & Canned Goods", "description": null, "is_active": true } }
       }
     ],
     "created_at": "..."
@@ -49,7 +47,7 @@ Returns the schedule regardless of its `status` — a `draft` or `closed` link s
 }
 ```
 
-`estimated_price` is the seller's listing-time guess and should always be labeled as an estimate in the UI — never present it as final. Once the seller confirms in-store (see `confirm-price` in `pasabuy-schedule-api.md`), `actual_price`/`promo_status`/`price_confirmed_at` reflect the confirmed truth; show `actual_price` in place of `estimated_price` once `price_confirmed_at` is set. These fields are safe to expose publicly (pre-order informational data, not sensitive).
+`product.default_price` is the catalog price and should be labeled as an estimate in the UI until the seller confirms in-store — never present it as final. Once the seller confirms (see `confirm-price` in `pasabuy-schedule-api.md`), `actual_price`/`promo_status`/`price_confirmed_at` reflect the confirmed truth; show `actual_price` in place of `product.default_price` once `price_confirmed_at` is set. These fields are safe to expose publicly (pre-order informational data, not sensitive).
 
 Use each product entry's `product.uuid` (not the schedule-product `uuid`) as the identifier when placing an order — see `customer-api.md`.
 

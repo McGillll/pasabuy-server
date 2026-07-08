@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'description', 'image_path', 'is_active'])]
+#[Fillable(['name', 'description', 'image_path', 'is_active', 'category_id', 'default_price'])]
 class Product extends Model
 {
     use Filterable, HasFactory, SoftDeletes;
@@ -31,5 +31,10 @@ class Product extends Model
     public function latestScheduleProduct()
     {
         return $this->hasOne(PasabuyScheduleProduct::class)->latestOfMany('updated_at');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(ProductCategory::class, 'category_id');
     }
 }

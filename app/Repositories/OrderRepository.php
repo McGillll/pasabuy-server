@@ -21,6 +21,14 @@ class OrderRepository implements OrderRepositoryInterface
             ->first();
     }
 
+    public function findByUuidForSchedule(string $uuid, int $scheduleId)
+    {
+        return Order::with('items.product', 'pasabuySchedule')
+            ->where('uuid', $uuid)
+            ->where('pasabuy_schedule_id', $scheduleId)
+            ->first();
+    }
+
     public function findActiveForSchedule(int $userId, int $scheduleId)
     {
         return Order::where('user_id', $userId)
@@ -87,17 +95,6 @@ class OrderRepository implements OrderRepositoryInterface
         $order->items()->delete();
 
         return $this->addItems($order, $payload);
-    }
-
-    public function orderedQuantity(int $scheduleId, int $productId, ?int $excludeOrderId = null)
-    {
-        return OrderItem::where('product_id', $productId)
-            ->when($excludeOrderId, fn ($query) => $query->where('order_id', '!=', $excludeOrderId))
-            ->whereHas('order', function ($query) use ($scheduleId) {
-                $query->where('pasabuy_schedule_id', $scheduleId)
-                    ->whereIn('status', Order::LIVE_STATUSES);
-            })
-            ->sum('quantity');
     }
 
     public function cancel(object $order)
