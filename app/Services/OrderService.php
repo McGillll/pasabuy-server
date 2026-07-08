@@ -119,7 +119,7 @@ class OrderService implements OrderServiceInterface
         DB::transaction(function () use ($items, $scheduleProduct, $summary) {
             foreach ($items as $item) {
                 if ($scheduleProduct->promo_status === 'out_of_stock') {
-                    $this->orderRepository->flagNeedsConfirmation($item);
+                    $this->orderRepository->flagNeedsConfirmation($item, null);
                     $summary->needs_confirmation++;
 
                     continue;
@@ -141,7 +141,7 @@ class OrderService implements OrderServiceInterface
                     continue;
                 }
 
-                $this->orderRepository->flagNeedsConfirmation($item);
+                $this->orderRepository->flagNeedsConfirmation($item, $actualPrice);
                 $summary->needs_confirmation++;
             }
 
@@ -236,6 +236,8 @@ class OrderService implements OrderServiceInterface
                 'actual_price' => $scheduleProduct->actual_price,
                 'confirmation_status' => $scheduleProduct->promo_status === 'out_of_stock' ? 'pending' : 'none',
                 'quantity' => $item['quantity'],
+                'max_price' => $item['max_price'] ?? null,
+                'auto_buy_if_under_max' => $item['auto_buy_if_under_max'] ?? false,
             ];
         })->all();
     }

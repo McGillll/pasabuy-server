@@ -70,6 +70,8 @@ class OrderRepository implements OrderRepositoryInterface
             $orderItem->estimated_price = $item['estimated_price'];
             $orderItem->actual_price = $item['actual_price'] ?? null;
             $orderItem->confirmation_status = $item['confirmation_status'] ?? 'none';
+            $orderItem->max_price = $item['max_price'] ?? null;
+            $orderItem->auto_buy_if_under_max = $item['auto_buy_if_under_max'] ?? false;
             $orderItem->quantity = $item['quantity'];
             $orderItem->subtotal = ($item['actual_price'] ?? $item['estimated_price']) * $item['quantity'];
             $orderItem->save();
@@ -132,9 +134,10 @@ class OrderRepository implements OrderRepositoryInterface
         return $item->fresh();
     }
 
-    public function flagNeedsConfirmation(object $item)
+    public function flagNeedsConfirmation(object $item, ?float $proposedPrice)
     {
         $item->confirmation_status = 'pending';
+        $item->actual_price = $proposedPrice;
         $item->save();
 
         $order = $item->order;

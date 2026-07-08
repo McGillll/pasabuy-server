@@ -112,6 +112,10 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             ->whereHas('pasabuySchedule', fn ($query) => $query->where('uuid', $scheduleUuid))
             ->first();
 
+        if (! $scheduleProduct) {
+            return null;
+        }
+
         $scheduleProduct->actual_price = $payload->promo_status === 'out_of_stock' ? null : $payload->actual_price;
         $scheduleProduct->promo_status = $payload->promo_status;
         $scheduleProduct->price_confirmed_at = now();

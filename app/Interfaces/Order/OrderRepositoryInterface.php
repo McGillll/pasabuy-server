@@ -28,7 +28,7 @@ interface OrderRepositoryInterface
 
     public function applyResolvedPrice(object $item, ?float $actualPrice, ?int $quantity = null);
 
-    public function flagNeedsConfirmation(object $item);
+    public function flagNeedsConfirmation(object $item, ?float $proposedPrice);
 
     public function addOrUpdateBonusItem(object $order, object $scheduleProduct);
 

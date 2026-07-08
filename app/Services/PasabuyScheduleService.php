@@ -94,6 +94,10 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
 
         $scheduleProduct = $this->pasabuyScheduleRepository->confirmProductPrice($scheduleUuid, $scheduleProductUuid, $payload);
 
+        if (! $scheduleProduct) {
+            throw new NotFoundException('Schedule product not found.');
+        }
+
         $summary = $this->orderService->recalculateForScheduleProduct($scheduleProduct);
 
         return (object) ['schedule_product' => $scheduleProduct, 'summary' => $summary];
