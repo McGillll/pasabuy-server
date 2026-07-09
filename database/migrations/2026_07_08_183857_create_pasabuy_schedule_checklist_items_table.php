@@ -18,7 +18,6 @@ return new class extends Migration
             $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
             $table->string('product_name');
             $table->unsignedInteger('quantity')->default(0);
-            $table->boolean('is_checked')->default(false);
             $table->timestamp('checked_at')->nullable();
             $table->unsignedInteger('additional_quantity')->default(0);
             $table->unsignedInteger('return_quantity')->default(0);

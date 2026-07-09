@@ -165,7 +165,6 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             return null;
         }
 
-        $item->is_checked = $isChecked;
         $item->checked_at = $isChecked ? now() : null;
         $item->save();
 
@@ -189,7 +188,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
                 if (! $item->exists) {
                     $item->product_name = $row->product->name;
                     $item->quantity = $row->total_quantity;
-                    $item->is_checked = false;
+                    $item->checked_at = null;
                     $item->additional_quantity = 0;
                     $item->return_quantity = 0;
                 } elseif (! $item->is_checked) {

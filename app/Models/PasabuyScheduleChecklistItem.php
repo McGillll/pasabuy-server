@@ -3,10 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-#[Fillable(['product_name', 'quantity', 'is_checked', 'checked_at', 'additional_quantity', 'return_quantity'])]
+#[Fillable(['pasabuy_schedule_id', 'product_id', 'product_name', 'quantity', 'checked_at', 'additional_quantity', 'return_quantity'])]
 class PasabuyScheduleChecklistItem extends Model
 {
     protected static function booted()
@@ -19,9 +20,13 @@ class PasabuyScheduleChecklistItem extends Model
     protected function casts()
     {
         return [
-            'is_checked' => 'boolean',
             'checked_at' => 'datetime',
         ];
+    }
+
+    protected function isChecked(): Attribute
+    {
+        return Attribute::make(get: fn () => $this->checked_at !== null);
     }
 
     public function pasabuySchedule()
