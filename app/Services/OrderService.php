@@ -120,13 +120,13 @@ class OrderService implements OrderServiceInterface
     {
         $items = $this->orderRepository->findLiveItemsForProduct($scheduleProduct->pasabuy_schedule_id, $scheduleProduct->product_id);
 
-        $summary = (object) ['auto_applied' => 0, 'needs_confirmation' => 0, 'bonus_applied' => 0];
+        $summary = (object) ['auto_applied' => 0, 'needs_confirmation' => 0, 'bonus_applied' => 0, 'out_of_stock' => 0];
 
         DB::transaction(function () use ($items, $scheduleProduct, $summary) {
             foreach ($items as $item) {
                 if ($scheduleProduct->product_status === 'out_of_stock') {
-                    $this->orderRepository->flagNeedsConfirmation($item, null);
-                    $summary->needs_confirmation++;
+                    $this->orderRepository->markItemOutOfStock($item);
+                    $summary->out_of_stock++;
 
                     continue;
                 }

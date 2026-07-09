@@ -36,5 +36,7 @@ interface OrderRepositoryInterface
 
     public function markItemRemoved(object $item);
 
+    public function markItemOutOfStock(object $item);
+
     public function revertToPendingIfResolved(object $order);
 }

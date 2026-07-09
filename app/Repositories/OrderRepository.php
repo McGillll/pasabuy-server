@@ -193,6 +193,18 @@ class OrderRepository implements OrderRepositoryInterface
         return $item->fresh();
     }
 
+    public function markItemOutOfStock(object $item)
+    {
+        $item->confirmation_status = 'out_of_stock';
+        $item->actual_price = null;
+        $item->subtotal = 0;
+        $item->save();
+
+        $this->recalcTotal($item->order);
+
+        return $item->fresh();
+    }
+
     public function revertToPendingIfResolved(object $order)
     {
         $hasPending = $order->items()->where('confirmation_status', 'pending')->exists();
