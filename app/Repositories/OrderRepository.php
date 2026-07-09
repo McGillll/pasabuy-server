@@ -77,9 +77,7 @@ class OrderRepository implements OrderRepositoryInterface
             $orderItem->product_name = $item['product_name'];
             $orderItem->estimated_price = $item['estimated_price'];
             $orderItem->actual_price = $item['actual_price'] ?? null;
-            $orderItem->confirmation_status = $item['confirmation_status'] ?? 'none';
-            $orderItem->max_price = $item['max_price'] ?? null;
-            $orderItem->auto_buy_if_under_max = $item['auto_buy_if_under_max'] ?? false;
+            $orderItem->is_out_of_stock = $item['is_out_of_stock'] ?? false;
             $orderItem->quantity = $item['quantity'];
             $orderItem->subtotal = ($item['actual_price'] ?? $item['estimated_price']) * $item['quantity'];
             $orderItem->save();
@@ -110,7 +108,7 @@ class OrderRepository implements OrderRepositoryInterface
         return OrderItem::where('product_id', $productId)
             ->where('is_bonus', false)
             ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $scheduleId)
-                ->whereIn('status', ['pending', 'needs_confirmation']))
+                ->where('status', 'pending'))
             ->with('order')
             ->get();
     }
@@ -122,27 +120,11 @@ class OrderRepository implements OrderRepositoryInterface
         }
 
         $item->actual_price = $actualPrice;
-        $item->confirmation_status = 'accepted';
+        $item->is_out_of_stock = false;
         $item->subtotal = $actualPrice * $item->quantity;
         $item->save();
 
         $this->recalcTotal($item->order);
-
-        return $item->fresh();
-    }
-
-    public function flagNeedsConfirmation(object $item, ?float $proposedPrice)
-    {
-        $item->confirmation_status = 'pending';
-        $item->actual_price = $proposedPrice;
-        $item->save();
-
-        $order = $item->order;
-
-        if ($order->status === 'pending') {
-            $order->status = 'needs_confirmation';
-            $order->save();
-        }
 
         return $item->fresh();
     }
@@ -169,7 +151,6 @@ class OrderRepository implements OrderRepositoryInterface
         $bonusItem->estimated_price = 0;
         $bonusItem->actual_price = 0;
         $bonusItem->is_bonus = true;
-        $bonusItem->confirmation_status = 'none';
         $bonusItem->quantity = $paidItem->quantity;
         $bonusItem->subtotal = 0;
         $bonusItem->save();
@@ -182,20 +163,9 @@ class OrderRepository implements OrderRepositoryInterface
         $order->items()->where('product_id', $productId)->where('is_bonus', true)->delete();
     }
 
-    public function markItemRemoved(object $item)
-    {
-        $item->confirmation_status = 'removed';
-        $item->subtotal = 0;
-        $item->save();
-
-        $this->recalcTotal($item->order);
-
-        return $item->fresh();
-    }
-
     public function markItemOutOfStock(object $item)
     {
-        $item->confirmation_status = 'out_of_stock';
+        $item->is_out_of_stock = true;
         $item->actual_price = null;
         $item->subtotal = 0;
         $item->save();
@@ -203,18 +173,6 @@ class OrderRepository implements OrderRepositoryInterface
         $this->recalcTotal($item->order);
 
         return $item->fresh();
-    }
-
-    public function revertToPendingIfResolved(object $order)
-    {
-        $hasPending = $order->items()->where('confirmation_status', 'pending')->exists();
-
-        if (! $hasPending && $order->status === 'needs_confirmation') {
-            $order->status = 'pending';
-            $order->save();
-        }
-
-        return $order->fresh(['items.product', 'pasabuySchedule']);
     }
 
     protected function recalcTotal(Order $order)

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-#[Fillable(['product_name', 'estimated_price', 'actual_price', 'is_bonus', 'confirmation_status', 'max_price', 'auto_buy_if_under_max', 'quantity', 'subtotal'])]
+#[Fillable(['product_name', 'estimated_price', 'actual_price', 'is_bonus', 'is_out_of_stock', 'quantity', 'subtotal'])]
 class OrderItem extends Model
 {
     protected static function booted()
@@ -20,7 +20,7 @@ class OrderItem extends Model
     {
         return [
             'is_bonus' => 'boolean',
-            'auto_buy_if_under_max' => 'boolean',
+            'is_out_of_stock' => 'boolean',
         ];
     }
 

@@ -17,8 +17,6 @@ class OrderItemsStoreRequest extends FormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_uuid' => ['required', 'string'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.max_price' => ['nullable', 'numeric', 'min:0'],
-            'items.*.auto_buy_if_under_max' => ['nullable', 'boolean'],
         ];
     }
 }

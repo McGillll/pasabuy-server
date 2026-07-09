@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained();
             $table->string('customer_name');
             $table->string('customer_contact');
-            $table->enum('status', ['pending', 'needs_confirmation', 'confirmed', 'cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->decimal('total_amount', 10, 2);
             $table->timestamps();
         });

@@ -122,7 +122,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 
         return OrderItem::selectRaw('product_id, SUM(quantity) as total_quantity')
             ->where('is_bonus', false)
-            ->where('confirmation_status', '!=', 'removed')
+            ->where('is_out_of_stock', false)
             ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id)
                 ->whereIn('status', Order::LIVE_STATUSES))
             ->groupBy('product_id')
@@ -137,7 +137,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 
         return OrderItem::where('product_id', $product->id)
             ->where('is_bonus', false)
-            ->where('confirmation_status', '!=', 'removed')
+            ->where('is_out_of_stock', false)
             ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id)
                 ->whereIn('status', Order::LIVE_STATUSES))
             ->with('order')

@@ -11,9 +11,7 @@ class Order extends Model
 {
     public const EDITABLE_STATUSES = ['pending'];
 
-    public const CONFIRMABLE_STATUSES = ['pending', 'needs_confirmation'];
-
-    public const LIVE_STATUSES = ['pending', 'needs_confirmation', 'confirmed'];
+    public const LIVE_STATUSES = ['pending', 'confirmed'];
 
     protected static function booted()
     {

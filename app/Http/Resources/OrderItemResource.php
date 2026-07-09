@@ -16,9 +16,7 @@ class OrderItemResource extends JsonResource
             'estimated_price' => $this->estimated_price,
             'actual_price' => $this->actual_price,
             'is_bonus' => $this->is_bonus,
-            'confirmation_status' => $this->confirmation_status,
-            'max_price' => $this->max_price,
-            'auto_buy_if_under_max' => $this->auto_buy_if_under_max,
+            'is_out_of_stock' => $this->is_out_of_stock,
             'quantity' => $this->quantity,
             'subtotal' => $this->subtotal,
         ];

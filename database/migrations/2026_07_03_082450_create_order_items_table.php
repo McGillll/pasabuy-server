@@ -20,9 +20,7 @@ return new class extends Migration
             $table->decimal('estimated_price', 10, 2);
             $table->decimal('actual_price', 10, 2)->nullable();
             $table->boolean('is_bonus')->default(false);
-            $table->enum('confirmation_status', ['none', 'pending', 'accepted', 'removed'])->default('none');
-            $table->decimal('max_price', 10, 2)->nullable();
-            $table->boolean('auto_buy_if_under_max')->default(false);
+            $table->boolean('is_out_of_stock')->default(false);
             $table->unsignedInteger('quantity');
             $table->decimal('subtotal', 10, 2);
             $table->timestamps();

@@ -173,13 +173,11 @@ Transitions `closed` → `finished`. No request body. `finished` is a terminal s
 
 ## PATCH /api/admin/pasabuy-schedules/{uuid}/schedule-products/{scheduleProductUuid}/confirm-price
 
-Called by the seller once she's physically in the store standing in front of the item. Not gated by schedule status (works while `open`/`closed`/`finished`) — she can confirm truth for individual items while still shopping. Setting this triggers server-side recalculation of every **live** (`pending`/`needs_confirmation`) order that references this product on this schedule:
+Called by the seller once she's physically in the store standing in front of the item. Not gated by schedule status (works while `open`/`closed`/`finished`) — she can confirm truth for individual items while still shopping. Setting this triggers server-side recalculation of every **live** (`pending`, i.e. not yet `confirmed`/`cancelled`) order item that references this product on this schedule, applied immediately with no customer confirmation step:
 
-- **Price same or lower than the order's snapshotted `estimated_price`** → auto-applied; the order item's `actual_price`/`subtotal` update immediately, no customer action needed.
-- **Price higher, and the item has `auto_buy_if_under_max=true` with the new price `<= max_price`** → also auto-applied (evaluated synchronously here, not on a timer).
-- **Price higher, no matching auto-buy preference** → the item is flagged `confirmation_status: 'pending'` (its `actual_price` is set to the *proposed* price for display, but `subtotal`/`quantity` stay at the last-agreed values) and the order's `status` flips to `needs_confirmation`. See `order-api.md` for how the customer resolves this.
-- **`product_status: 'out_of_stock'`** → every live item for this product is flagged `pending` regardless of price (no valid price to auto-apply); `actual_price` stays `null`.
-- **`product_status: 'b1t1'`** → independent of the price branch above, one bonus `OrderItem` per live order is created/updated 1:1 with the paid item's quantity (`is_bonus: true`, price `0`, no confirmation needed) — removed automatically if a later confirm moves the status off `b1t1`.
+- **Product not out of stock** → the confirmed `actual_price` is auto-applied to every live item for this product; `actual_price`/`subtotal` update immediately (`is_out_of_stock: false`).
+- **`product_status: 'out_of_stock'`** → every live item for this product is zeroed instead: `is_out_of_stock: true`, `actual_price: null`, `subtotal: 0`.
+- **`product_status: 'b1t1'`** → independent of the price branch above, one bonus `OrderItem` per live order is created/updated 1:1 with the paid item's quantity (`is_bonus: true`, price `0`) — removed automatically if a later confirm moves the status off `b1t1`.
 
 ### Request body
 
@@ -204,12 +202,12 @@ product_status=none
   "message": "Price confirmed",
   "data": {
     "schedule_product": { "uuid": "...", "actual_price": "130.00", "product_status": "none", "price_confirmed_at": "...", "product": { ... } },
-    "summary": { "auto_applied": 1, "needs_confirmation": 0, "bonus_applied": 0 }
+    "summary": { "auto_applied": 1, "bonus_applied": 0, "out_of_stock": 0 }
   }
 }
 ```
 
-`summary` counts, across every live order touched, how many items were auto-applied, how many now need the customer's confirmation, and how many got a B1T1 bonus line — use it to show the seller immediate feedback.
+`summary` counts, across every live order touched, how many items had the price auto-applied, how many got a B1T1 bonus line, and how many were zeroed out for being out of stock — use it to show the seller immediate feedback.
 
 ### Error responses
 
@@ -231,7 +229,7 @@ Returns every order placed against this schedule, newest first, each with its `i
 
 ## GET /api/admin/pasabuy-schedules/{uuid}/summary
 
-Aggregates ordered quantity per product across every **live** order (`pending`/`needs_confirmation`/`confirmed`; cancelled orders and removed/bonus items are excluded) on this schedule. This is the "Price & Totals" view — click through to `buyers` below for the per-buyer breakdown behind one row.
+Aggregates ordered quantity per product across every **live** order (`pending`/`confirmed`; cancelled orders, bonus items, and items marked `is_out_of_stock` are excluded) on this schedule. This is the "Price & Totals" view — click through to `buyers` below for the per-buyer breakdown behind one row.
 
 ### Success response — 200
 
@@ -255,7 +253,7 @@ Aggregates ordered quantity per product across every **live** order (`pending`/`
 
 ## GET /api/admin/pasabuy-schedules/{uuid}/products/{productUuid}/buyers
 
-Every live order item for one product on this schedule — feeds the modal opened by clicking a Summary row, so the seller can see who ordered before confirming a price.
+Every live (`pending`/`confirmed`, not `is_out_of_stock`) order item for one product on this schedule — feeds the modal opened by clicking a Summary row, so the seller can see who ordered before confirming a price.
 
 ### Success response — 200
 

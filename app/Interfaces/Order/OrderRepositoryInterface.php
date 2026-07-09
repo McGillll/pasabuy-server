@@ -28,15 +28,9 @@ interface OrderRepositoryInterface
 
     public function applyResolvedPrice(object $item, ?float $actualPrice, ?int $quantity = null);
 
-    public function flagNeedsConfirmation(object $item, ?float $proposedPrice);
-
     public function addOrUpdateBonusItem(object $order, object $scheduleProduct);
 
     public function removeBonusItem(object $order, int $productId);
 
-    public function markItemRemoved(object $item);
-
     public function markItemOutOfStock(object $item);
-
-    public function revertToPendingIfResolved(object $order);
 }

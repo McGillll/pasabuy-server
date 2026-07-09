@@ -27,10 +27,6 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        if ($payload->status === 'confirmed' && $order->status === 'needs_confirmation') {
-            throw new InvalidPayloadException('This order still has items awaiting the customer\'s confirmation.');
-        }
-
         return $this->orderRepository->updateStatus($uuid, $payload);
     }
 
@@ -109,7 +105,7 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        if (! in_array($order->status, Order::CONFIRMABLE_STATUSES)) {
+        if (! in_array($order->status, Order::EDITABLE_STATUSES)) {
             throw new InvalidPayloadException('This order can no longer be cancelled.');
         }
 
@@ -120,7 +116,7 @@ class OrderService implements OrderServiceInterface
     {
         $items = $this->orderRepository->findLiveItemsForProduct($scheduleProduct->pasabuy_schedule_id, $scheduleProduct->product_id);
 
-        $summary = (object) ['auto_applied' => 0, 'needs_confirmation' => 0, 'bonus_applied' => 0, 'out_of_stock' => 0];
+        $summary = (object) ['auto_applied' => 0, 'bonus_applied' => 0, 'out_of_stock' => 0];
 
         DB::transaction(function () use ($items, $scheduleProduct, $summary) {
             foreach ($items as $item) {
@@ -131,24 +127,8 @@ class OrderService implements OrderServiceInterface
                     continue;
                 }
 
-                $actualPrice = (float) $scheduleProduct->actual_price;
-
-                if ($actualPrice <= (float) $item->estimated_price) {
-                    $this->orderRepository->applyResolvedPrice($item, $actualPrice);
-                    $summary->auto_applied++;
-
-                    continue;
-                }
-
-                if ($item->auto_buy_if_under_max && $item->max_price !== null && $actualPrice <= (float) $item->max_price) {
-                    $this->orderRepository->applyResolvedPrice($item, $actualPrice);
-                    $summary->auto_applied++;
-
-                    continue;
-                }
-
-                $this->orderRepository->flagNeedsConfirmation($item, $actualPrice);
-                $summary->needs_confirmation++;
+                $this->orderRepository->applyResolvedPrice($item, (float) $scheduleProduct->actual_price);
+                $summary->auto_applied++;
             }
 
             $orders = $items->pluck('order')->unique('id');
@@ -165,36 +145,6 @@ class OrderService implements OrderServiceInterface
         });
 
         return $summary;
-    }
-
-    public function resolveItem(string $orderUuid, string $itemUuid, object $payload)
-    {
-        $order = $this->orderRepository->findOwnedByUuid($orderUuid, $payload->user->id);
-
-        if (! $order) {
-            throw new NotFoundException('Order not found.');
-        }
-
-        if ($order->status !== 'needs_confirmation') {
-            throw new InvalidPayloadException('This order has no pending confirmations.');
-        }
-
-        $item = $order->items->firstWhere('uuid', $itemUuid);
-
-        if (! $item || $item->confirmation_status !== 'pending') {
-            throw new NotFoundException('Order item not found or not pending confirmation.');
-        }
-
-        if ($payload->action === 'remove') {
-            $this->orderRepository->markItemRemoved($item);
-        } else {
-            $quantity = $payload->quantity ?? $item->quantity;
-            $scheduleProduct = $this->pasabuyScheduleRepository->findScheduleProduct($order->pasabuy_schedule_id, $item->product_id);
-
-            $this->orderRepository->applyResolvedPrice($item, (float) $scheduleProduct->actual_price, $quantity);
-        }
-
-        return $this->orderRepository->revertToPendingIfResolved($order);
     }
 
     public function updateItemsForSeller(string $scheduleUuid, string $orderUuid, object $payload)
@@ -247,10 +197,8 @@ class OrderService implements OrderServiceInterface
                 'product_name' => $product->name,
                 'estimated_price' => $product->default_price,
                 'actual_price' => $scheduleProduct->actual_price,
-                'confirmation_status' => $scheduleProduct->product_status === 'out_of_stock' ? 'pending' : 'none',
+                'is_out_of_stock' => $scheduleProduct->product_status === 'out_of_stock',
                 'quantity' => $item['quantity'],
-                'max_price' => $item['max_price'] ?? null,
-                'auto_buy_if_under_max' => $item['auto_buy_if_under_max'] ?? false,
             ];
         })->all();
     }
@@ -271,10 +219,8 @@ class OrderService implements OrderServiceInterface
                 'product_name' => $product->name,
                 'estimated_price' => $product->default_price,
                 'actual_price' => $scheduleProduct->price_confirmed_at ? $scheduleProduct->actual_price : null,
-                'confirmation_status' => $scheduleProduct->product_status === 'out_of_stock' ? 'pending' : 'none',
+                'is_out_of_stock' => $scheduleProduct->product_status === 'out_of_stock',
                 'quantity' => $item['quantity'],
-                'max_price' => null,
-                'auto_buy_if_under_max' => false,
             ];
         })->all();
     }
