@@ -40,7 +40,7 @@ All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin
 | title       | string        |                                                                            |
 | description | string\|null  |                                                                            |
 | cutoff_at   | datetime\|null| Optional deadline; ordering is blocked once passed even if `status` is still `open` |
-| pasabuy_schedule_date | date\|null | The date the seller physically goes to the store — distinct from `cutoff_at` (the ordering deadline) and `created_at` (record creation). Drives the `month`/`year` list filters. |
+| pasabuy_schedule_date | date\|null | The date the seller physically goes to the store — distinct from `cutoff_at` (the ordering deadline) and `created_at` (record creation). Drives the `month`/`year` list filters. Required on `POST`/`PUT`; only `null` for schedules created before this field existed. |
 | status      | string        | `open` \| `closed` \| `finished`, default `open`. Only `open` (and before `cutoff_at`) accepts customer orders. Valid transitions: `open`→`closed`, `closed`→`open`, `closed`→`finished`. `finished` is terminal. |
 | is_open     | boolean       | Computed: `status === 'open' && (!cutoff_at || cutoff_at is in the future)` — use this to gate the UI |
 | products    | array         | Only the products someone has actually ordered so far on this schedule — see schedule-product object below |
@@ -82,7 +82,7 @@ Returns a standard Laravel paginator (see `product-api.md` for shape); items do 
 | title       | string   | Yes      |                                          |
 | description | string   | No       |                                          |
 | cutoff_at   | datetime | No       | Any format `strtotime()`/Carbon accepts |
-| pasabuy_schedule_date | date | No | The date the seller physically goes to the store |
+| pasabuy_schedule_date | date | Yes | The date the seller physically goes to the store |
 | status      | string   | No       | `open`\|`closed`\|`finished`, default `open` |
 
 No product-picking step — customers can order any active catalog product against this schedule as soon as it's `open`.
