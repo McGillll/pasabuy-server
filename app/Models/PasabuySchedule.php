@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-#[Fillable(['title', 'description', 'cutoff_at', 'status'])]
+#[Fillable(['title', 'description', 'cutoff_at', 'pasabuy_schedule_date', 'status'])]
 class PasabuySchedule extends Model
 {
     use Filterable;
@@ -29,6 +29,7 @@ class PasabuySchedule extends Model
     {
         return [
             'cutoff_at' => 'datetime',
+            'pasabuy_schedule_date' => 'date',
         ];
     }
 

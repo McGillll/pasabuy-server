@@ -18,4 +18,14 @@ class PasabuyScheduleFilter extends ModelFilter
     {
         return $this->where('title', 'like', "%{$query}%");
     }
+
+    public function month($month)
+    {
+        return $this->whereMonth('pasabuy_schedule_date', $month);
+    }
+
+    public function year($year)
+    {
+        return $this->whereYear('pasabuy_schedule_date', $year);
+    }
 }

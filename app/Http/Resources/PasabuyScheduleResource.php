@@ -14,6 +14,7 @@ class PasabuyScheduleResource extends JsonResource
             'title' => $this->title,
             'description' => $this->description,
             'cutoff_at' => $this->cutoff_at,
+            'pasabuy_schedule_date' => $this->pasabuy_schedule_date?->toDateString(),
             'status' => $this->status,
             'is_open' => $this->status === 'open' && (! $this->cutoff_at || $this->cutoff_at->isFuture()),
             'products' => PasabuyScheduleProductResource::collection($this->whenLoaded('scheduleProducts')),
