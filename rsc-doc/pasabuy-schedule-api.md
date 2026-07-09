@@ -229,7 +229,7 @@ Returns every order placed against this schedule, newest first, each with its `i
 
 ## GET /api/admin/pasabuy-schedules/{uuid}/summary
 
-Aggregates ordered quantity per product across every **live** order (`pending`/`confirmed`; cancelled orders, bonus items, and items marked `is_out_of_stock` are excluded) on this schedule. This is the "Price & Totals" view — click through to `buyers` below for the per-buyer breakdown behind one row.
+Aggregates ordered quantity per product across every **live** order (`pending`/`confirmed`; cancelled orders and bonus items are excluded) on this schedule. Products marked `is_out_of_stock` still appear here with their originally ordered quantity — the row isn't dropped just because the seller marked it out of stock in-store. This is the "Price & Totals" view — click through to `buyers` below for the per-buyer breakdown behind one row.
 
 ### Success response — 200
 
@@ -253,7 +253,7 @@ Aggregates ordered quantity per product across every **live** order (`pending`/`
 
 ## GET /api/admin/pasabuy-schedules/{uuid}/products/{productUuid}/buyers
 
-Every live (`pending`/`confirmed`, not `is_out_of_stock`) order item for one product on this schedule — feeds the modal opened by clicking a Summary row, so the seller can see who ordered before confirming a price.
+Every live (`pending`/`confirmed`) order item for one product on this schedule, including items already marked `is_out_of_stock` — feeds the modal opened by clicking a Summary row, so the seller can see who ordered before (or after) confirming a price.
 
 ### Success response — 200
 
