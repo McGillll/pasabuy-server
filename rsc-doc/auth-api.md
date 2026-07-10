@@ -36,7 +36,7 @@ Every response — success or failure — uses:
 | email          | string        |                                  |
 | contact_number | string\|null  |                                  |
 | role           | string        | `"admin"` or `"customer"`        |
-| is_approved    | boolean       | Always `true` for `admin`. For `customer`, `false` until an admin approves the registration — a pending customer can still log in and call `/auth/me` to see this flag, but every ordering/product-request endpoint rejects with **403** until it flips to `true` (see `customer-api.md`) |
+| is_approved    | boolean       | Always `true` for `admin`. For `customer`, `false` until an admin approves the registration — a pending customer can still log in and call `/auth/me` to see this flag, but every ordering endpoint rejects with **403** until it flips to `true` (see `customer-api.md`) |
 
 ---
 

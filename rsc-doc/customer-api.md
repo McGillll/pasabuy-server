@@ -1,12 +1,12 @@
 # Customer API
 
-Customer registration, admin approval, and everything a logged-in customer can do: place an order, view/edit their own orders, and submit product suggestions. Login itself reuses the shared Auth API (`POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` — see `auth-api.md`); this doc covers what's customer-specific.
+Customer registration, admin approval, and everything a logged-in customer can do: place an order, view/edit their own orders. Login itself reuses the shared Auth API (`POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` — see `auth-api.md`); this doc covers what's customer-specific.
 
 ## Who can do what
 
 - **Anyone** (no auth) can register via `POST /api/public/customers/register`.
 - **Any logged-in customer**, even one pending approval, can call `/auth/login`, `/auth/me`, `/auth/logout` — this lets the frontend show a "pending approval" screen instead of a dead login.
-- **Only an approved customer** (`is_approved: true`) can place orders, edit orders, view their own orders, or submit product requests. Every route below except registration requires `Authorization: Bearer {token}` from a token whose ability is `customer`, **and** `is_approved: true` — otherwise every one of them returns **403** with `"Your account is pending admin approval."`
+- **Only an approved customer** (`is_approved: true`) can place orders, edit orders, or view their own orders. Every route below except registration requires `Authorization: Bearer {token}` from a token whose ability is `customer`, **and** `is_approved: true` — otherwise every one of them returns **403** with `"Your account is pending admin approval."`
 - **Only an admin** can list customers and approve/reject them (`admin/customers/*`) — see the admin section at the bottom.
 
 ## Endpoints overview
@@ -19,8 +19,6 @@ Customer registration, admin approval, and everything a logged-in customer can d
 | GET    | `/api/customer/orders/{uuid}`                                 | Yes (customer, approved)  | View one of the authenticated customer's own orders |
 | PUT    | `/api/customer/orders/{uuid}`                                 | Yes (customer, approved)  | Replace the items on a still-editable order |
 | PATCH  | `/api/customer/orders/{uuid}/cancel`                          | Yes (customer, approved)  | Cancel an order outright (only while `pending`, and while the schedule is still open) |
-| GET    | `/api/customer/product-requests`                              | Yes (customer, approved)  | List the authenticated customer's own product requests |
-| POST   | `/api/customer/product-requests`                              | Yes (customer, approved)  | Submit a product suggestion |
 | GET    | `/api/admin/customers`                                        | Yes (admin)                | List customers (paginated, filterable) |
 | GET    | `/api/admin/customers/{uuid}/orders`                           | Yes (admin)                | List every order placed by one customer |
 | POST   | `/api/admin/customers/{uuid}/approve`                          | Yes (admin)                | Approve a pending customer |
@@ -217,48 +215,6 @@ PATCH /api/customer/orders/36d53541-.../cancel
 
 ---
 
-## GET /api/customer/product-requests
-
-Lists the authenticated customer's own submitted suggestions.
-
-### Success response — 200
-
-Paginator of `ProductRequest` objects: `{ uuid, note, status, pasabuy_schedule: { uuid, title } | null, created_at }`.
-
----
-
-## POST /api/customer/product-requests
-
-A free-text suggestion for a product the seller doesn't currently stock. **Does not create an order line or affect any `total_amount`** — it's purely informational for the seller to review and, at their discretion, add as a real `Product` to a future schedule.
-
-### Request body
-
-| Field                  | Type   | Required | Notes                                    |
-|------------------------|--------|----------|----------------------------------------------|
-| note                   | string | Yes      | Max 1000 chars                                 |
-| pasabuy_schedule_uuid  | string | No       | Attaches the suggestion to a specific schedule for context |
-
-### Example request
-
-```json
-POST /api/customer/product-requests
-{ "note": "Can you also get Milo 3-in-1 next time?", "pasabuy_schedule_uuid": "e9400549-..." }
-```
-
-### Success response — 201
-
-```json
-{ "success": true, "message": "Request submitted successfully", "data": { "uuid": "...", "note": "Can you also get Milo 3-in-1 next time?", "status": "open", "pasabuy_schedule": { "uuid": "e9400549-...", "title": "Grocery Run July" }, "created_at": "..." } }
-```
-
-### Error responses
-
-- **403** — `"Your account is pending admin approval."`
-- **404** — `pasabuy_schedule_uuid` provided but doesn't resolve to a real schedule.
-- **422** — validation failure.
-
----
-
 ## GET /api/admin/customers
 
 Admin-only. Paginated list of customer accounts.
@@ -348,6 +304,6 @@ Sets `is_approved` back to `false` and clears `approved_at` — revokes access w
 |--------|------------------------------------------------|--------------------------------------------|
 | 401    | Missing/invalid/expired token                   | all authenticated endpoints                 |
 | 403    | Customer account pending admin approval          | all customer endpoints except registration  |
-| 404    | Resource not found or not owned                 | orders show/update/cancel, product-request schedule lookup, admin approve/reject/orders |
-| 422    | Validation failure or business-rule rejection    | register, order placement/edit/cancel, product requests |
+| 404    | Resource not found or not owned                 | orders show/update/cancel, admin approve/reject/orders |
+| 422    | Validation failure or business-rule rejection    | register, order placement/edit/cancel |
 | 429    | Rate limited                                     | register (5/min/IP)                         |
