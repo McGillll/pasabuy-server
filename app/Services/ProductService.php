@@ -6,6 +6,8 @@ use App\Exceptions\NotFoundException;
 use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Interfaces\Product\ProductServiceInterface;
 use App\Interfaces\ProductCategory\ProductCategoryRepositoryInterface;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductService implements ProductServiceInterface
 {
@@ -39,15 +41,33 @@ class ProductService implements ProductServiceInterface
     {
         $this->resolveCategory($payload);
 
+        if (isset($payload->image)) {
+            $payload->image_path = $this->storeImage($payload);
+        }
+
         return $this->productRepository->create($payload);
     }
 
     public function update(string $uuid, object $payload)
     {
-        $this->findByUuid($uuid);
+        $product = $this->findByUuid($uuid);
         $this->resolveCategory($payload);
 
+        if (isset($payload->image)) {
+            if ($product->image_path) {
+                Storage::delete($product->image_path);
+            }
+            $payload->image_path = $this->storeImage($payload);
+        }
+
         return $this->productRepository->update($uuid, $payload);
+    }
+
+    protected function storeImage(object $payload)
+    {
+        $filename = Str::slug($payload->name).'-'.uniqid().'.'.$payload->image->getClientOriginalExtension();
+
+        return $payload->image->storeAs('products', $filename);
     }
 
     protected function resolveCategory(object $payload)
@@ -69,7 +89,11 @@ class ProductService implements ProductServiceInterface
 
     public function delete(string $uuid)
     {
-        $this->findByUuid($uuid);
+        $product = $this->findByUuid($uuid);
+
+        if ($product->image_path) {
+            Storage::delete($product->image_path);
+        }
 
         return $this->productRepository->delete($uuid);
     }

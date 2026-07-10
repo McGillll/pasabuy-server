@@ -9,7 +9,6 @@ use App\Http\Resources\ProductResource;
 use App\Interfaces\Product\ProductServiceInterface;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -43,7 +42,7 @@ class ProductController extends Controller
         $payload = (object) $request->validated();
 
         if ($request->hasFile('image')) {
-            $payload->image_path = $request->file('image')->store('products', 'public');
+            $payload->image = $request->file('image');
         }
 
         $product = $this->productService->create($payload);
@@ -56,11 +55,7 @@ class ProductController extends Controller
         $payload = (object) $request->validated();
 
         if ($request->hasFile('image')) {
-            $existing = $this->productService->findByUuid($uuid);
-            if ($existing->image_path) {
-                Storage::disk('public')->delete($existing->image_path);
-            }
-            $payload->image_path = $request->file('image')->store('products', 'public');
+            $payload->image = $request->file('image');
         }
 
         $product = $this->productService->update($uuid, $payload);

@@ -14,7 +14,7 @@ class ProductResource extends JsonResource
             'uuid' => $this->uuid,
             'name' => $this->name,
             'description' => $this->description,
-            'image_url' => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
+            'image_url' => $this->image_path ? Storage::url($this->image_path) : null,
             'is_active' => $this->is_active,
             'default_price' => $this->default_price,
             'default_product_status' => $this->default_product_status,
