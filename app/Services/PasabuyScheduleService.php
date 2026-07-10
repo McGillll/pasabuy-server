@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\ChecklistItemToggled;
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
@@ -149,7 +150,11 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         $schedule = $this->findByUuid($scheduleUuid);
         $this->ensureOwnership($schedule, $payload->user_id);
 
-        return $this->pasabuyScheduleRepository->toggleChecklistItem($scheduleUuid, $productUuid, $payload->is_checked);
+        $item = $this->pasabuyScheduleRepository->toggleChecklistItem($scheduleUuid, $productUuid, $payload->is_checked);
+
+        $this->broadcastChecklistItemToggled($schedule, $item);
+
+        return $item;
     }
 
     public function regenerateChecklist(string $uuid, int $userId)
@@ -193,7 +198,11 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         $schedule = $this->findByChecklistShareToken($token);
 
-        return $this->pasabuyScheduleRepository->toggleChecklistItem($schedule->uuid, $productUuid, $isChecked);
+        $item = $this->pasabuyScheduleRepository->toggleChecklistItem($schedule->uuid, $productUuid, $isChecked);
+
+        $this->broadcastChecklistItemToggled($schedule, $item);
+
+        return $item;
     }
 
     protected function findByChecklistShareToken(string $token)
@@ -209,6 +218,15 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         }
 
         return $schedule;
+    }
+
+    protected function broadcastChecklistItemToggled(PasabuySchedule $schedule, $item)
+    {
+        if (! $item || ! $schedule->checklist_share_token) {
+            return;
+        }
+
+        broadcast(new ChecklistItemToggled($schedule->checklist_share_token, $item));
     }
 
     protected function ensureOwnership(PasabuySchedule $schedule, int $userId)
