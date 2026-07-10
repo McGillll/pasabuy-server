@@ -18,5 +18,6 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/{uuid}/products/{productUuid}/buyers', [PasabuyScheduleController::class, 'productBuyers']);
     Route::get('/{uuid}/checklist', [PasabuyScheduleController::class, 'checklist']);
     Route::patch('/{uuid}/checklist/{productUuid}', [PasabuyScheduleController::class, 'toggleChecklistItem']);
+    Route::post('/{uuid}/checklist/regenerate', [PasabuyScheduleController::class, 'regenerateChecklist']);
     Route::put('/{uuid}/orders/{orderUuid}/items', [PasabuyScheduleController::class, 'updateOrderItems']);
 });

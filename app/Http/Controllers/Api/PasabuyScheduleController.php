@@ -146,6 +146,13 @@ class PasabuyScheduleController extends Controller
         return $this->success(new PasabuyScheduleChecklistItemResource($item), 'Checklist item updated');
     }
 
+    public function regenerateChecklist(Request $request, string $uuid)
+    {
+        $items = $this->pasabuyScheduleService->regenerateChecklist($uuid, $request->user()->id);
+
+        return $this->success(PasabuyScheduleChecklistItemResource::collection($items), 'Checklist regenerated');
+    }
+
     public function updateOrderItems(PasabuyScheduleOrderItemsUpdateRequest $request, string $uuid, string $orderUuid)
     {
         $order = $this->orderService->updateItemsForSeller($uuid, $orderUuid, (object) $request->validated());

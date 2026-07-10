@@ -24,7 +24,7 @@ class PasabuyScheduleChecklistItem extends Model
         ];
     }
 
-    protected function isChecked()
+    protected function isChecked(): Attribute
     {
         return Attribute::make(get: fn () => $this->checked_at !== null);
     }

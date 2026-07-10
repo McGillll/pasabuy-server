@@ -176,8 +176,28 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $summaryRows = $this->summary($schedule->uuid);
         $seenProductIds = [];
 
-        DB::transaction(function () use ($schedule, $summaryRows, &$seenProductIds) {
+        $statusByProductId = PasabuyScheduleProduct::where('pasabuy_schedule_id', $schedule->id)
+            ->pluck('product_status', 'product_id');
+
+        $bonusQuantityByProductId = OrderItem::selectRaw('product_id, SUM(quantity) as bonus_quantity')
+            ->where('is_bonus', true)
+            ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id)
+                ->whereIn('status', Order::LIVE_STATUSES))
+            ->groupBy('product_id')
+            ->pluck('bonus_quantity', 'product_id');
+
+        DB::transaction(function () use ($schedule, $summaryRows, $statusByProductId, $bonusQuantityByProductId, &$seenProductIds) {
             foreach ($summaryRows as $row) {
+                if (($statusByProductId[$row->product_id] ?? 'none') === 'out_of_stock') {
+                    continue;
+                }
+
+                $totalQuantity = $row->total_quantity + ($bonusQuantityByProductId[$row->product_id] ?? 0);
+
+                if ($totalQuantity <= 0) {
+                    continue;
+                }
+
                 $seenProductIds[] = $row->product_id;
 
                 $item = PasabuyScheduleChecklistItem::firstOrNew([
@@ -187,17 +207,17 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 
                 if (! $item->exists) {
                     $item->product_name = $row->product->name;
-                    $item->quantity = $row->total_quantity;
+                    $item->quantity = $totalQuantity;
                     $item->checked_at = null;
                     $item->additional_quantity = 0;
                     $item->return_quantity = 0;
                 } elseif (! $item->is_checked) {
                     $item->product_name = $row->product->name;
-                    $item->quantity = $row->total_quantity;
+                    $item->quantity = $totalQuantity;
                     $item->additional_quantity = 0;
                     $item->return_quantity = 0;
                 } else {
-                    $delta = $row->total_quantity - $item->quantity;
+                    $delta = $totalQuantity - $item->quantity;
                     $item->additional_quantity = $delta > 0 ? $delta : 0;
                     $item->return_quantity = $delta < 0 ? abs($delta) : 0;
                 }
@@ -210,14 +230,13 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
                 ->get()
                 ->each(function (PasabuyScheduleChecklistItem $item) {
                     if (! $item->is_checked) {
-                        $item->quantity = 0;
-                        $item->additional_quantity = 0;
-                        $item->return_quantity = 0;
-                    } else {
-                        $item->return_quantity = $item->quantity;
-                        $item->additional_quantity = 0;
+                        $item->delete();
+
+                        return;
                     }
 
+                    $item->return_quantity = $item->quantity;
+                    $item->additional_quantity = 0;
                     $item->save();
                 });
         });

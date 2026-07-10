@@ -152,6 +152,20 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         return $this->pasabuyScheduleRepository->toggleChecklistItem($scheduleUuid, $productUuid, $payload->is_checked);
     }
 
+    public function regenerateChecklist(string $uuid, int $userId)
+    {
+        $schedule = $this->findByUuid($uuid);
+        $this->ensureOwnership($schedule, $userId);
+
+        if (! in_array($schedule->status, ['closed', 'finished'], true)) {
+            throw new InvalidPayloadException('Checklist can only be regenerated for a closed or finished schedule.');
+        }
+
+        $this->pasabuyScheduleRepository->syncChecklistOnClose($schedule);
+
+        return $this->pasabuyScheduleRepository->checklist($uuid);
+    }
+
     protected function ensureOwnership(PasabuySchedule $schedule, int $userId)
     {
         if ($schedule->user_id !== $userId) {

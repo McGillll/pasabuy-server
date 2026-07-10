@@ -26,6 +26,7 @@ A pasabuy schedule is the seller's shareable "batch" — customers can order **a
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/products/{productUuid}/buyers` | Every buyer of one product on this schedule, for the Summary-row detail view |
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/checklist`         | The seller's shopping checklist (empty until the schedule has been closed at least once) |
 | PATCH  | `/api/admin/pasabuy-schedules/{uuid}/checklist/{productUuid}` | Check/uncheck one checklist item                |
+| POST   | `/api/admin/pasabuy-schedules/{uuid}/checklist/regenerate` | Manually re-run the checklist sync (same logic as `close`) against current order totals, without changing schedule status |
 | PUT    | `/api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items` | Seller edits a customer's order items (closed schedules only) |
 
 All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin ability). Bodies are JSON (no file uploads on this module, so `PUT`/`POST`/`PATCH` action endpoints are sent as real verbs, no `_method` spoofing needed).
@@ -136,6 +137,8 @@ Transitions `open` → `closed`. No request body. Blocks customer-side ordering/
 **Also (re)snapshots the checklist** (see `GET .../checklist` below) from the current live order totals:
 - First close ever → creates one checklist row per product currently ordered, unchecked, `quantity` = current total ordered.
 - Any later close (after a reopen let more orders in) → unchecked rows just get `quantity` refreshed to the new total; checked rows keep their original `quantity` frozen and instead get `additional_quantity`/`return_quantity` populated with the delta against the new total.
+- `quantity` is the **physical shopping quantity**, not the raw paid total: products confirmed `product_status: 'out_of_stock'` are skipped entirely (no checklist row — nothing to buy), and products confirmed `product_status: 'b1t1'` have their bonus (`is_bonus: true`) item quantity added on top of the paid quantity, since the seller needs stock to cover the free unit too. This differs from `GET .../summary`, which reports raw paid quantity only and leaves out-of-stock/b1t1 adjustments to the client.
+- A product with a computed quantity of `0` (e.g. its only orders were cancelled/removed) never gets a row either. If it already had an **unchecked** row from an earlier close, that row is deleted outright rather than left at `quantity: 0`. A **checked** row is never deleted this way — it's preserved with `return_quantity` set to its full frozen `quantity`, since the seller already bought it and needs to return everything.
 
 ### Success response — 200
 
@@ -289,7 +292,7 @@ The seller's shopping checklist. **Empty until the schedule has been closed at l
 }
 ```
 
-`quantity` is the amount to buy while unchecked; once checked it freezes at whatever quantity it was checked at. `additional_quantity`/`return_quantity` are only ever populated on a checked item, by a later `close` recalculation — buy `additional_quantity` more, or return `return_quantity` of what was already bought.
+`quantity` is the amount to buy while unchecked; once checked it freezes at whatever quantity it was checked at. `additional_quantity`/`return_quantity` are only ever populated on a checked item, by a later `close` recalculation — buy `additional_quantity` more, or return `return_quantity` of what was already bought. Products currently `product_status: 'out_of_stock'` never have a row here; `b1t1` products have their `quantity` inflated by the bonus item count (see `close` above).
 
 ### Error responses
 
@@ -319,6 +322,24 @@ Returns the updated checklist item (same shape as one entry above).
 
 ---
 
+## POST /api/admin/pasabuy-schedules/{uuid}/checklist/regenerate
+
+Manually re-runs the same sync `close` performs (see above), without changing the schedule's status. For when orders were edited or new orders confirmed after the initial close and the checklist quantities/deltas have gone stale. No request body. Safe to call repeatedly — unchecked rows just get `quantity` refreshed; checked rows keep their frozen `quantity` and get `additional_quantity`/`return_quantity` recomputed against the new total.
+
+Only callable once the schedule has been closed at least once (`status` is `closed` or `finished`).
+
+### Success response — 200
+
+Returns the refreshed checklist (same shape as `GET .../checklist`).
+
+### Error responses
+
+- **403** (not owner)
+- **404** — schedule not found.
+- **422** — schedule is still `open` (never closed, so there's no checklist to regenerate).
+
+---
+
 ## PUT /api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items
 
 Seller-side order correction tool — full replace of one customer's order items (add, remove, change quantity). Only allowed once the schedule's `status` is `closed`; no quantity cap is enforced (the seller is trusted to know real-world stock). Recalculates the order's `subtotal`/`total_amount` the same way customer edits do, sourcing price from the schedule-product's confirmed `actual_price` if set, else the product's `default_price`. Adding a product not yet ordered on this schedule creates its `PasabuyScheduleProduct` row on the fly, same as a customer ordering it for the first time.
@@ -345,6 +366,6 @@ Returns the updated `OrderResource` (see `order-api.md`).
 | Status | Meaning              | Applies to                        |
 |--------|-----------------------|-------------------------------------|
 | 401    | Missing/invalid token | all endpoints                        |
-| 403    | Not the schedule's owner | update, destroy, close, reopen, finish, confirm-price, checklist toggle |
+| 403    | Not the schedule's owner | update, destroy, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate |
 | 404    | Not found             | show, update, destroy, close, reopen, finish, orders, confirm-price, summary, buyers, checklist, order items |
-| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, order items |
+| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate (still open), order items |

@@ -31,4 +31,6 @@ interface PasabuyScheduleServiceInterface
     public function checklist(string $uuid);
 
     public function toggleChecklistItem(string $scheduleUuid, string $productUuid, object $payload);
+
+    public function regenerateChecklist(string $uuid, int $userId);
 }
