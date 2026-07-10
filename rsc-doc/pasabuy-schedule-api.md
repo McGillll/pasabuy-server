@@ -27,7 +27,11 @@ A pasabuy schedule is the seller's shareable "batch" — customers can order **a
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/checklist`         | The seller's shopping checklist (empty until the schedule has been closed at least once) |
 | PATCH  | `/api/admin/pasabuy-schedules/{uuid}/checklist/{productUuid}` | Check/uncheck one checklist item                |
 | POST   | `/api/admin/pasabuy-schedules/{uuid}/checklist/regenerate` | Manually re-run the checklist sync (same logic as `close`) against current order totals, without changing schedule status |
+| GET    | `/api/admin/pasabuy-schedules/{uuid}/checklist/share-link` | Get (or lazily create) the checklist's public share token |
+| POST   | `/api/admin/pasabuy-schedules/{uuid}/checklist/share-link/regenerate` | Rotate the checklist share token, invalidating any previously shared link |
 | PUT    | `/api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items` | Seller edits a customer's order items (closed schedules only) |
+
+Unauthenticated helper access to the checklist (view + check off items, no login required) is documented separately below under **Public checklist (unauthenticated)**.
 
 All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin ability). Bodies are JSON (no file uploads on this module, so `PUT`/`POST`/`PATCH` action endpoints are sent as real verbs, no `_method` spoofing needed).
 
@@ -340,6 +344,46 @@ Returns the refreshed checklist (same shape as `GET .../checklist`).
 
 ---
 
+## GET /api/admin/pasabuy-schedules/{uuid}/checklist/share-link
+
+Returns the schedule's checklist share token, generating one on first call if it doesn't exist yet. Give this to a helper as `{client_origin}/pasabuy/checklist/{token}` — a fully public page (no login) where they can view quantities and check items off while shopping. The token is a random 40-character string, independent of the schedule's own `uuid` (which is also public, via the customer ordering link) — anyone holding just the ordering link cannot derive or use it to touch the checklist.
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Success", "data": { "token": "..." } }
+```
+
+### Error responses
+
+- **403** (not owner)
+- **404** — schedule not found.
+
+---
+
+## POST /api/admin/pasabuy-schedules/{uuid}/checklist/share-link/regenerate
+
+Rotates the checklist share token. The previous token stops working immediately (any helper still using the old link gets a 404 on their next request/poll) — use this if a link leaked or the helper no longer needs access. Same response/error shape as the `GET` above, with message `"Checklist share link regenerated"`.
+
+---
+
+## Public checklist (unauthenticated)
+
+Two routes under `/api/public/checklist/{token}`, keyed by the share token above instead of the schedule `uuid` — no `Authorization` header, no ownership check (possession of the token *is* the authorization). Both are rate-limited via the `checklist-toggle` limiter (60 requests/minute per IP). Neither exposes a way to regenerate the checklist from order totals — that stays a seller-only action; the intended client polls `GET` on an interval instead to pick up changes the seller makes.
+
+### GET /api/public/checklist/{token}
+
+Same response shape as `GET /api/admin/pasabuy-schedules/{uuid}/checklist`.
+
+- **404** — token doesn't exist (never generated, or rotated away).
+- **422** — the schedule behind this token isn't `closed`/`finished` yet (checklist doesn't exist until the seller closes ordering).
+
+### PATCH /api/public/checklist/{token}/{productUuid}
+
+Same request body / response shape / behavior as `PATCH /api/admin/pasabuy-schedules/{uuid}/checklist/{productUuid}` (sent as `POST` with `_method: 'PATCH'` spoofing, per the client's FormData convention). Same 404/422 conditions as the `GET` above, plus **404** if `productUuid` has no checklist row.
+
+---
+
 ## PUT /api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items
 
 Seller-side order correction tool — full replace of one customer's order items (add, remove, change quantity). Only allowed once the schedule's `status` is `closed`; no quantity cap is enforced (the seller is trusted to know real-world stock). Recalculates the order's `subtotal`/`total_amount` the same way customer edits do, sourcing price from the schedule-product's confirmed `actual_price` if set, else the product's `default_price`. Adding a product not yet ordered on this schedule creates its `PasabuyScheduleProduct` row on the fly, same as a customer ordering it for the first time.
@@ -365,7 +409,8 @@ Returns the updated `OrderResource` (see `order-api.md`).
 
 | Status | Meaning              | Applies to                        |
 |--------|-----------------------|-------------------------------------|
-| 401    | Missing/invalid token | all endpoints                        |
-| 403    | Not the schedule's owner | update, destroy, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate |
-| 404    | Not found             | show, update, destroy, close, reopen, finish, orders, confirm-price, summary, buyers, checklist, order items |
-| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate (still open), order items |
+| 401    | Missing/invalid token | all admin endpoints (not applicable to the public checklist endpoints, which use the share token instead) |
+| 403    | Not the schedule's owner | update, destroy, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate, checklist share-link (get/regenerate) |
+| 404    | Not found             | show, update, destroy, close, reopen, finish, orders, confirm-price, summary, buyers, checklist, order items, checklist share-link, public checklist (bad/rotated token) |
+| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate (still open), order items, public checklist (schedule not closed yet) |
+| 429    | Rate limit exceeded   | public checklist GET/PATCH (`checklist-toggle`: 60/min per IP) |

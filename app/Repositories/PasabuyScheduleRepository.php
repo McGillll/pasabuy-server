@@ -10,6 +10,7 @@ use App\Models\PasabuyScheduleChecklistItem;
 use App\Models\PasabuyScheduleProduct;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 {
@@ -150,6 +151,41 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             ->with('product.category')
             ->orderBy('product_name')
             ->get();
+    }
+
+    public function findByChecklistShareToken(string $token)
+    {
+        return PasabuySchedule::where('checklist_share_token', $token)->first();
+    }
+
+    public function getOrCreateChecklistShareToken(string $uuid)
+    {
+        $schedule = PasabuySchedule::where('uuid', $uuid)->first();
+
+        if ($schedule->checklist_share_token) {
+            return $schedule->checklist_share_token;
+        }
+
+        return $this->assignChecklistShareToken($schedule);
+    }
+
+    public function regenerateChecklistShareToken(string $uuid)
+    {
+        $schedule = PasabuySchedule::where('uuid', $uuid)->first();
+
+        return $this->assignChecklistShareToken($schedule);
+    }
+
+    protected function assignChecklistShareToken(PasabuySchedule $schedule)
+    {
+        do {
+            $token = Str::random(40);
+        } while (PasabuySchedule::where('checklist_share_token', $token)->exists());
+
+        $schedule->checklist_share_token = $token;
+        $schedule->save();
+
+        return $token;
     }
 
     public function toggleChecklistItem(string $scheduleUuid, string $productUuid, bool $isChecked)

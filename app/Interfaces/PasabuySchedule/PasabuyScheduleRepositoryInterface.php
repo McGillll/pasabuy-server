@@ -36,4 +36,10 @@ interface PasabuyScheduleRepositoryInterface
     public function toggleChecklistItem(string $scheduleUuid, string $productUuid, bool $isChecked);
 
     public function syncChecklistOnClose(PasabuySchedule $schedule);
+
+    public function findByChecklistShareToken(string $token);
+
+    public function getOrCreateChecklistShareToken(string $uuid);
+
+    public function regenerateChecklistShareToken(string $uuid);
 }

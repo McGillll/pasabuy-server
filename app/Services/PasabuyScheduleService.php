@@ -166,6 +166,51 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         return $this->pasabuyScheduleRepository->checklist($uuid);
     }
 
+    public function getChecklistShareLink(string $uuid, int $userId)
+    {
+        $schedule = $this->findByUuid($uuid);
+        $this->ensureOwnership($schedule, $userId);
+
+        return $this->pasabuyScheduleRepository->getOrCreateChecklistShareToken($uuid);
+    }
+
+    public function regenerateChecklistShareLink(string $uuid, int $userId)
+    {
+        $schedule = $this->findByUuid($uuid);
+        $this->ensureOwnership($schedule, $userId);
+
+        return $this->pasabuyScheduleRepository->regenerateChecklistShareToken($uuid);
+    }
+
+    public function publicChecklist(string $token)
+    {
+        $schedule = $this->findByChecklistShareToken($token);
+
+        return $this->pasabuyScheduleRepository->checklist($schedule->uuid);
+    }
+
+    public function publicToggleChecklistItem(string $token, string $productUuid, bool $isChecked)
+    {
+        $schedule = $this->findByChecklistShareToken($token);
+
+        return $this->pasabuyScheduleRepository->toggleChecklistItem($schedule->uuid, $productUuid, $isChecked);
+    }
+
+    protected function findByChecklistShareToken(string $token)
+    {
+        $schedule = $this->pasabuyScheduleRepository->findByChecklistShareToken($token);
+
+        if (! $schedule) {
+            throw new NotFoundException('Checklist link not found.');
+        }
+
+        if (! in_array($schedule->status, ['closed', 'finished'], true)) {
+            throw new InvalidPayloadException('This checklist is not ready yet — the seller hasn\'t closed ordering.');
+        }
+
+        return $schedule;
+    }
+
     protected function ensureOwnership(PasabuySchedule $schedule, int $userId)
     {
         if ($schedule->user_id !== $userId) {

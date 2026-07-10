@@ -153,6 +153,20 @@ class PasabuyScheduleController extends Controller
         return $this->success(PasabuyScheduleChecklistItemResource::collection($items), 'Checklist regenerated');
     }
 
+    public function checklistShareLink(Request $request, string $uuid)
+    {
+        $token = $this->pasabuyScheduleService->getChecklistShareLink($uuid, $request->user()->id);
+
+        return $this->success(['token' => $token]);
+    }
+
+    public function regenerateChecklistShareLink(Request $request, string $uuid)
+    {
+        $token = $this->pasabuyScheduleService->regenerateChecklistShareLink($uuid, $request->user()->id);
+
+        return $this->success(['token' => $token], 'Checklist share link regenerated');
+    }
+
     public function updateOrderItems(PasabuyScheduleOrderItemsUpdateRequest $request, string $uuid, string $orderUuid)
     {
         $order = $this->orderService->updateItemsForSeller($uuid, $orderUuid, (object) $request->validated());
