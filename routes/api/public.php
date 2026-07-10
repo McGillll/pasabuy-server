@@ -16,5 +16,5 @@ Route::post('/customers/register', [PublicCustomerController::class, 'register']
 
 Route::prefix('checklist')->middleware('throttle:checklist-toggle')->group(function () {
     Route::get('/{token}', [PublicChecklistController::class, 'show']);
-    Route::post('/{token}/{productUuid}', [PublicChecklistController::class, 'toggle']);
+    Route::patch('/{token}/{productUuid}', [PublicChecklistController::class, 'toggle']);
 });
