@@ -30,4 +30,11 @@ class PasabuyOrderFilter extends ModelFilter
     {
         return $this->where('delivery_status', $value);
     }
+
+    public function scheduleUuid($value)
+    {
+        return $this->whereHas('pasabuySchedule', function ($query) use ($value) {
+            $query->where('uuid', $value);
+        });
+    }
 }

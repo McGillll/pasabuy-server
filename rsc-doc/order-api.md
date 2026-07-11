@@ -69,6 +69,7 @@ Lists orders across all schedules (paginated), for the cross-schedule admin Orde
 | status          | string | No       | `pending` \| `confirmed` \| `cancelled`                        |
 | payment_status  | string | No       | `unpaid` \| `partially_paid` \| `paid`                          |
 | delivery_status | string | No       | `not_delivered` \| `delivered`                                  |
+| schedule_uuid   | string | No       | Restrict to orders belonging to a single `PasabuySchedule` (by its uuid) |
 | search          | string | No       | Matches against `customer_name` or `customer_contact`          |
 
 ### Success response — 200
