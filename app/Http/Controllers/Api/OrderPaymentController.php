@@ -17,9 +17,9 @@ class OrderPaymentController extends Controller
         protected OrderPaymentServiceInterface $orderPaymentService,
     ) {}
 
-    public function index(string $orderUuid)
+    public function index(Request $request, string $orderUuid)
     {
-        $payments = $this->orderPaymentService->listForOrder($orderUuid);
+        $payments = $this->orderPaymentService->listForOrder($orderUuid, $request->user()->id);
 
         return $this->success(OrderPaymentResource::collection($payments));
     }
@@ -28,6 +28,7 @@ class OrderPaymentController extends Controller
     {
         $payload = (object) $request->validated();
         $payload->recorded_by_user_id = $request->user()->id;
+        $payload->user_id = $request->user()->id;
 
         $payment = $this->orderPaymentService->create($orderUuid, $payload);
 
@@ -36,7 +37,7 @@ class OrderPaymentController extends Controller
 
     public function destroy(Request $request, string $orderUuid, string $uuid)
     {
-        $this->orderPaymentService->delete($orderUuid, $uuid);
+        $this->orderPaymentService->delete($orderUuid, $uuid, $request->user()->id);
 
         return $this->success(null, 'Payment removed');
     }

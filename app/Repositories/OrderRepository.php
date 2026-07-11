@@ -10,7 +10,7 @@ class OrderRepository implements OrderRepositoryInterface
 {
     public function findByUuid(string $uuid)
     {
-        return Order::with('items.product')->where('uuid', $uuid)->first();
+        return Order::with('items.product', 'pasabuySchedule')->where('uuid', $uuid)->first();
     }
 
     public function findOwnedByUuid(string $uuid, int $userId)
@@ -52,6 +52,34 @@ class OrderRepository implements OrderRepositoryInterface
         $order->save();
 
         return $order->fresh(['items.product', 'pasabuySchedule']);
+    }
+
+    public function updateDeliveryStatus(string $uuid, object $payload)
+    {
+        $order = Order::where('uuid', $uuid)->first();
+        $order->delivery_status = $payload->delivery_status;
+        $order->save();
+
+        return $order->fresh(['items.product', 'pasabuySchedule']);
+    }
+
+    public function recalcPaymentStatus(object $order)
+    {
+        $locked = Order::whereKey($order->id)->lockForUpdate()->first();
+
+        $paid = $locked->payments()->sum('amount');
+
+        $locked->payment_status = match (true) {
+            bccomp((string) $paid, '0', 2) <= 0 => 'unpaid',
+            bccomp((string) $paid, (string) $locked->total_amount, 2) >= 0 => 'paid',
+            default => 'partially_paid',
+        };
+
+        $locked->save();
+
+        $order->payment_status = $locked->payment_status;
+
+        return $order;
     }
 
     public function create(object $payload)

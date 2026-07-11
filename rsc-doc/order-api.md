@@ -4,9 +4,10 @@ Admin-side order management. Orders themselves are created and edited by custome
 
 ## Endpoints overview
 
-| Method | Endpoint                          | Description                        |
-|--------|-------------------------------------|----------------------------------------|
-| PATCH  | `/api/admin/orders/{uuid}/status`   | Move an order to `confirmed` or `cancelled` |
+| Method | Endpoint                                     | Description                        |
+|--------|-----------------------------------------------|----------------------------------------|
+| PATCH  | `/api/admin/orders/{uuid}/status`             | Move an order to `confirmed` or `cancelled` |
+| PATCH  | `/api/admin/orders/{uuid}/delivery-status`    | Toggle delivery status to `delivered` or `not_delivered` |
 
 `Accept: application/json`, `Authorization: Bearer {token}` (admin ability). Body is JSON or form-urlencoded (no file upload involved, so no FormData/method-spoofing needed here).
 
@@ -28,6 +29,8 @@ There is no order-level status change from this recalculation — an order's `st
 | customer_contact           | string        | Snapshot of the owning customer's contact number at order time |
 | status                     | string        | `pending` \| `confirmed` \| `cancelled` |
 | total_amount               | string        | Decimal string, server-computed — never trust a client-sent total |
+| payment_status             | string        | `unpaid` \| `partially_paid` \| `paid` — server-computed from the order-payments ledger; never set directly. Recalculated whenever a payment is created or deleted: `unpaid` when paid sum is `0`, `paid` when paid sum `>= total_amount`, otherwise `partially_paid` |
+| delivery_status            | string        | `not_delivered` \| `delivered` — toggled directly via `PATCH /api/admin/orders/{uuid}/delivery-status`. Independent of `status` and `payment_status` |
 | is_editable                | boolean       | `true` only while `status` is `pending` and the parent schedule is still open/before cutoff — matches the customer-side edit gate |
 | is_cancellable              | boolean       | `true` while `status` is `pending`, **and** the parent schedule is still open/before cutoff — same gate as `is_editable`, so cancelling disappears once the seller closes the schedule or the order is `confirmed`/`cancelled` |
 | pasabuy_schedule            | object\|null  | Present when loaded — see `PasabuyScheduleResource` in `pasabuy-schedule-api.md` |
@@ -78,13 +81,39 @@ PATCH /api/admin/orders/36d53541-.../status
 - **404** — no order with that uuid: `{ "success": false, "message": "Order not found.", "data": null }`
 - **422** — `status` missing or not one of `confirmed`/`cancelled`.
 
+## PATCH /api/admin/orders/{uuid}/delivery-status
+
+### Request body
+
+| Field           | Type   | Required | Notes                                      |
+|-----------------|--------|----------|-----------------------------------------------|
+| delivery_status | string | Yes      | Must be `not_delivered` or `delivered`         |
+
+### Example request
+
+```json
+PATCH /api/admin/orders/36d53541-.../delivery-status
+{ "delivery_status": "delivered" }
+```
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Order delivery status updated successfully", "data": { "uuid": "...", "status": "confirmed", "payment_status": "paid", "delivery_status": "delivered", "total_amount": "50.00", "created_at": "..." } }
+```
+
+### Error responses
+
+- **404** — no order with that uuid: `{ "success": false, "message": "Order not found.", "data": null }`
+- **422** — `delivery_status` missing or not one of `not_delivered`/`delivered`.
+
 ## Seller order-item editor
 
 Sellers correct a customer's order (add/remove items, change quantities) once the schedule is `closed`, via `PUT /api/admin/pasabuy-schedules/{scheduleUuid}/orders/{orderUuid}/items` — see `pasabuy-schedule-api.md` for the full request/response shape and error cases.
 
 ## Order payments (admin)
 
-A payment ledger against an order — supports multiple partial/installment payments per order. Only the admin (seller) records payments; there is no customer-submitted payment workflow. `Order.status` (`pending`/`confirmed`/`cancelled`) is unaffected by payments — this is a separate ledger, not an order-lifecycle state.
+A payment ledger against an order — supports multiple partial/installment payments per order. Only the admin (seller) records payments; there is no customer-submitted payment workflow. `Order.status` (`pending`/`confirmed`/`cancelled`) is unaffected by payments — this is a separate ledger, not an order-lifecycle state. `Order.payment_status` (`unpaid`/`partially_paid`/`paid`) **is** derived from this ledger and is automatically recalculated after every payment create/delete — it can never be set directly via any endpoint.
 
 | Method | Endpoint                                             | Description                    |
 |--------|-------------------------------------------------------|---------------------------------|
@@ -125,7 +154,7 @@ Deleting an order (cascade) removes all its payments.
 
 | Status | Meaning               | Applies to    |
 |--------|------------------------|-----------------|
-| 401    | Missing/invalid token  | updateStatus, order payments     |
-| 404    | Order not found        | updateStatus, order payments     |
+| 401    | Missing/invalid token  | updateStatus, updateDeliveryStatus, order payments     |
+| 404    | Order not found        | updateStatus, updateDeliveryStatus, order payments     |
 | 404    | Payment not found      | payments destroy |
-| 422    | Validation failure     | updateStatus, payments store |
+| 422    | Validation failure     | updateStatus, updateDeliveryStatus, payments store |

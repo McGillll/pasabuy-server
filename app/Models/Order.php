@@ -3,15 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-#[Fillable(['customer_name', 'customer_contact', 'status', 'total_amount'])]
+#[Fillable(['customer_name', 'customer_contact', 'status', 'total_amount', 'payment_status', 'delivery_status'])]
 class Order extends Model
 {
+    use HasFactory;
+
     public const EDITABLE_STATUSES = ['pending'];
 
     public const LIVE_STATUSES = ['pending', 'confirmed'];
+
+    public const PAYMENT_STATUSES = ['unpaid', 'partially_paid', 'paid'];
+
+    public const DELIVERY_STATUSES = ['not_delivered', 'delivered'];
 
     protected static function booted()
     {

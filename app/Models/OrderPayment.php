@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 #[Fillable(['amount', 'method', 'reference_number', 'notes', 'paid_at'])]
 class OrderPayment extends Model
 {
+    use HasFactory;
+
     protected static function booted()
     {
         static::creating(function (OrderPayment $payment) {

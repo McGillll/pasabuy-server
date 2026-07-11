@@ -16,6 +16,8 @@ class OrderResource extends JsonResource
             'customer_contact' => $this->customer_contact,
             'status' => $this->status,
             'total_amount' => $this->total_amount,
+            'payment_status' => $this->payment_status,
+            'delivery_status' => $this->delivery_status,
             'is_editable' => in_array($this->status, Order::EDITABLE_STATUSES)
                 && $this->relationLoaded('pasabuySchedule')
                 && $this->pasabuySchedule->is_open,

@@ -169,7 +169,10 @@ class PasabuyScheduleController extends Controller
 
     public function updateOrderItems(PasabuyScheduleOrderItemsUpdateRequest $request, string $uuid, string $orderUuid)
     {
-        $order = $this->orderService->updateItemsForSeller($uuid, $orderUuid, (object) $request->validated());
+        $payload = (object) $request->validated();
+        $payload->user_id = $request->user()->id;
+
+        $order = $this->orderService->updateItemsForSeller($uuid, $orderUuid, $payload);
 
         return $this->success(new OrderResource($order), 'Order items updated');
     }

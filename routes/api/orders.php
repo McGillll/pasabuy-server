@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin/orders')->middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::patch('/{uuid}/status', [OrderController::class, 'updateStatus']);
+    Route::patch('/{uuid}/delivery-status', [OrderController::class, 'updateDeliveryStatus']);
 });
 
 Route::middleware(['auth:sanctum', 'abilities:customer', 'customer.approved'])->group(function () {

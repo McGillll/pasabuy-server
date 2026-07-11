@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
+use App\Exceptions\UnauthorizedActionException;
 use App\Interfaces\Order\OrderRepositoryInterface;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
@@ -27,7 +28,22 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
+        $this->ensureOrderOwnership($order, $payload->user_id);
+
         return $this->orderRepository->updateStatus($uuid, $payload);
+    }
+
+    public function updateDeliveryStatus(string $uuid, object $payload)
+    {
+        $order = $this->orderRepository->findByUuid($uuid);
+
+        if (! $order) {
+            throw new NotFoundException('Order not found.');
+        }
+
+        $this->ensureOrderOwnership($order, $payload->user_id);
+
+        return $this->orderRepository->updateDeliveryStatus($uuid, $payload);
     }
 
     public function createForSchedule(string $scheduleUuid, object $payload)
@@ -155,6 +171,10 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Pasabuy schedule not found.');
         }
 
+        if ($schedule->user_id !== $payload->user_id) {
+            throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
+        }
+
         if ($schedule->status !== 'closed') {
             throw new InvalidPayloadException('Order items can only be edited by the seller while the schedule is closed.');
         }
@@ -170,6 +190,13 @@ class OrderService implements OrderServiceInterface
         return DB::transaction(function () use ($order, $resolvedItems) {
             return $this->orderRepository->replaceItems($order, (object) ['items' => $resolvedItems]);
         });
+    }
+
+    protected function ensureOrderOwnership(Order $order, int $userId)
+    {
+        if ($order->pasabuySchedule->user_id !== $userId) {
+            throw new UnauthorizedActionException('You do not own this order.');
+        }
     }
 
     protected function ensureScheduleIsOpen($schedule)

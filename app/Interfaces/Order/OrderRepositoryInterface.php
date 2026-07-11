@@ -16,6 +16,10 @@ interface OrderRepositoryInterface
 
     public function updateStatus(string $uuid, object $payload);
 
+    public function updateDeliveryStatus(string $uuid, object $payload);
+
+    public function recalcPaymentStatus(object $order);
+
     public function create(object $payload);
 
     public function addItems(object $order, object $payload);
