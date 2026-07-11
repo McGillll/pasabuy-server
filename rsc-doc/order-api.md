@@ -82,10 +82,50 @@ PATCH /api/admin/orders/36d53541-.../status
 
 Sellers correct a customer's order (add/remove items, change quantities) once the schedule is `closed`, via `PUT /api/admin/pasabuy-schedules/{scheduleUuid}/orders/{orderUuid}/items` — see `pasabuy-schedule-api.md` for the full request/response shape and error cases.
 
+## Order payments (admin)
+
+A payment ledger against an order — supports multiple partial/installment payments per order. Only the admin (seller) records payments; there is no customer-submitted payment workflow. `Order.status` (`pending`/`confirmed`/`cancelled`) is unaffected by payments — this is a separate ledger, not an order-lifecycle state.
+
+| Method | Endpoint                                             | Description                    |
+|--------|-------------------------------------------------------|---------------------------------|
+| GET    | `/api/admin/orders/{orderUuid}/payments`             | List payments for an order, newest `paid_at` first |
+| POST   | `/api/admin/orders/{orderUuid}/payments`             | Record a payment against an order |
+| DELETE | `/api/admin/orders/{orderUuid}/payments/{uuid}`      | Void/remove a mis-recorded payment |
+
+`Accept: application/json`, `Authorization: Bearer {token}` (admin ability).
+
+### OrderPayment object
+
+| Field             | Type          | Notes                                            |
+|-------------------|---------------|---------------------------------------------------|
+| uuid              | string        | Public identifier                                  |
+| amount            | string        | Decimal string                                     |
+| method            | string        | `cash` \| `gcash` \| `bank_transfer` \| `maya` \| `other` |
+| reference_number  | string\|null  | e.g. GCash/bank transfer reference                 |
+| notes             | string\|null  |                                                     |
+| paid_at           | datetime      | When the payment was made (client-supplied, not `created_at`) |
+| recorded_by       | object\|null  | `{ uuid, full_name }` of the admin who recorded it, when loaded |
+| created_at        | datetime      |                                                     |
+
+### POST /api/admin/orders/{orderUuid}/payments — request body
+
+| Field             | Type   | Required | Notes                                       |
+|-------------------|--------|----------|-----------------------------------------------|
+| amount            | number | Yes      | Must be > 0                                    |
+| method            | string | Yes      | One of `cash`, `gcash`, `bank_transfer`, `maya`, `other` |
+| reference_number  | string | No       |                                                 |
+| notes             | string | No       |                                                 |
+| paid_at           | date   | Yes      |                                                 |
+
+No validation currently caps total payments at the order's `total_amount` — overpayment (tips, rounding, later price adjustments) is allowed by design.
+
+Deleting an order (cascade) removes all its payments.
+
 ## Error status summary
 
 | Status | Meaning               | Applies to    |
 |--------|------------------------|-----------------|
-| 401    | Missing/invalid token  | updateStatus     |
-| 404    | Order not found        | updateStatus     |
-| 422    | Validation failure     | updateStatus |
+| 401    | Missing/invalid token  | updateStatus, order payments     |
+| 404    | Order not found        | updateStatus, order payments     |
+| 404    | Payment not found      | payments destroy |
+| 422    | Validation failure     | updateStatus, payments store |
