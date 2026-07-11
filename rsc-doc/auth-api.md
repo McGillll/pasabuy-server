@@ -1,14 +1,16 @@
 # Auth API
 
-Sanctum personal-access-token authentication, shared by both the seller/admin app and customer accounts — `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/me` work identically regardless of `role`. Customer registration and admin approval are separate endpoints documented in `customer-api.md`; this module only covers logging in with an already-registered account (admin or customer).
+Sanctum personal-access-token authentication, shared by both the seller/admin app and customer accounts — `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `PATCH /api/auth/me`, and `PATCH /api/auth/me/password` work identically regardless of `role`. Customer registration and admin approval are separate endpoints documented in `customer-api.md`; this module covers logging in and self-service "My Account" profile/password management for an already-registered account (admin or customer).
 
 ## Endpoints overview
 
-| Method | Endpoint          | Auth required | Description                    |
-|--------|-------------------|----------------|--------------------------------|
-| POST   | `/api/auth/login` | No             | Exchange email/password for a token |
-| POST   | `/api/auth/logout`| Yes            | Revoke the current token       |
-| GET    | `/api/auth/me`    | Yes            | Get the authenticated user     |
+| Method | Endpoint                  | Auth required | Description                          |
+|--------|----------------------------|----------------|---------------------------------------|
+| POST   | `/api/auth/login`          | No             | Exchange email/password for a token   |
+| POST   | `/api/auth/logout`         | Yes            | Revoke the current token              |
+| GET    | `/api/auth/me`              | Yes            | Get the authenticated user            |
+| PATCH  | `/api/auth/me`              | Yes            | Update own profile (name/email)       |
+| PATCH  | `/api/auth/me/password`     | Yes            | Change own password                   |
 
 All requests must send `Accept: application/json`. Authenticated requests send `Authorization: Bearer {token}`.
 
@@ -138,12 +140,101 @@ Requires `Authorization: Bearer {token}`. Returns the currently authenticated us
 
 ---
 
+## PATCH /api/auth/me
+
+Requires `Authorization: Bearer {token}`. Updates the authenticated user's own `first_name`, `last_name`, `email`. Any authenticated role (admin or customer) may call this for their own account — there is no "update another user" variant.
+
+### Request body
+
+| Field      | Type   | Required | Notes                                                        |
+|------------|--------|----------|----------------------------------------------------------------|
+| first_name | string | Yes      | Max 255                                                        |
+| last_name  | string | Yes      | Max 255                                                        |
+| email      | string | Yes      | Valid email, unique across `users` excluding the current user |
+
+### Example request
+
+```json
+PATCH /api/auth/me
+{
+  "first_name": "Juan",
+  "last_name": "Dela Cruz",
+  "email": "juan.delacruz@example.com"
+}
+```
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    "uuid": "97ba3fd3-3826-4814-a49a-896a443d490e",
+    "first_name": "Juan",
+    "last_name": "Dela Cruz",
+    "email": "juan.delacruz@example.com",
+    "contact_number": null,
+    "role": "customer",
+    "is_approved": true
+  }
+}
+```
+
+### Error responses
+
+- **401** — missing/invalid/expired token.
+- **422** — validation failure (missing/invalid fields, or `email` already taken by another user). Standard Laravel validation error shape.
+
+---
+
+## PATCH /api/auth/me/password
+
+Requires `Authorization: Bearer {token}`. Changes the authenticated user's own password. Does not return a resource — success message only.
+
+### Request body
+
+| Field                 | Type   | Required | Notes                                  |
+|-----------------------|--------|----------|------------------------------------------|
+| current_password      | string | Yes      | Must match the user's current password |
+| password              | string | Yes      | Min 8 characters                        |
+| password_confirmation | string | Yes      | Must match `password`                   |
+
+### Example request
+
+```json
+PATCH /api/auth/me/password
+{
+  "current_password": "old-password",
+  "password": "new-password123",
+  "password_confirmation": "new-password123"
+}
+```
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Password updated successfully", "data": null }
+```
+
+### Error responses
+
+- **401** — missing/invalid/expired token.
+- **401** — `current_password` doesn't match:
+  ```json
+  { "success": false, "message": "Current password is incorrect.", "data": null }
+  ```
+- **422** — validation failure (missing fields, `password` too short, or `password_confirmation` mismatch). Standard Laravel validation error shape.
+
+---
+
 ## Error status summary
 
 | Status | Meaning                          | Applies to           |
 |--------|-----------------------------------|-----------------------|
-| 401    | Bad credentials, or missing/invalid/expired token | login, logout, me |
-| 422    | Validation failure                | login                 |
+| 401    | Bad credentials, or missing/invalid/expired token | login, logout, me, PATCH me, PATCH me/password |
+| 401    | Incorrect `current_password`      | PATCH me/password     |
+| 422    | Validation failure                | login, PATCH me, PATCH me/password |
 | 429    | Rate limited                      | login                 |
 
 ## Seeded credentials (local/dev only)

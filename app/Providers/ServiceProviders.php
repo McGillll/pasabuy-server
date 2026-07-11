@@ -8,12 +8,14 @@ use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Interfaces\Product\ProductServiceInterface;
 use App\Interfaces\ProductCategory\ProductCategoryServiceInterface;
+use App\Interfaces\Settings\SettingsServiceInterface;
 use App\Services\AuthService;
 use App\Services\CustomerService;
 use App\Services\OrderService;
 use App\Services\PasabuyScheduleService;
 use App\Services\ProductService;
 use App\Services\ProductCategoryService;
+use App\Services\SettingsService;
 use Illuminate\Support\ServiceProvider;
 
 class ServiceProviders extends ServiceProvider
@@ -26,5 +28,6 @@ class ServiceProviders extends ServiceProvider
         $this->app->bind(PasabuyScheduleServiceInterface::class, PasabuyScheduleService::class);
         $this->app->bind(OrderServiceInterface::class, OrderService::class);
         $this->app->bind(CustomerServiceInterface::class, CustomerService::class);
+        $this->app->bind(SettingsServiceInterface::class, SettingsService::class);
     }
 }

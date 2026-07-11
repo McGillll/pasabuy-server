@@ -43,4 +43,18 @@ class AuthService implements AuthServiceInterface
     {
         return $payload->user;
     }
+
+    public function updateProfile(object $payload)
+    {
+        return $this->authRepository->updateProfile($payload);
+    }
+
+    public function updatePassword(object $payload)
+    {
+        if (! Hash::check($payload->current_password, $payload->user->password)) {
+            throw new AuthenticationFailedException('Current password is incorrect.');
+        }
+
+        return $this->authRepository->updatePassword($payload);
+    }
 }

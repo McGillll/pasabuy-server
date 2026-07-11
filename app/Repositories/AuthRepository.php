@@ -16,4 +16,24 @@ class AuthRepository implements AuthRepositoryInterface
     {
         return User::where('uuid', $uuid)->first();
     }
+
+    public function updateProfile(object $payload)
+    {
+        $user = $payload->user;
+        $user->first_name = $payload->first_name;
+        $user->last_name = $payload->last_name;
+        $user->email = $payload->email;
+        $user->save();
+
+        return $user;
+    }
+
+    public function updatePassword(object $payload)
+    {
+        $user = $payload->user;
+        $user->password = $payload->password;
+        $user->save();
+
+        return $user;
+    }
 }

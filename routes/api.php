@@ -9,3 +9,4 @@ Route::prefix('admin/pasabuy-schedules')->group(base_path('routes/api/pasabuy-sc
 Route::group([], base_path('routes/api/orders.php'));
 Route::prefix('admin/customers')->group(base_path('routes/api/customers.php'));
 Route::prefix('public')->group(base_path('routes/api/public.php'));
+Route::group([], base_path('routes/api/settings.php'));

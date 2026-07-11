@@ -9,4 +9,8 @@ interface AuthServiceInterface
     public function logout(object $payload);
 
     public function me(object $payload);
+
+    public function updateProfile(object $payload);
+
+    public function updatePassword(object $payload);
 }

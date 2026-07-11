@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AuthLoginRequest;
+use App\Http\Requests\PasswordUpdateRequest;
+use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Resources\UserResource;
 use App\Interfaces\Auth\AuthServiceInterface;
 use App\Traits\ApiResponse;
@@ -39,5 +41,25 @@ class AuthController extends Controller
         $user = $this->authService->me((object) ['user' => $request->user()]);
 
         return $this->success(new UserResource($user), 'Authenticated user retrieved');
+    }
+
+    public function updateProfile(ProfileUpdateRequest $request)
+    {
+        $payload = (object) $request->validated();
+        $payload->user = $request->user();
+
+        $user = $this->authService->updateProfile($payload);
+
+        return $this->success(new UserResource($user), 'Profile updated successfully');
+    }
+
+    public function updatePassword(PasswordUpdateRequest $request)
+    {
+        $payload = (object) $request->validated();
+        $payload->user = $request->user();
+
+        $this->authService->updatePassword($payload);
+
+        return $this->success(null, 'Password updated successfully');
     }
 }
