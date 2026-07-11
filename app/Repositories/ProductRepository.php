@@ -3,13 +3,13 @@
 namespace App\Repositories;
 
 use App\Interfaces\Product\ProductRepositoryInterface;
-use App\Models\Product;
+use App\Models\PasabuyProduct;
 
 class ProductRepository implements ProductRepositoryInterface
 {
     public function all(object $payload)
     {
-        return Product::filter((array) $payload)
+        return PasabuyProduct::filter((array) $payload)
             ->with('latestScheduleProduct', 'category')
             ->orderBy('name')
             ->paginate($payload->per_page ?? 15);
@@ -17,7 +17,7 @@ class ProductRepository implements ProductRepositoryInterface
 
     public function publicCatalog(object $payload)
     {
-        return Product::filter((array) $payload)
+        return PasabuyProduct::filter((array) $payload)
             ->where('is_active', true)
             ->with('category')
             ->orderBy('name')
@@ -26,12 +26,12 @@ class ProductRepository implements ProductRepositoryInterface
 
     public function findByUuid(string $uuid)
     {
-        return Product::with('category')->where('uuid', $uuid)->first();
+        return PasabuyProduct::with('category')->where('uuid', $uuid)->first();
     }
 
     public function create(object $payload)
     {
-        $product = new Product;
+        $product = new PasabuyProduct;
         $product->name = $payload->name;
         $product->description = $payload->description ?? null;
         $product->image_path = $payload->image_path ?? null;

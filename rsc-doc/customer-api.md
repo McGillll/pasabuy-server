@@ -122,7 +122,7 @@ POST /api/customer/pasabuy-schedules/e9400549-.../orders
 ### Success response — 201
 
 ```json
-{ "success": true, "message": "Order placed successfully", "data": { "uuid": "...", "customer_name": "Juan Dela Cruz", "customer_contact": "09171234567", "status": "pending", "total_amount": "50.00", "is_editable": true, "is_cancellable": true, "items": [ { "uuid": "...", "product_name": "Instant Noodles", "estimated_price": "25.00", "actual_price": null, "is_bonus": false, "is_out_of_stock": false, "quantity": 2, "subtotal": "50.00" } ], "created_at": "..." } }
+{ "success": true, "message": "Order placed successfully", "data": { "uuid": "...", "customer_name": "Juan Dela Cruz", "customer_contact": "09171234567", "status": "pending", "total_amount": "50.00", "is_editable": true, "is_cancellable": true, "items": [ { "uuid": "...", "product_name": "Instant Noodles", "estimated_price": "25.00", "actual_price": null, "is_out_of_stock": false, "quantity": 2, "bonus_quantity": 0, "subtotal": "50.00" } ], "created_at": "..." } }
 ```
 
 ### Error responses
@@ -253,7 +253,7 @@ Admin-only. Every order the customer has ever placed, across all schedules, newe
       "is_editable": false,
       "is_cancellable": false,
       "pasabuy_schedule": { "uuid": "e9400549-...", "title": "Grocery Run July", "status": "closed", "is_open": false, "created_at": "..." },
-      "items": [ { "uuid": "...", "product_uuid": "abe9e0a5-...", "product_name": "Instant Noodles", "estimated_price": "25.00", "actual_price": "25.00", "is_bonus": false, "is_out_of_stock": false, "quantity": 2, "subtotal": "50.00" } ],
+      "items": [ { "uuid": "...", "product_uuid": "abe9e0a5-...", "product_name": "Instant Noodles", "estimated_price": "25.00", "actual_price": "25.00", "is_out_of_stock": false, "quantity": 2, "bonus_quantity": 0, "subtotal": "50.00" } ],
       "created_at": "..."
     }
   ]

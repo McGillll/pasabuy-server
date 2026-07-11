@@ -49,9 +49,9 @@ Every order now belongs to a customer account (`user_id` internally) — there i
 | product_name            | string        | Snapshot at order time — won't change if the product is later renamed |
 | estimated_price          | string        | Snapshot of the schedule's listing-time price when this item was ordered/last edited |
 | actual_price             | string\|null  | `null` until the seller confirms in-store pricing for this product, or if the product is `out_of_stock` |
-| is_bonus                 | boolean       | `true` for a B1T1 bonus line — always priced `0` |
 | is_out_of_stock          | boolean       | `true` if the seller marked this product out of stock in-store — `actual_price` is `null` and `subtotal` is `0` while this is `true` |
-| quantity                 | int           |                                                                      |
+| quantity                 | int           | Quantity actually paid for                                          |
+| bonus_quantity           | int           | Extra units granted free on top of `quantity` — `> 0` while the schedule product is `b1t1`, `0` otherwise. Not included in `subtotal` |
 | subtotal                 | string        | `(actual_price ?? estimated_price) * quantity`, or `0` while `is_out_of_stock` is `true` |
 
 ---

@@ -10,13 +10,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 #[Fillable(['name', 'description', 'image_path', 'is_active', 'category_id', 'default_price', 'default_product_status'])]
-class Product extends Model
+class PasabuyProduct extends Model
 {
     use Filterable, HasFactory, SoftDeletes;
 
     protected static function booted()
     {
-        static::creating(function (Product $product) {
+        static::creating(function (PasabuyProduct $product) {
             $product->uuid = Str::uuid()->toString();
         });
     }
@@ -30,7 +30,7 @@ class Product extends Model
 
     public function latestScheduleProduct()
     {
-        return $this->hasOne(PasabuyScheduleProduct::class)->latestOfMany('updated_at');
+        return $this->hasOne(PasabuyScheduleProduct::class, 'product_id')->latestOfMany('updated_at');
     }
 
     public function category()

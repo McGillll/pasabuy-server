@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\PasabuyOrder;
+use App\Models\PasabuyOrderItem;
 use App\Models\PasabuySchedule;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -14,7 +14,7 @@ class OrderSeeder extends Seeder
 
     public function run()
     {
-        if (Order::exists()) {
+        if (PasabuyOrder::exists()) {
             return;
         }
 
@@ -34,12 +34,12 @@ class OrderSeeder extends Seeder
             }
 
             foreach ($customers as $index => $customer) {
-                $order = new Order;
+                $order = new PasabuyOrder;
                 $order->pasabuy_schedule_id = $schedule->id;
                 $order->user_id = $customer->id;
                 $order->customer_name = $customer->fullName();
                 $order->customer_contact = $customer->contact_number;
-                $order->status = self::STATUSES[$index] ?? 'pending';
+                $order->status = 'pending';
                 $order->total_amount = 0;
                 $order->save();
 
@@ -49,9 +49,9 @@ class OrderSeeder extends Seeder
                     $subtotal = $scheduleProduct->product->default_price * $quantity;
                     $total += $subtotal;
 
-                    $orderItem = new OrderItem;
+                    $orderItem = new PasabuyOrderItem;
                     $orderItem->order_id = $order->id;
-                    $orderItem->product_id = $scheduleProduct->product_id;
+                    $orderItem->pasabuy_schedule_product_id = $scheduleProduct->id;
                     $orderItem->product_name = $scheduleProduct->product->name;
                     $orderItem->estimated_price = $scheduleProduct->product->default_price;
                     $orderItem->actual_price = $scheduleProduct->actual_price;

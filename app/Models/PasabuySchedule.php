@@ -53,6 +53,6 @@ class PasabuySchedule extends Model
 
     public function orders()
     {
-        return $this->hasMany(Order::class);
+        return $this->hasMany(PasabuyOrder::class);
     }
 }

@@ -4,7 +4,7 @@ namespace App\ModelFilters;
 
 use EloquentFilter\ModelFilter;
 
-class OrderFilter extends ModelFilter
+class PasabuyOrderFilter extends ModelFilter
 {
     public $relations = [];
 

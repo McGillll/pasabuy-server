@@ -2,15 +2,15 @@
 
 namespace Database\Factories;
 
-use App\Models\Order;
-use App\Models\OrderPayment;
+use App\Models\PasabuyOrder;
+use App\Models\PasabuyOrderPayment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<OrderPayment>
+ * @extends Factory<PasabuyOrderPayment>
  */
-class OrderPaymentFactory extends Factory
+class PasabuyOrderPaymentFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -20,7 +20,7 @@ class OrderPaymentFactory extends Factory
     public function definition()
     {
         return [
-            'order_id' => Order::factory(),
+            'order_id' => PasabuyOrder::factory(),
             'recorded_by_user_id' => User::factory(),
             'amount' => fake()->randomFloat(2, 10, 100),
             'method' => 'cash',

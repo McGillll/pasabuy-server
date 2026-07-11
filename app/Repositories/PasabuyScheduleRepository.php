@@ -3,12 +3,12 @@
 namespace App\Repositories;
 
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
-use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\PasabuyOrder;
+use App\Models\PasabuyOrderItem;
+use App\Models\PasabuyProduct;
 use App\Models\PasabuySchedule;
 use App\Models\PasabuyScheduleChecklistItem;
 use App\Models\PasabuyScheduleProduct;
-use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -75,7 +75,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         return $schedule;
     }
 
-    public function findOrCreateScheduleProduct(PasabuySchedule $schedule, Product $product)
+    public function findOrCreateScheduleProduct(PasabuySchedule $schedule, PasabuyProduct $product)
     {
         return PasabuyScheduleProduct::firstOrCreate(
             ['pasabuy_schedule_id' => $schedule->id, 'product_id' => $product->id],
@@ -87,7 +87,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     {
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
 
-        return $schedule->orders()->with('items.product')->latest()->get();
+        return $schedule->orders()->with('items.pasabuyScheduleProduct.product')->latest()->get();
     }
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload)
@@ -119,24 +119,39 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     {
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
 
-        return OrderItem::selectRaw('product_id, SUM(quantity) as total_quantity')
-            ->where('is_bonus', false)
+        $rows = PasabuyOrderItem::selectRaw('pasabuy_schedule_product_id, SUM(quantity) as total_quantity')
             ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id)
-                ->whereIn('status', Order::LIVE_STATUSES))
-            ->groupBy('product_id')
-            ->with('product.category')
+                ->whereIn('status', PasabuyOrder::LIVE_STATUSES))
+            ->groupBy('pasabuy_schedule_product_id')
             ->get();
+
+        $scheduleProducts = PasabuyScheduleProduct::whereIn('id', $rows->pluck('pasabuy_schedule_product_id'))
+            ->with('product.category')
+            ->get()
+            ->keyBy('id');
+
+        return $rows->map(function ($row) use ($scheduleProducts) {
+            $scheduleProduct = $scheduleProducts[$row->pasabuy_schedule_product_id];
+            $row->product_id = $scheduleProduct->product_id;
+            $row->product = $scheduleProduct->product;
+
+            return $row;
+        });
     }
 
     public function productBuyers(string $scheduleUuid, string $productUuid)
     {
         $schedule = PasabuySchedule::where('uuid', $scheduleUuid)->first();
-        $product = Product::where('uuid', $productUuid)->first();
+        $product = PasabuyProduct::where('uuid', $productUuid)->first();
 
-        return OrderItem::where('product_id', $product->id)
-            ->where('is_bonus', false)
-            ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id)
-                ->whereIn('status', Order::LIVE_STATUSES))
+        $scheduleProduct = $this->findScheduleProduct($schedule->id, $product->id);
+
+        if (! $scheduleProduct) {
+            return collect();
+        }
+
+        return PasabuyOrderItem::where('pasabuy_schedule_product_id', $scheduleProduct->id)
+            ->whereHas('order', fn ($query) => $query->whereIn('status', PasabuyOrder::LIVE_STATUSES))
             ->with('order')
             ->get();
     }
@@ -189,7 +204,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     public function toggleChecklistItem(string $scheduleUuid, string $productUuid, bool $isChecked)
     {
         $schedule = PasabuySchedule::where('uuid', $scheduleUuid)->first();
-        $product = Product::where('uuid', $productUuid)->first();
+        $product = PasabuyProduct::where('uuid', $productUuid)->first();
 
         $item = PasabuyScheduleChecklistItem::where('pasabuy_schedule_id', $schedule->id)
             ->where('product_id', $product->id)

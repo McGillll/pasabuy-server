@@ -3,13 +3,13 @@
 namespace App\Repositories;
 
 use App\Interfaces\OrderPayment\OrderPaymentRepositoryInterface;
-use App\Models\OrderPayment;
+use App\Models\PasabuyOrderPayment;
 
 class OrderPaymentRepository implements OrderPaymentRepositoryInterface
 {
     public function findByUuid(string $uuid)
     {
-        return OrderPayment::with('recordedBy')->where('uuid', $uuid)->first();
+        return PasabuyOrderPayment::with('recordedBy')->where('uuid', $uuid)->first();
     }
 
     public function listForOrder(object $order)
@@ -19,7 +19,7 @@ class OrderPaymentRepository implements OrderPaymentRepositoryInterface
 
     public function create(object $payload)
     {
-        $payment = new OrderPayment;
+        $payment = new PasabuyOrderPayment;
         $payment->order_id = $payload->order->id;
         $payment->recorded_by_user_id = $payload->recorded_by_user_id;
         $payment->amount = $payload->amount;

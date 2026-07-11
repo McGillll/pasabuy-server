@@ -2,15 +2,15 @@
 
 namespace Database\Factories;
 
-use App\Models\Order;
+use App\Models\PasabuyOrder;
 use App\Models\PasabuySchedule;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Order>
+ * @extends Factory<PasabuyOrder>
  */
-class OrderFactory extends Factory
+class PasabuyOrderFactory extends Factory
 {
     /**
      * Define the model's default state.

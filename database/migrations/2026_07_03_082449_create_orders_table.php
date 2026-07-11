@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('orders', function (Blueprint $table) {
+        Schema::create('pasabuy_orders', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('pasabuy_schedule_id')->constrained()->cascadeOnDelete();
@@ -20,6 +20,10 @@ return new class extends Migration
             $table->string('customer_contact');
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->decimal('total_amount', 10, 2);
+            $table->enum('payment_status', ['unpaid', 'partially_paid', 'paid'])->default('unpaid');
+            $table->enum('delivery_status', ['not_delivered', 'delivered'])->default('not_delivered');
+            $table->index('payment_status');
+            $table->index('delivery_status');
             $table->timestamps();
         });
     }
@@ -29,6 +33,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('orders');
+        Schema::dropIfExists('pasabuy_orders');
     }
 };

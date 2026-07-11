@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Order;
+use App\Models\PasabuyOrder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,10 +18,10 @@ class OrderResource extends JsonResource
             'total_amount' => $this->total_amount,
             'payment_status' => $this->payment_status,
             'delivery_status' => $this->delivery_status,
-            'is_editable' => in_array($this->status, Order::EDITABLE_STATUSES)
+            'is_editable' => in_array($this->status, PasabuyOrder::EDITABLE_STATUSES)
                 && $this->relationLoaded('pasabuySchedule')
                 && $this->pasabuySchedule->is_open,
-            'is_cancellable' => in_array($this->status, Order::EDITABLE_STATUSES)
+            'is_cancellable' => in_array($this->status, PasabuyOrder::EDITABLE_STATUSES)
                 && $this->relationLoaded('pasabuySchedule')
                 && $this->pasabuySchedule->is_open,
             'pasabuy_schedule' => $this->whenLoaded('pasabuySchedule', fn () => new PasabuyScheduleResource($this->pasabuySchedule)),

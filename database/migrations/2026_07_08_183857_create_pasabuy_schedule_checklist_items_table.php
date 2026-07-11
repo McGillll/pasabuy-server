@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('pasabuy_schedule_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('product_id')->nullable()->constrained('pasabuy_products')->nullOnDelete();
             $table->string('product_name');
             $table->unsignedInteger('quantity')->default(0);
             $table->timestamp('checked_at')->nullable();

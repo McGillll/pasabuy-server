@@ -139,7 +139,7 @@ Transitions `open` → `closed`. No request body. Blocks customer-side ordering/
 **Also (re)snapshots the checklist** (see `GET .../checklist` below) from the current live order totals:
 - First close ever → creates one checklist row per product currently ordered, unchecked, `quantity` = current total ordered.
 - Any later close (after a reopen let more orders in) → unchecked rows just get `quantity` refreshed to the new total; checked rows keep their original `quantity` frozen and instead get `additional_quantity`/`return_quantity` populated with the delta against the new total.
-- `quantity` is the **physical shopping quantity**, not the raw paid total: products confirmed `product_status: 'out_of_stock'` are skipped entirely (no checklist row — nothing to buy), and products confirmed `product_status: 'b1t1'` have their bonus (`is_bonus: true`) item quantity added on top of the paid quantity, since the seller needs stock to cover the free unit too. This differs from `GET .../summary`, which reports raw paid quantity only and leaves out-of-stock/b1t1 adjustments to the client.
+- `quantity` is the **physical shopping quantity**, not the raw paid total: products confirmed `product_status: 'out_of_stock'` are skipped entirely (no checklist row — nothing to buy), and products confirmed `product_status: 'b1t1'` have their `bonus_quantity` added on top of the paid quantity, since the seller needs stock to cover the free unit too. This differs from `GET .../summary`, which reports raw paid quantity only and leaves out-of-stock/b1t1 adjustments to the client.
 - A product with a computed quantity of `0` (e.g. its only orders were cancelled/removed) never gets a row either. If it already had an **unchecked** row from an earlier close, that row is deleted outright rather than left at `quantity: 0`. A **checked** row is never deleted this way — it's preserved with `return_quantity` set to its full frozen `quantity`, since the seller already bought it and needs to return everything.
 
 ### Success response — 200
@@ -182,7 +182,7 @@ Called by the seller once she's physically in the store standing in front of the
 
 - **Product not out of stock** → the confirmed `actual_price` is auto-applied to every live item for this product; `actual_price`/`subtotal` update immediately (`is_out_of_stock: false`).
 - **`product_status: 'out_of_stock'`** → every live item for this product is zeroed instead: `is_out_of_stock: true`, `actual_price: null`, `subtotal: 0`.
-- **`product_status: 'b1t1'`** → independent of the price branch above, one bonus `OrderItem` per live order is created/updated 1:1 with the paid item's quantity (`is_bonus: true`, price `0`) — removed automatically if a later confirm moves the status off `b1t1`.
+- **`product_status: 'b1t1'`** → independent of the price branch above, every live order item for this product has `bonus_quantity` set to match its own `quantity` (extra free units, not counted in `subtotal`) — reset back to `0` automatically if a later confirm moves the status off `b1t1`.
 
 ### Request body
 

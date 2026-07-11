@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 #[Fillable(['customer_name', 'customer_contact', 'status', 'total_amount', 'payment_status', 'delivery_status'])]
-class Order extends Model
+class PasabuyOrder extends Model
 {
     use Filterable, HasFactory;
 
@@ -23,7 +23,7 @@ class Order extends Model
 
     protected static function booted()
     {
-        static::creating(function (Order $order) {
+        static::creating(function (PasabuyOrder $order) {
             $order->uuid = Str::uuid()->toString();
         });
     }
@@ -35,7 +35,7 @@ class Order extends Model
 
     public function items()
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(PasabuyOrderItem::class, 'order_id');
     }
 
     public function user()
@@ -45,6 +45,6 @@ class Order extends Model
 
     public function payments()
     {
-        return $this->hasMany(OrderPayment::class);
+        return $this->hasMany(PasabuyOrderPayment::class, 'order_id');
     }
 }

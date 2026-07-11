@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\PasabuyProduct;
 use App\Models\PasabuySchedule;
 use App\Models\PasabuyScheduleProduct;
-use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -24,7 +24,7 @@ class PasabuyScheduleSeeder extends Seeder
         }
 
         $admin = User::where('email', 'admin@pasabuy.test')->first();
-        $products = Product::all();
+        $products = PasabuyProduct::all();
 
         foreach (self::SCHEDULES as $item) {
             $schedule = new PasabuySchedule;

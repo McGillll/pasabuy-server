@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 #[Fillable(['amount', 'method', 'reference_number', 'notes', 'paid_at'])]
-class OrderPayment extends Model
+class PasabuyOrderPayment extends Model
 {
     use HasFactory;
 
     protected static function booted()
     {
-        static::creating(function (OrderPayment $payment) {
+        static::creating(function (PasabuyOrderPayment $payment) {
             $payment->uuid = Str::uuid()->toString();
         });
     }
@@ -29,7 +29,7 @@ class OrderPayment extends Model
 
     public function order()
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(PasabuyOrder::class);
     }
 
     public function recordedBy()

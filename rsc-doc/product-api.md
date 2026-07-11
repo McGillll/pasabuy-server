@@ -34,7 +34,7 @@ Standard `{success, message, data}` envelope (see `auth-api.md`).
 | last_confirmed_price | string\|null | The most recent in-store `actual_price` confirmed for this product on any past pasabuy schedule. Only present on `GET /api/admin/products` (list); omitted on `show`/`store`/`update` responses. `null` if never confirmed. Purely informational history — does not affect `default_price`. |
 | last_product_status | string\|null | The product status (`none`\|`b1t1`\|`out_of_stock`) tied to `last_confirmed_price`. Same availability caveat. |
 
-Soft-deleted products are excluded from `index`/`show` automatically but remain referenced (by name/price snapshot) on any historical `order_items`.
+Soft-deleted products are excluded from `index`/`show` automatically but remain referenced (by name/price snapshot) on any historical `pasabuy_order_items`.
 
 ---
 
@@ -123,7 +123,7 @@ Same as `POST`, plus **404** if the uuid doesn't exist.
 
 ## DELETE /api/admin/products/{uuid}
 
-Soft-deletes the product (reversible in the database — no restore endpoint is exposed yet). Safe to call even if the product is referenced by past orders, since `order_items` stores its own name/price snapshot.
+Soft-deletes the product (reversible in the database — no restore endpoint is exposed yet). Safe to call even if the product is referenced by past orders, since `pasabuy_order_items` stores its own name/price snapshot.
 
 ### Success response — 200
 

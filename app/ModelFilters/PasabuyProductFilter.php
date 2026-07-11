@@ -1,10 +1,10 @@
-<?php 
+<?php
 
 namespace App\ModelFilters;
 
 use EloquentFilter\ModelFilter;
 
-class ProductFilter extends ModelFilter
+class PasabuyProductFilter extends ModelFilter
 {
     /**
     * Related Models that have ModelFilters as well as the method on the ModelFilter

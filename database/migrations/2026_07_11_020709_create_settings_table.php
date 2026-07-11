@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('settings', function (Blueprint $table) {
+        Schema::create('pasabuy_settings', function (Blueprint $table) {
             $table->id();
             $table->string('business_name');
             $table->string('contact_email')->nullable();
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::table('settings')->insert([
+        DB::table('pasabuy_settings')->insert([
             'business_name' => 'My Pasabuy Shop',
             'created_at' => now(),
             'updated_at' => now(),
@@ -33,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('settings');
+        Schema::dropIfExists('pasabuy_settings');
     }
 };

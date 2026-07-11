@@ -9,7 +9,7 @@ use App\Interfaces\Order\OrderRepositoryInterface;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
-use App\Models\Order;
+use App\Models\PasabuyOrder;
 use Illuminate\Support\Facades\DB;
 
 class OrderService implements OrderServiceInterface
@@ -87,7 +87,7 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        if (! in_array($order->status, Order::EDITABLE_STATUSES)) {
+        if (! in_array($order->status, PasabuyOrder::EDITABLE_STATUSES)) {
             throw new InvalidPayloadException('This order can no longer be edited.');
         }
 
@@ -126,7 +126,7 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        if (! in_array($order->status, Order::EDITABLE_STATUSES)) {
+        if (! in_array($order->status, PasabuyOrder::EDITABLE_STATUSES)) {
             throw new InvalidPayloadException('This order can no longer be cancelled.');
         }
 
@@ -135,32 +135,26 @@ class OrderService implements OrderServiceInterface
 
     public function recalculateForScheduleProduct(object $scheduleProduct)
     {
-        $items = $this->orderRepository->findLiveItemsForProduct($scheduleProduct->pasabuy_schedule_id, $scheduleProduct->product_id);
+        $items = $this->orderRepository->findLiveItemsForScheduleProduct($scheduleProduct->id);
 
         $summary = (object) ['auto_applied' => 0, 'bonus_applied' => 0, 'out_of_stock' => 0];
 
         DB::transaction(function () use ($items, $scheduleProduct, $summary) {
             foreach ($items as $item) {
                 if ($scheduleProduct->product_status === 'out_of_stock') {
-                    $this->orderRepository->markItemOutOfStock($item);
+                    $this->orderRepository->applyResolvedPrice($item, null, null, 0);
                     $summary->out_of_stock++;
 
                     continue;
                 }
 
-                $this->orderRepository->applyResolvedPrice($item, (float) $scheduleProduct->actual_price);
+                $bonusQuantity = $scheduleProduct->product_status === 'b1t1' ? $item->quantity : 0;
+
+                $this->orderRepository->applyResolvedPrice($item, (float) $scheduleProduct->actual_price, null, $bonusQuantity);
                 $summary->auto_applied++;
-            }
 
-            $orders = $items->pluck('order')->unique('id');
-
-            foreach ($orders as $order) {
-                if ($scheduleProduct->product_status === 'b1t1') {
-                    if ($this->orderRepository->addOrUpdateBonusItem($order, $scheduleProduct)) {
-                        $summary->bonus_applied++;
-                    }
-                } else {
-                    $this->orderRepository->removeBonusItem($order, $scheduleProduct->product_id);
+                if ($bonusQuantity > 0) {
+                    $summary->bonus_applied++;
                 }
             }
         });
@@ -197,7 +191,7 @@ class OrderService implements OrderServiceInterface
         });
     }
 
-    protected function ensureOrderOwnership(Order $order, int $userId)
+    protected function ensureOrderOwnership(PasabuyOrder $order, int $userId)
     {
         if ($order->pasabuySchedule->user_id !== $userId) {
             throw new UnauthorizedActionException('You do not own this order.');
@@ -223,12 +217,12 @@ class OrderService implements OrderServiceInterface
             $scheduleProduct = $this->pasabuyScheduleRepository->findOrCreateScheduleProduct($schedule, $product);
 
             return [
-                'product_id' => $product->id,
+                'pasabuy_schedule_product_id' => $scheduleProduct->id,
                 'product_name' => $product->name,
                 'estimated_price' => $product->default_price,
                 'actual_price' => $scheduleProduct->actual_price,
-                'is_out_of_stock' => $scheduleProduct->product_status === 'out_of_stock',
                 'quantity' => $item['quantity'],
+                'bonus_quantity' => $scheduleProduct->product_status === 'b1t1' ? $item['quantity'] : 0,
             ];
         })->all();
     }
@@ -245,12 +239,12 @@ class OrderService implements OrderServiceInterface
             $scheduleProduct = $this->pasabuyScheduleRepository->findOrCreateScheduleProduct($schedule, $product);
 
             return [
-                'product_id' => $product->id,
+                'pasabuy_schedule_product_id' => $scheduleProduct->id,
                 'product_name' => $product->name,
                 'estimated_price' => $product->default_price,
                 'actual_price' => $scheduleProduct->price_confirmed_at ? $scheduleProduct->actual_price : null,
-                'is_out_of_stock' => $scheduleProduct->product_status === 'out_of_stock',
                 'quantity' => $item['quantity'],
+                'bonus_quantity' => $scheduleProduct->product_status === 'b1t1' ? $item['quantity'] : 0,
             ];
         })->all();
     }

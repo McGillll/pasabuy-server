@@ -3,13 +3,13 @@
 namespace App\Repositories;
 
 use App\Interfaces\Settings\SettingsRepositoryInterface;
-use App\Models\Setting;
+use App\Models\PasabuySetting;
 
 class SettingsRepository implements SettingsRepositoryInterface
 {
     public function get()
     {
-        return Setting::first();
+        return PasabuySetting::first();
     }
 
     public function update(object $payload)

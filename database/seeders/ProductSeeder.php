@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Product;
+use App\Models\PasabuyProduct;
 use App\Models\ProductCategory;
 use Illuminate\Database\Seeder;
 
@@ -23,14 +23,14 @@ class ProductSeeder extends Seeder
 
     public function run()
     {
-        if (Product::exists()) {
+        if (PasabuyProduct::exists()) {
             return;
         }
 
         $categories = ProductCategory::pluck('id', 'name');
 
         foreach (self::PRODUCTS as $item) {
-            $product = new Product;
+            $product = new PasabuyProduct;
             $product->name = $item['name'];
             $product->description = $item['description'];
             $product->image_path = null;

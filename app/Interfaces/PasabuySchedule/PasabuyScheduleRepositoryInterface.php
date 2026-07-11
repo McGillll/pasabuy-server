@@ -2,8 +2,8 @@
 
 namespace App\Interfaces\PasabuySchedule;
 
+use App\Models\PasabuyProduct;
 use App\Models\PasabuySchedule;
-use App\Models\Product;
 
 interface PasabuyScheduleRepositoryInterface
 {
@@ -25,7 +25,7 @@ interface PasabuyScheduleRepositoryInterface
 
     public function findScheduleProduct(int $scheduleId, int $productId);
 
-    public function findOrCreateScheduleProduct(PasabuySchedule $schedule, Product $product);
+    public function findOrCreateScheduleProduct(PasabuySchedule $schedule, PasabuyProduct $product);
 
     public function summary(string $uuid);
 

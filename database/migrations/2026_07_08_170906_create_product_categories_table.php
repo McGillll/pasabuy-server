@@ -21,7 +21,7 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        Schema::table('products', function (Blueprint $table) {
+        Schema::table('pasabuy_products', function (Blueprint $table) {
             $table->foreign('category_id')->references('id')->on('product_categories')->nullOnDelete();
         });
     }
@@ -31,7 +31,7 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('products', function (Blueprint $table) {
+        Schema::table('pasabuy_products', function (Blueprint $table) {
             $table->dropForeign(['category_id']);
         });
 

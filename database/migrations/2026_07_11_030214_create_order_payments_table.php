@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_payments', function (Blueprint $table) {
+        Schema::create('pasabuy_order_payments', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('order_id')->constrained('pasabuy_orders')->cascadeOnDelete();
             $table->foreignId('recorded_by_user_id')->constrained('users');
             $table->decimal('amount', 10, 2);
             $table->enum('method', ['cash', 'gcash', 'bank_transfer', 'maya', 'other'])->default('cash');
@@ -30,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_payments');
+        Schema::dropIfExists('pasabuy_order_payments');
     }
 };

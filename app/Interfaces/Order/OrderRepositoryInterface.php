@@ -30,13 +30,7 @@ interface OrderRepositoryInterface
 
     public function cancel(object $order);
 
-    public function findLiveItemsForProduct(int $scheduleId, int $productId);
+    public function findLiveItemsForScheduleProduct(int $scheduleProductId);
 
-    public function applyResolvedPrice(object $item, ?float $actualPrice, ?int $quantity = null);
-
-    public function addOrUpdateBonusItem(object $order, object $scheduleProduct);
-
-    public function removeBonusItem(object $order, int $productId);
-
-    public function markItemOutOfStock(object $item);
+    public function applyResolvedPrice(object $item, ?float $actualPrice, ?int $quantity = null, ?int $bonusQuantity = null);
 }

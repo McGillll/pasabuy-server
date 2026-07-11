@@ -11,17 +11,16 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('order_items', function (Blueprint $table) {
+        Schema::create('pasabuy_order_items', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('order_id')->constrained('pasabuy_orders')->cascadeOnDelete();
+            $table->foreignId('pasabuy_schedule_product_id')->nullable()->constrained('pasabuy_schedule_products')->nullOnDelete();
             $table->string('product_name');
             $table->decimal('estimated_price', 10, 2);
             $table->decimal('actual_price', 10, 2)->nullable();
-            $table->boolean('is_bonus')->default(false);
-            $table->boolean('is_out_of_stock')->default(false);
             $table->unsignedInteger('quantity');
+            $table->unsignedInteger('bonus_quantity')->default(0);
             $table->decimal('subtotal', 10, 2);
             $table->timestamps();
         });
@@ -32,6 +31,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('order_items');
+        Schema::dropIfExists('pasabuy_order_items');
     }
 };
