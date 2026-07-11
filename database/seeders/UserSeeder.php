@@ -14,10 +14,10 @@ class UserSeeder extends Seeder
         }
 
         User::create([
-            'first_name' => 'Admin',
-            'last_name' => 'User',
-            'email' => 'admin@pasabuy.test',
-            'password' => 'password',
+            'first_name' => 'Chirihil',
+            'last_name' => 'Pasabuy',
+            'email' => 'chirihil.pasabuy@gmail.com',
+            'password' => 'password123',
             'role' => 'admin',
         ]);
     }
