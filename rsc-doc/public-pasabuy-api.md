@@ -2,7 +2,7 @@
 
 Unauthenticated preview of a pasabuy schedule's shareable link. **No authentication** — anyone with the link can view the schedule. Placing an order now requires a logged-in, admin-approved customer account — see `customer-api.md` for registration/login and the order-placement endpoint.
 
-**This endpoint's `products` array is not the customer's order-form source.** It only lists products someone has already ordered on this schedule (see the reactive-attach note in `pasabuy-schedule-api.md`) — a brand new schedule has an empty array here even though it's fully orderable. The order form should be built from `GET /api/public/products` (see `product-api.md`), the full active catalog; use this endpoint just for the schedule's own fields (`title`, `status`, `is_open`, `cutoff_at`) plus, for any product already ordered, its confirmed `actual_price`/`product_status`.
+**This endpoint's `products` array is not the customer's order-form source.** It only lists products someone has already ordered on this schedule (see the reactive-attach note in `pasabuy-schedule-api.md`) — a brand new schedule has an empty array here even though it's fully orderable. The order form should be built from `GET /api/public/products` (see `product-api.md`), the full active catalog; use this endpoint just for the schedule's own fields (`title`, `status`, `is_open`, `pasabuy_schedule_date`) plus, for any product already ordered, its confirmed `actual_price`/`product_status`.
 
 ## Endpoints overview
 
@@ -32,7 +32,7 @@ Returns the schedule regardless of its `status` — a `closed` or `finished` lin
     "uuid": "e9400549-...",
     "title": "Grocery Run July",
     "description": null,
-    "cutoff_at": null,
+    "pasabuy_schedule_date": "2026-07-20",
     "status": "open",
     "is_open": true,
     "products": [

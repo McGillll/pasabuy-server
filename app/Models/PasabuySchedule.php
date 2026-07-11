@@ -4,10 +4,11 @@ namespace App\Models;
 
 use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-#[Fillable(['title', 'description', 'cutoff_at', 'pasabuy_schedule_date', 'status'])]
+#[Fillable(['title', 'description', 'pasabuy_schedule_date', 'status'])]
 class PasabuySchedule extends Model
 {
     use Filterable;
@@ -28,9 +29,15 @@ class PasabuySchedule extends Model
     protected function casts()
     {
         return [
-            'cutoff_at' => 'datetime',
             'pasabuy_schedule_date' => 'date',
         ];
+    }
+
+    protected function isOpen(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->status === 'open' && (! $this->pasabuy_schedule_date || $this->pasabuy_schedule_date->isFuture()),
+        );
     }
 
     public function user()

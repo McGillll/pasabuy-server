@@ -13,10 +13,9 @@ class PasabuyScheduleResource extends JsonResource
             'uuid' => $this->uuid,
             'title' => $this->title,
             'description' => $this->description,
-            'cutoff_at' => $this->cutoff_at,
             'pasabuy_schedule_date' => $this->pasabuy_schedule_date?->toDateString(),
             'status' => $this->status,
-            'is_open' => $this->status === 'open' && (! $this->cutoff_at || $this->cutoff_at->isFuture()),
+            'is_open' => $this->is_open,
             'products' => PasabuyScheduleProductResource::collection($this->whenLoaded('scheduleProducts')),
             'created_at' => $this->created_at,
         ];

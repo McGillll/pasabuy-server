@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\ChecklistItemToggled;
+use App\Events\ChecklistRegenerated;
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
@@ -168,7 +169,11 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
 
         $this->pasabuyScheduleRepository->syncChecklistOnClose($schedule);
 
-        return $this->pasabuyScheduleRepository->checklist($uuid);
+        $items = $this->pasabuyScheduleRepository->checklist($uuid);
+
+        $this->broadcastChecklistRegenerated($schedule, $items);
+
+        return $items;
     }
 
     public function getChecklistShareLink(string $uuid, int $userId)
@@ -227,6 +232,15 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         }
 
         broadcast(new ChecklistItemToggled($schedule->checklist_share_token, $item));
+    }
+
+    protected function broadcastChecklistRegenerated(PasabuySchedule $schedule, $items)
+    {
+        if (! $schedule->checklist_share_token) {
+            return;
+        }
+
+        broadcast(new ChecklistRegenerated($schedule->checklist_share_token, $items));
     }
 
     protected function ensureOwnership(PasabuySchedule $schedule, int $userId)

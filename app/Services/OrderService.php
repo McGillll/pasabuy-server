@@ -174,9 +174,7 @@ class OrderService implements OrderServiceInterface
 
     protected function ensureScheduleIsOpen($schedule)
     {
-        $isOpen = $schedule->status === 'open' && (! $schedule->cutoff_at || $schedule->cutoff_at->isFuture());
-
-        if (! $isOpen) {
+        if (! $schedule->is_open) {
             throw new InvalidPayloadException('This pasabuy is closed for orders.');
         }
     }

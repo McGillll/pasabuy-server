@@ -15,7 +15,7 @@ A pasabuy schedule is the seller's shareable "batch" — customers can order **a
 | GET    | `/api/admin/pasabuy-schedules`                          | List schedules (paginated)                      |
 | POST   | `/api/admin/pasabuy-schedules`                          | Create a schedule                                |
 | GET    | `/api/admin/pasabuy-schedules/{uuid}`                   | Get one schedule with its (reactively attached) products |
-| PUT    | `/api/admin/pasabuy-schedules/{uuid}`                   | Update schedule fields (title/description/cutoff; status only via a valid transition) |
+| PUT    | `/api/admin/pasabuy-schedules/{uuid}`                   | Update schedule fields (title/description/pasabuy_schedule_date; status only via a valid transition) |
 | DELETE | `/api/admin/pasabuy-schedules/{uuid}`                   | Delete a schedule                                |
 | POST   | `/api/admin/pasabuy-schedules/{uuid}/close`             | Close the schedule (`open` → `closed`); also (re)snapshots the checklist |
 | POST   | `/api/admin/pasabuy-schedules/{uuid}/reopen`            | Reopen the schedule (`closed` → `open`)          |
@@ -44,10 +44,9 @@ All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin
 | uuid        | string        | Public identifier — this is what goes in the customer-facing link, e.g. `https://{frontend}/pasabuy/{uuid}` |
 | title       | string        |                                                                            |
 | description | string\|null  |                                                                            |
-| cutoff_at   | datetime\|null| Optional deadline; ordering is blocked once passed even if `status` is still `open` |
-| pasabuy_schedule_date | date\|null | The date the seller physically goes to the store — distinct from `cutoff_at` (the ordering deadline) and `created_at` (record creation). Drives the `month`/`year` list filters. Required on `POST`/`PUT`; only `null` for schedules created before this field existed. |
-| status      | string        | `open` \| `closed` \| `finished`, default `open`. Only `open` (and before `cutoff_at`) accepts customer orders. Valid transitions: `open`→`closed`, `closed`→`open`, `closed`→`finished`. `finished` is terminal. |
-| is_open     | boolean       | Computed: `status === 'open' && (!cutoff_at || cutoff_at is in the future)` — use this to gate the UI |
+| pasabuy_schedule_date | date\|null | The date the seller physically goes to the store — also doubles as the ordering deadline: ordering closes as soon as this date arrives. Distinct from `created_at` (record creation). Drives the `month`/`year` list filters. Required on `POST`/`PUT`. |
+| status      | string        | `open` \| `closed` \| `finished`, default `open`. Only `open` (and before `pasabuy_schedule_date`) accepts customer orders. Valid transitions: `open`→`closed`, `closed`→`open`, `closed`→`finished`. `finished` is terminal. |
+| is_open     | boolean       | Computed: `status === 'open' && (!pasabuy_schedule_date || pasabuy_schedule_date is in the future)` — use this to gate the UI |
 | products    | array         | Only the products someone has actually ordered so far on this schedule — see schedule-product object below |
 | created_at  | datetime      |                                                                            |
 
@@ -86,8 +85,7 @@ Returns a standard Laravel paginator (see `product-api.md` for shape); items do 
 |-------------|----------|----------|----------------------------------------|
 | title       | string   | Yes      |                                          |
 | description | string   | No       |                                          |
-| cutoff_at   | datetime | No       | Any format `strtotime()`/Carbon accepts |
-| pasabuy_schedule_date | date | Yes | The date the seller physically goes to the store |
+| pasabuy_schedule_date | date | Yes | The date the seller physically goes to the store — also the ordering deadline |
 | status      | string   | No       | `open`\|`closed`\|`finished`, default `open` |
 
 No product-picking step — customers can order any active catalog product against this schedule as soon as it's `open`.
@@ -95,12 +93,12 @@ No product-picking step — customers can order any active catalog product again
 ### Success response — 201
 
 ```json
-{ "success": true, "message": "Pasabuy schedule created successfully", "data": { "uuid": "...", "title": "Grocery Run July", "description": null, "cutoff_at": null, "status": "open", "is_open": true, "created_at": "..." } }
+{ "success": true, "message": "Pasabuy schedule created successfully", "data": { "uuid": "...", "title": "Grocery Run July", "description": null, "pasabuy_schedule_date": "2026-07-20", "status": "open", "is_open": true, "created_at": "..." } }
 ```
 
 ### Error responses
 
-- **422** — validation failure (missing `title`, invalid `status`/`cutoff_at`).
+- **422** — validation failure (missing `title`/`pasabuy_schedule_date`, invalid `status`).
 
 ---
 
@@ -116,7 +114,7 @@ Includes `products` — only the ones actually ordered so far (see the module no
 
 ## PUT /api/admin/pasabuy-schedules/{uuid}
 
-Same body as `POST`; this is a full replace, not a partial patch — always send `title` too. If `status` is included and differs from the current value, it's validated against the same transition table as `close`/`reopen` — prefer those dedicated endpoints for status changes; use this one for title/description/cutoff.
+Same body as `POST`; this is a full replace, not a partial patch — always send `title` too. If `status` is included and differs from the current value, it's validated against the same transition table as `close`/`reopen` — prefer those dedicated endpoints for status changes; use this one for title/description/pasabuy_schedule_date.
 
 ### Error responses
 

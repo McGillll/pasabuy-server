@@ -16,7 +16,6 @@ class PasabuyScheduleStoreRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'cutoff_at' => ['nullable', 'date'],
             'pasabuy_schedule_date' => ['required', 'date'],
             'status' => ['sometimes', 'in:open,closed,finished'],
         ];
