@@ -20,6 +20,18 @@ class OrderController extends Controller
         protected OrderServiceInterface $orderService,
     ) {}
 
+    public function index(Request $request)
+    {
+        $orders = $this->orderService->all((object) $request->query());
+
+        return $this->success([
+            'data' => OrderResource::collection($orders->items()),
+            'current_page' => $orders->currentPage(),
+            'last_page' => $orders->lastPage(),
+            'total' => $orders->total(),
+        ]);
+    }
+
     public function updateStatus(OrderStatusUpdateRequest $request, string $uuid)
     {
         $payload = (object) $request->validated();

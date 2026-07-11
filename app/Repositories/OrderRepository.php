@@ -8,6 +8,14 @@ use App\Models\OrderItem;
 
 class OrderRepository implements OrderRepositoryInterface
 {
+    public function all(object $payload)
+    {
+        return Order::filter((array) $payload)
+            ->with('items.product', 'pasabuySchedule')
+            ->latest()
+            ->paginate($payload->per_page ?? 15);
+    }
+
     public function findByUuid(string $uuid)
     {
         return Order::with('items.product', 'pasabuySchedule')->where('uuid', $uuid)->first();
@@ -136,7 +144,7 @@ class OrderRepository implements OrderRepositoryInterface
         return OrderItem::where('product_id', $productId)
             ->where('is_bonus', false)
             ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $scheduleId)
-                ->where('status', 'pending'))
+                ->whereIn('status', Order::LIVE_STATUSES))
             ->with('order')
             ->get();
     }

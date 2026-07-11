@@ -20,6 +20,11 @@ class OrderService implements OrderServiceInterface
         protected ProductRepositoryInterface $productRepository,
     ) {}
 
+    public function all(object $payload)
+    {
+        return $this->orderRepository->all($payload);
+    }
+
     public function updateStatus(string $uuid, object $payload)
     {
         $order = $this->orderRepository->findByUuid($uuid);

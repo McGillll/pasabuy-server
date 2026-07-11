@@ -213,20 +213,15 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $statusByProductId = PasabuyScheduleProduct::where('pasabuy_schedule_id', $schedule->id)
             ->pluck('product_status', 'product_id');
 
-        $bonusQuantityByProductId = OrderItem::selectRaw('product_id, SUM(quantity) as bonus_quantity')
-            ->where('is_bonus', true)
-            ->whereHas('order', fn ($query) => $query->where('pasabuy_schedule_id', $schedule->id)
-                ->whereIn('status', Order::LIVE_STATUSES))
-            ->groupBy('product_id')
-            ->pluck('bonus_quantity', 'product_id');
-
-        DB::transaction(function () use ($schedule, $summaryRows, $statusByProductId, $bonusQuantityByProductId, &$seenProductIds) {
+        DB::transaction(function () use ($schedule, $summaryRows, $statusByProductId, &$seenProductIds) {
             foreach ($summaryRows as $row) {
-                if (($statusByProductId[$row->product_id] ?? 'none') === 'out_of_stock') {
+                $status = $statusByProductId[$row->product_id] ?? 'none';
+
+                if ($status === 'out_of_stock') {
                     continue;
                 }
 
-                $totalQuantity = $row->total_quantity + ($bonusQuantityByProductId[$row->product_id] ?? 0);
+                $totalQuantity = $status === 'b1t1' ? $row->total_quantity * 2 : $row->total_quantity;
 
                 if ($totalQuantity <= 0) {
                     continue;

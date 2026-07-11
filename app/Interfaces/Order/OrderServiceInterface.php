@@ -4,6 +4,8 @@ namespace App\Interfaces\Order;
 
 interface OrderServiceInterface
 {
+    public function all(object $payload);
+
     public function updateStatus(string $uuid, object $payload);
 
     public function updateDeliveryStatus(string $uuid, object $payload);

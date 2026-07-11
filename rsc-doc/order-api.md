@@ -1,11 +1,12 @@
 # Order API (admin)
 
-Admin-side order management. Orders themselves are created and edited by customers via the customer API (`customer-api.md`), which also covers the customer-facing cancel endpoint — this module only covers the seller reviewing and updating status. To list orders for a schedule, use `GET /api/admin/pasabuy-schedules/{uuid}/orders` (documented in `pasabuy-schedule-api.md`).
+Admin-side order management. Orders themselves are created and edited by customers via the customer API (`customer-api.md`), which also covers the customer-facing cancel endpoint — this module only covers the seller reviewing and updating status. To list orders scoped to a single schedule, use `GET /api/admin/pasabuy-schedules/{uuid}/orders` (documented in `pasabuy-schedule-api.md`). To list orders across all schedules, use `GET /api/admin/orders` below.
 
 ## Endpoints overview
 
 | Method | Endpoint                                     | Description                        |
 |--------|-----------------------------------------------|----------------------------------------|
+| GET    | `/api/admin/orders`                           | List all orders across all schedules, paginated and filterable |
 | PATCH  | `/api/admin/orders/{uuid}/status`             | Move an order to `confirmed` or `cancelled` |
 | PATCH  | `/api/admin/orders/{uuid}/delivery-status`    | Toggle delivery status to `delivered` or `not_delivered` |
 
@@ -54,6 +55,36 @@ Every order now belongs to a customer account (`user_id` internally) — there i
 | subtotal                 | string        | `(actual_price ?? estimated_price) * quantity`, or `0` while `is_out_of_stock` is `true` |
 
 ---
+
+## GET /api/admin/orders
+
+Lists orders across all schedules (paginated), for the cross-schedule admin Orders view. `Accept: application/json`, `Authorization: Bearer {token}` (admin ability).
+
+### Query params
+
+| Field           | Type   | Required | Notes                                                       |
+|-----------------|--------|----------|--------------------------------------------------------------|
+| page            | int    | No       | Default `1`                                                   |
+| per_page        | int    | No       | Default `15`                                                   |
+| status          | string | No       | `pending` \| `confirmed` \| `cancelled`                        |
+| payment_status  | string | No       | `unpaid` \| `partially_paid` \| `paid`                          |
+| delivery_status | string | No       | `not_delivered` \| `delivered`                                  |
+| search          | string | No       | Matches against `customer_name` or `customer_contact`          |
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "data": [ { "uuid": "...", "customer_name": "Juan Dela Cruz", "status": "pending", "payment_status": "unpaid", "delivery_status": "not_delivered", "pasabuy_schedule": { "uuid": "...", "title": "..." }, "...": "..." } ],
+    "current_page": 1,
+    "last_page": 3,
+    "total": 42
+  }
+}
+```
 
 ## PATCH /api/admin/orders/{uuid}/status
 
@@ -154,7 +185,7 @@ Deleting an order (cascade) removes all its payments.
 
 | Status | Meaning               | Applies to    |
 |--------|------------------------|-----------------|
-| 401    | Missing/invalid token  | updateStatus, updateDeliveryStatus, order payments     |
+| 401    | Missing/invalid token  | index, updateStatus, updateDeliveryStatus, order payments     |
 | 404    | Order not found        | updateStatus, updateDeliveryStatus, order payments     |
 | 404    | Payment not found      | payments destroy |
 | 422    | Validation failure     | updateStatus, updateDeliveryStatus, payments store |

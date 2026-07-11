@@ -4,6 +4,8 @@ namespace App\Interfaces\Order;
 
 interface OrderRepositoryInterface
 {
+    public function all(object $payload);
+
     public function findByUuid(string $uuid);
 
     public function findOwnedByUuid(string $uuid, int $userId);
