@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AuthForgotPasswordRequest;
 use App\Http\Requests\AuthLoginRequest;
+use App\Http\Requests\AuthResetPasswordRequest;
 use App\Http\Requests\PasswordUpdateRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Resources\UserResource;
@@ -61,5 +63,19 @@ class AuthController extends Controller
         $this->authService->updatePassword($payload);
 
         return $this->success(null, 'Password updated successfully');
+    }
+
+    public function forgotPassword(AuthForgotPasswordRequest $request)
+    {
+        $this->authService->forgotPassword((object) $request->validated());
+
+        return $this->success(null, 'If an account exists for that email, a password reset link has been sent.');
+    }
+
+    public function resetPassword(AuthResetPasswordRequest $request)
+    {
+        $this->authService->resetPassword((object) $request->validated());
+
+        return $this->success(null, 'Password has been reset successfully');
     }
 }

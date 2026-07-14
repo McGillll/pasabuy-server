@@ -13,4 +13,8 @@ interface AuthServiceInterface
     public function updateProfile(object $payload);
 
     public function updatePassword(object $payload);
+
+    public function forgotPassword(object $payload);
+
+    public function resetPassword(object $payload);
 }

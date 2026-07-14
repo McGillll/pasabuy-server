@@ -1,20 +1,24 @@
 # Auth API
 
-Sanctum personal-access-token authentication, shared by both the seller/admin app and customer accounts — `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `PATCH /api/auth/me`, and `PATCH /api/auth/me/password` work identically regardless of `role`. Customer registration and admin approval are separate endpoints documented in `customer-api.md`; this module covers logging in and self-service "My Account" profile/password management for an already-registered account (admin or customer).
+Sanctum personal-access-token authentication, shared by both the seller/admin app and customer accounts — `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `PATCH /api/auth/me`, `PATCH /api/auth/me/password`, `POST /api/auth/forgot-password`, and `POST /api/auth/reset-password` work identically regardless of `role`. Customer registration and admin approval are separate endpoints documented in `customer-api.md`; this module covers logging in, self-service "My Account" profile/password management, and forgot/reset password for an already-registered account (admin or customer).
 
 ## Endpoints overview
 
-| Method | Endpoint                  | Auth required | Description                          |
-|--------|----------------------------|----------------|---------------------------------------|
-| POST   | `/api/auth/login`          | No             | Exchange email/password for a token   |
-| POST   | `/api/auth/logout`         | Yes            | Revoke the current token              |
-| GET    | `/api/auth/me`              | Yes            | Get the authenticated user            |
-| PATCH  | `/api/auth/me`              | Yes            | Update own profile (name/email)       |
-| PATCH  | `/api/auth/me/password`     | Yes            | Change own password                   |
+| Method | Endpoint                       | Auth required | Description                          |
+|--------|----------------------------------|----------------|---------------------------------------|
+| POST   | `/api/auth/login`               | No             | Exchange email/password for a token   |
+| POST   | `/api/auth/logout`               | Yes            | Revoke the current token              |
+| GET    | `/api/auth/me`                   | Yes            | Get the authenticated user            |
+| PATCH  | `/api/auth/me`                   | Yes            | Update own profile (name/email)       |
+| PATCH  | `/api/auth/me/password`          | Yes            | Change own password                   |
+| POST   | `/api/auth/forgot-password`      | No             | Request a password reset email        |
+| POST   | `/api/auth/reset-password`       | No             | Reset password using an emailed token |
 
 All requests must send `Accept: application/json`. Authenticated requests send `Authorization: Bearer {token}`.
 
 `POST /api/auth/login` is rate-limited to 5 attempts/minute per email+IP combination (`throttle:login`). Exceeding it returns a standard Laravel `429` response.
+
+`POST /api/auth/forgot-password` and `POST /api/auth/reset-password` are both rate-limited to 3 attempts/minute per email+IP combination (`throttle:forgot-password`). Exceeding it returns a standard Laravel `429` response.
 
 ## Response envelope
 
@@ -228,14 +232,95 @@ PATCH /api/auth/me/password
 
 ---
 
+## POST /api/auth/forgot-password
+
+No auth required. Looks up the account by email and, if one exists, queues a password reset email containing a link to the frontend's reset-password page (`{FRONTEND_URL}/reset-password?token=...&email=...`). Token expires in 60 minutes.
+
+**No account enumeration:** this endpoint always returns the same generic `200` success response, whether or not the email belongs to a real account. It never reveals whether an account exists, and never throws a not-found error.
+
+### Request body
+
+| Field | Type   | Required | Notes             |
+|-------|--------|----------|--------------------|
+| email | string | Yes      | Must be a valid email |
+
+### Example request
+
+```json
+POST /api/auth/forgot-password
+{
+  "email": "juan.delacruz@example.com"
+}
+```
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": "If an account exists for that email, a password reset link has been sent.",
+  "data": null
+}
+```
+
+### Error responses
+
+- **422** — validation failure (missing/invalid `email`). Standard Laravel validation error shape.
+- **429** — too many attempts (rate limited).
+
+---
+
+## POST /api/auth/reset-password
+
+No auth required. Consumes the token emailed by `forgot-password` and sets a new password for the associated account.
+
+### Request body
+
+| Field                 | Type   | Required | Notes                                  |
+|-----------------------|--------|----------|------------------------------------------|
+| token                 | string | Yes      | Token from the reset-password email link |
+| email                 | string | Yes      | Must be a valid email                     |
+| password              | string | Yes      | Min 8 characters                          |
+| password_confirmation | string | Yes      | Must match `password`                     |
+
+### Example request
+
+```json
+POST /api/auth/reset-password
+{
+  "token": "9f8c1e2a...",
+  "email": "juan.delacruz@example.com",
+  "password": "new-password123",
+  "password_confirmation": "new-password123"
+}
+```
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Password has been reset successfully", "data": null }
+```
+
+### Error responses
+
+- **422** — validation failure (missing/invalid fields, `password` too short, or `password_confirmation` mismatch). Standard Laravel validation error shape.
+- **422** — token invalid or expired (also returned if the email doesn't match any account):
+  ```json
+  { "success": false, "message": "This password reset link is invalid or has expired.", "data": null }
+  ```
+- **429** — too many attempts (rate limited).
+
+---
+
 ## Error status summary
 
 | Status | Meaning                          | Applies to           |
 |--------|-----------------------------------|-----------------------|
 | 401    | Bad credentials, or missing/invalid/expired token | login, logout, me, PATCH me, PATCH me/password |
 | 401    | Incorrect `current_password`      | PATCH me/password     |
-| 422    | Validation failure                | login, PATCH me, PATCH me/password |
-| 429    | Rate limited                      | login                 |
+| 422    | Validation failure                | login, PATCH me, PATCH me/password, forgot-password, reset-password |
+| 422    | Reset token invalid or expired     | reset-password         |
+| 429    | Rate limited                      | login, forgot-password, reset-password |
 
 ## Seeded credentials (local/dev only)
 

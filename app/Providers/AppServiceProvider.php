@@ -38,5 +38,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('checklist-toggle', function (Request $request) {
             return Limit::perMinute(60)->by($request->ip());
         });
+
+        RateLimiter::for('forgot-password', function (Request $request) {
+            return Limit::perMinute(3)->by($request->input('email').$request->ip());
+        });
     }
 }

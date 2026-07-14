@@ -3,10 +3,14 @@
 namespace App\Services;
 
 use App\Exceptions\AuthenticationFailedException;
+use App\Exceptions\InvalidPayloadException;
 use App\Interfaces\Auth\AuthRepositoryInterface;
 use App\Interfaces\Auth\AuthServiceInterface;
+use App\Mail\PasswordResetMail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
 
 class AuthService implements AuthServiceInterface
 {
@@ -56,5 +60,39 @@ class AuthService implements AuthServiceInterface
         }
 
         return $this->authRepository->updatePassword($payload);
+    }
+
+    public function forgotPassword(object $payload)
+    {
+        $user = $this->authRepository->findByEmail($payload->email);
+
+        if (! $user) {
+            return;
+        }
+
+        $token = Password::broker()->createToken($user);
+        $resetUrl = rtrim(config('app.frontend_url'), '/').'/reset-password?token='.$token.'&email='.urlencode($user->email);
+
+        Mail::to($user->email)->queue(new PasswordResetMail($user, $resetUrl));
+    }
+
+    public function resetPassword(object $payload)
+    {
+        $status = Password::broker()->reset(
+            [
+                'email' => $payload->email,
+                'password' => $payload->password,
+                'password_confirmation' => $payload->password_confirmation,
+                'token' => $payload->token,
+            ],
+            function ($user, $password) {
+                $user->password = $password;
+                $user->save();
+            }
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            throw new InvalidPayloadException('This password reset link is invalid or has expired.');
+        }
     }
 }
