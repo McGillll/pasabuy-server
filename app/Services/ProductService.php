@@ -8,6 +8,9 @@ use App\Interfaces\Product\ProductServiceInterface;
 use App\Interfaces\ProductCategory\ProductCategoryRepositoryInterface;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Encoders\WebpEncoder;
+use Intervention\Image\ImageManager;
 
 class ProductService implements ProductServiceInterface
 {
@@ -65,9 +68,14 @@ class ProductService implements ProductServiceInterface
 
     protected function storeImage(object $payload)
     {
-        $filename = Str::slug($payload->name).'-'.uniqid().'.'.$payload->image->getClientOriginalExtension();
+        $manager = new ImageManager(Driver::class);
+        $image = $manager->decodePath($payload->image->getRealPath())->orient();
+        $encoded = $image->encode(new WebpEncoder(quality: 82));
 
-        return $payload->image->storeAs('products', $filename);
+        $path = 'products/'.Str::slug($payload->name).'-'.uniqid().'.webp';
+        Storage::put($path, (string) $encoded);
+
+        return $path;
     }
 
     protected function resolveCategory(object $payload)
