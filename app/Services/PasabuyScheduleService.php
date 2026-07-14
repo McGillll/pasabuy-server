@@ -46,6 +46,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         $schedule = $this->findByUuid($uuid);
         $this->ensureOwnership($schedule, $payload->user_id);
+        $this->assertNotFinished($schedule);
 
         if (isset($payload->status) && $payload->status !== $schedule->status) {
             $this->assertValidTransition($schedule, $payload->status);
@@ -58,6 +59,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         $schedule = $this->findByUuid($uuid);
         $this->ensureOwnership($schedule, $userId);
+        $this->assertNotFinished($schedule);
 
         return $this->pasabuyScheduleRepository->delete($uuid);
     }
@@ -103,6 +105,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         $schedule = $this->findByUuid($scheduleUuid);
         $this->ensureOwnership($schedule, $payload->user_id);
+        $this->assertNotFinished($schedule);
 
         if ($payload->product_status !== 'out_of_stock' && (! isset($payload->actual_price) || $payload->actual_price < 0)) {
             throw new InvalidPayloadException('A valid actual price is required unless marking the item out of stock.');
@@ -247,6 +250,13 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         if ($schedule->user_id !== $userId) {
             throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
+        }
+    }
+
+    protected function assertNotFinished(PasabuySchedule $schedule)
+    {
+        if ($schedule->status === 'finished') {
+            throw new InvalidPayloadException('This pasabuy schedule is finished and can no longer be edited.');
         }
     }
 
