@@ -19,6 +19,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->dateTime('cutoff_at')->nullable();
             $table->enum('status', ['open', 'closed', 'finished'])->default('open');
+            $table->timestamp('finished_at')->nullable();
             $table->timestamps();
         });
     }

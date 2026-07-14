@@ -33,6 +33,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     {
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
         $schedule->status = $status;
+        $schedule->finished_at = $status === 'finished' ? ($schedule->finished_at ?? now()) : $schedule->finished_at;
         $schedule->save();
 
         return $schedule->fresh([

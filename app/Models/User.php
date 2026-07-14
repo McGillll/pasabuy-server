@@ -39,6 +39,11 @@ class User extends Authenticatable
         return $this->hasMany(PasabuyOrder::class);
     }
 
+    public function invoiceSetting()
+    {
+        return $this->hasOne(PasabuySellerInvoiceSetting::class);
+    }
+
     public function fullName()
     {
         return trim("{$this->first_name} {$this->last_name}");

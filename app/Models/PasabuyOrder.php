@@ -21,6 +21,13 @@ class PasabuyOrder extends Model
 
     public const DELIVERY_STATUSES = ['not_delivered', 'delivered'];
 
+    protected function casts()
+    {
+        return [
+            'delivered_at' => 'datetime',
+        ];
+    }
+
     protected static function booted()
     {
         static::creating(function (PasabuyOrder $order) {

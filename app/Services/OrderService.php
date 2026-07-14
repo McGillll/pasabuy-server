@@ -130,6 +130,10 @@ class OrderService implements OrderServiceInterface
             throw new InvalidPayloadException('This order can no longer be cancelled.');
         }
 
+        $schedule = $this->pasabuyScheduleRepository->findByUuid($order->pasabuySchedule->uuid);
+
+        $this->ensureScheduleIsOpen($schedule);
+
         return $this->orderRepository->cancel($order);
     }
 

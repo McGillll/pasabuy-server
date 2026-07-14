@@ -11,3 +11,5 @@ Route::group([], base_path('routes/api/order_payments.php'));
 Route::prefix('admin/customers')->group(base_path('routes/api/customers.php'));
 Route::prefix('public')->group(base_path('routes/api/public.php'));
 Route::group([], base_path('routes/api/settings.php'));
+Route::group([], base_path('routes/api/invoice_settings.php'));
+Route::group([], base_path('routes/api/invoices.php'));

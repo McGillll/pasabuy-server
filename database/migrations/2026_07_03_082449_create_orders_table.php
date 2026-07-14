@@ -22,6 +22,7 @@ return new class extends Migration
             $table->decimal('total_amount', 10, 2);
             $table->enum('payment_status', ['unpaid', 'partially_paid', 'paid'])->default('unpaid');
             $table->enum('delivery_status', ['not_delivered', 'delivered'])->default('not_delivered');
+            $table->timestamp('delivered_at')->nullable();
             $table->index('payment_status');
             $table->index('delivery_status');
             $table->timestamps();

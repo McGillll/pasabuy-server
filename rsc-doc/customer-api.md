@@ -212,6 +212,7 @@ PATCH /api/customer/orders/36d53541-.../cancel
 
 - **404** — `"Order not found."` (doesn't exist, or not owned by this customer).
 - **422** — `"This order can no longer be cancelled."` (already `confirmed` or `cancelled`).
+- **422** — `"This pasabuy is closed for orders."` (schedule is no longer open/before cutoff).
 
 ---
 

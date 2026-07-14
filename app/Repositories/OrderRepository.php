@@ -66,6 +66,7 @@ class OrderRepository implements OrderRepositoryInterface
     {
         $order = PasabuyOrder::where('uuid', $uuid)->first();
         $order->delivery_status = $payload->delivery_status;
+        $order->delivered_at = $payload->delivery_status === 'delivered' ? ($order->delivered_at ?? now()) : null;
         $order->save();
 
         return $order->fresh(['items.pasabuyScheduleProduct.product', 'pasabuySchedule']);

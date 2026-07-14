@@ -65,6 +65,6 @@ class CustomerRepository implements CustomerRepositoryInterface
     {
         $customer = $this->findByUuid($uuid);
 
-        return $customer->orders()->with('items.product', 'pasabuySchedule')->latest()->get();
+        return $customer->orders()->with('items.pasabuyScheduleProduct.product', 'pasabuySchedule')->latest()->get();
     }
 }

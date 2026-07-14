@@ -23,7 +23,7 @@ class PasabuyScheduleSeeder extends Seeder
             return;
         }
 
-        $admin = User::where('email', 'admin@pasabuy.test')->first();
+        $admin = User::where('email', 'chirihil.pasabuy@gmail.com')->first();
         $products = PasabuyProduct::all();
 
         foreach (self::SCHEDULES as $item) {

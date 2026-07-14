@@ -31,6 +31,7 @@ class PasabuySchedule extends Model
     {
         return [
             'pasabuy_schedule_date' => 'date',
+            'finished_at' => 'datetime',
         ];
     }
 
