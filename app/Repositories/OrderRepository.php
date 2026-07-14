@@ -18,7 +18,7 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function findByUuid(string $uuid)
     {
-        return PasabuyOrder::with('items.pasabuyScheduleProduct.product', 'pasabuySchedule')->where('uuid', $uuid)->first();
+        return PasabuyOrder::with('items.pasabuyScheduleProduct.product', 'pasabuySchedule', 'payments')->where('uuid', $uuid)->first();
     }
 
     public function findOwnedByUuid(string $uuid, int $userId)

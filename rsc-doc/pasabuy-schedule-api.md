@@ -164,6 +164,8 @@ Transitions `closed` → `open`. Same shape/errors as `close`. Does not touch th
 
 Transitions `closed` → `finished`. No request body. `finished` is a terminal state — there is no transition back to `open`/`closed` from it. Use this once the batch has been fully delivered/settled. Does not touch the checklist or pricing.
 
+**Side effect:** once the status change is persisted, a `PasabuyInvoiceMail` (queued, `database` connection) is dispatched to every `pending`/`confirmed` order's customer email (`order.user.email`) on this schedule, built from `InvoiceService::buildForOrder()`. Orders without a customer email, or whose invoice fails to build, are skipped and logged — this never fails the `finish` request itself.
+
 ### Success response — 200
 
 ```json

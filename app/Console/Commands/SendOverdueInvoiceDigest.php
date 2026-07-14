@@ -24,7 +24,7 @@ class SendOverdueInvoiceDigest extends Command
 
         $orders = PasabuyOrder::where('status', 'confirmed')
             ->whereIn('payment_status', ['unpaid', 'partially_paid'])
-            ->with('pasabuySchedule.user', 'payments')
+            ->with('pasabuySchedule.user', 'items', 'payments')
             ->get();
 
         $overdueBySeller = collect();
@@ -47,8 +47,8 @@ class SendOverdueInvoiceDigest extends Command
                 'row' => [
                     'order_uuid' => $order->uuid,
                     'customer_name' => $order->customer_name,
-                    'invoice_total' => $invoice['invoice_total'],
-                    'interest_amount' => $invoice['interest_amount'],
+                    'total' => $invoice['total'],
+                    'interest_total' => $invoice['interest_total'],
                     'balance_due' => $invoice['balance_due'],
                     'due_date' => $invoice['due_date'],
                 ],

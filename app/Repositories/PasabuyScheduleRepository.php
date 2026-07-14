@@ -88,7 +88,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     {
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
 
-        return $schedule->orders()->with('items.pasabuyScheduleProduct.product')->latest()->get();
+        return $schedule->orders()->with('items.pasabuyScheduleProduct.product', 'user', 'pasabuySchedule', 'payments')->latest()->get();
     }
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload)
