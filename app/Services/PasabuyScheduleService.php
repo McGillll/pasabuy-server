@@ -313,5 +313,16 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         if (! in_array($newStatus, $allowed, true)) {
             throw new InvalidPayloadException("Cannot change schedule status from \"{$schedule->status}\" to \"{$newStatus}\".");
         }
+
+        if ($newStatus === 'finished') {
+            $this->assertNoPendingOrders($schedule);
+        }
+    }
+
+    protected function assertNoPendingOrders(PasabuySchedule $schedule)
+    {
+        if ($schedule->orders()->where('status', 'pending')->exists()) {
+            throw new InvalidPayloadException('Cannot finish this schedule while it has pending orders that have not been confirmed or cancelled.');
+        }
     }
 }

@@ -116,9 +116,11 @@ Includes `products` — only the ones actually ordered so far (see the module no
 
 Same body as `POST`; this is a full replace, not a partial patch — always send `title` too. If `status` is included and differs from the current value, it's validated against the same transition table as `close`/`reopen` — prefer those dedicated endpoints for status changes; use this one for title/description/pasabuy_schedule_date.
 
+Setting `status` to `finished` this way is subject to the same pending-orders guard as the dedicated `finish` endpoint below — it's blocked while the schedule still has any `pending` order.
+
 ### Error responses
 
-Same as `POST`, plus **403** (not owner), **404**, and **422** if `status` names an invalid transition (`"Cannot change schedule status from \"{from}\" to \"{to}\"."`).
+Same as `POST`, plus **403** (not owner), **404**, and **422** if `status` names an invalid transition (`"Cannot change schedule status from \"{from}\" to \"{to}\"."`) or if transitioning to `finished` while `pending` orders remain (`"Cannot finish this schedule while it has pending orders that have not been confirmed or cancelled."`).
 
 ---
 
@@ -164,6 +166,8 @@ Transitions `closed` → `open`. Same shape/errors as `close`. Does not touch th
 
 Transitions `closed` → `finished`. No request body. `finished` is a terminal state — there is no transition back to `open`/`closed` from it. Use this once the batch has been fully delivered/settled. Does not touch the checklist or pricing.
 
+**Blocked while any order on this schedule is still `pending`** — the seller must confirm or cancel every order first (`confirmed` orders are fine; only `pending` blocks the transition). This guard applies to both this endpoint and setting `status: "finished"` via the generic `PUT` update above.
+
 **Side effect:** once the status change is persisted, a `PasabuyInvoiceMail` (queued, `database` connection) is dispatched to every `pending`/`confirmed` order's customer email (`order.user.email`) on this schedule, built from `InvoiceService::buildForOrder()`. Orders without a customer email, or whose invoice fails to build, are skipped and logged — this never fails the `finish` request itself.
 
 ### Success response — 200
@@ -174,7 +178,7 @@ Transitions `closed` → `finished`. No request body. `finished` is a terminal s
 
 ### Error responses
 
-- **403** (not owner), **404**, **422** — invalid transition (e.g. schedule isn't `closed` yet).
+- **403** (not owner), **404**, **422** — invalid transition (e.g. schedule isn't `closed` yet), or `pending` orders still exist (`"Cannot finish this schedule while it has pending orders that have not been confirmed or cancelled."`).
 
 ---
 
