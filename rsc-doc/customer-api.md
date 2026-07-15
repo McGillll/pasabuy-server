@@ -137,13 +137,15 @@ POST /api/customer/pasabuy-schedules/e9400549-.../orders
 
 ### Query params
 
-| Field    | Type | Required | Notes       |
-|----------|------|----------|----------------|
-| per_page | int  | No       | Default 15      |
+| Field    | Type   | Required | Notes       |
+|----------|--------|----------|----------------|
+| per_page | int    | No       | Default 15      |
+| status   | string | No       | `pending` \| `confirmed` \| `cancelled` |
+| schedule_title | string | No | Case-insensitive match against the parent pasabuy schedule's `title` |
 
 ### Success response — 200
 
-Same paginator shape as `product-api.md`'s index endpoint, with `Order` objects in `data.data`.
+Same paginator shape as `product-api.md`'s index endpoint, with `Order` objects in `data.data`. `amount_paid`/`amount_due` are now populated here too (same calculation as `order-api.md`'s admin list).
 
 ---
 

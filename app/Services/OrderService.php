@@ -110,7 +110,11 @@ class OrderService implements OrderServiceInterface
 
     public function myOrders(object $payload)
     {
-        return $this->orderRepository->myOrders($payload->user->id, $payload);
+        $orders = $this->orderRepository->myOrders($payload->user->id, $payload);
+
+        $this->attachInvoiceSummary($orders->items());
+
+        return $orders;
     }
 
     public function findOwnedByUuid(string $uuid, object $payload)

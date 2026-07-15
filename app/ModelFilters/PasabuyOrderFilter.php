@@ -37,4 +37,11 @@ class PasabuyOrderFilter extends ModelFilter
             $query->where('uuid', $value);
         });
     }
+
+    public function scheduleTitle($value)
+    {
+        return $this->whereHas('pasabuySchedule', function ($query) use ($value) {
+            $query->where('title', 'like', "%{$value}%");
+        });
+    }
 }
