@@ -16,6 +16,8 @@ class OrderResource extends JsonResource
             'customer_contact' => $this->customer_contact,
             'status' => $this->status,
             'total_amount' => $this->total_amount,
+            'amount_paid' => $this->amount_paid,
+            'amount_due' => $this->amount_due,
             'payment_status' => $this->payment_status,
             'delivery_status' => $this->delivery_status,
             'is_editable' => in_array($this->status, PasabuyOrder::EDITABLE_STATUSES)

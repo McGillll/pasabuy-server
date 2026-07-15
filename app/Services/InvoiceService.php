@@ -19,6 +19,24 @@ class InvoiceService implements InvoiceServiceInterface
             $order->load('items');
         }
 
+        return array_merge(
+            ['items' => $this->buildItemLines($order)],
+            $this->calculateFinancials($order),
+        );
+    }
+
+    public function summaryForOrder(PasabuyOrder $order)
+    {
+        $financials = $this->calculateFinancials($order);
+
+        return [
+            'amount_paid' => $financials['amount_paid'],
+            'balance_due' => $financials['balance_due'],
+        ];
+    }
+
+    protected function calculateFinancials(PasabuyOrder $order)
+    {
         if (! $order->relationLoaded('payments')) {
             $order->load('payments');
         }
@@ -47,7 +65,6 @@ class InvoiceService implements InvoiceServiceInterface
         $grandTotal = $interestLines !== [] ? end($interestLines)['running_total'] : $total;
 
         return [
-            'items' => $this->buildItemLines($order),
             'subtotal' => $subtotal,
             'markup_amount' => $markupAmount,
             'total' => $total,

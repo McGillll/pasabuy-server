@@ -30,6 +30,8 @@ There is no order-level status change from this recalculation — an order's `st
 | customer_contact           | string        | Snapshot of the owning customer's contact number at order time |
 | status                     | string        | `pending` \| `confirmed` \| `cancelled` |
 | total_amount               | string        | Decimal string, server-computed — never trust a client-sent total |
+| amount_paid                | number\|null  | Sum of the order's recorded payments — same figure as `amount_paid` on the invoice (`invoice-api.md`). Only populated on `GET /api/admin/orders` (the cross-schedule list) and `GET /api/admin/pasabuy-schedules/{uuid}/orders` (the per-schedule list); `null` on responses from other order endpoints |
+| amount_due                 | number\|null  | Outstanding balance — same calculation as the invoice's `balance_due` (markup + overdue compounding interest, minus `amount_paid`). Only populated on `GET /api/admin/orders` and `GET /api/admin/pasabuy-schedules/{uuid}/orders`; `null` elsewhere |
 | payment_status             | string        | `unpaid` \| `partially_paid` \| `paid` — server-computed from the order-payments ledger; never set directly. Recalculated whenever a payment is created or deleted: `unpaid` when paid sum is `0`, `paid` when paid sum `>= total_amount`, otherwise `partially_paid` |
 | delivery_status            | string        | `not_delivered` \| `delivered` — toggled directly via `PATCH /api/admin/orders/{uuid}/delivery-status`. Independent of `status` and `payment_status` |
 | is_editable                | boolean       | `true` only while `status` is `pending` and the parent schedule is still open/before cutoff — matches the customer-side edit gate |
@@ -79,7 +81,7 @@ Lists orders across all schedules (paginated), for the cross-schedule admin Orde
   "success": true,
   "message": null,
   "data": {
-    "data": [ { "uuid": "...", "customer_name": "Juan Dela Cruz", "status": "pending", "payment_status": "unpaid", "delivery_status": "not_delivered", "pasabuy_schedule": { "uuid": "...", "title": "..." }, "...": "..." } ],
+    "data": [ { "uuid": "...", "customer_name": "Juan Dela Cruz", "status": "pending", "total_amount": "1500.00", "amount_paid": 0, "amount_due": 1650, "payment_status": "unpaid", "delivery_status": "not_delivered", "pasabuy_schedule": { "uuid": "...", "title": "..." }, "...": "..." } ],
     "current_page": 1,
     "last_page": 3,
     "total": 42

@@ -18,9 +18,13 @@ interface OrderServiceInterface
 
     public function findOwnedByUuid(string $uuid, object $payload);
 
+    public function findOwnedBySellerUuid(string $uuid, object $payload);
+
     public function cancelForCustomer(string $uuid, object $payload);
 
     public function recalculateForScheduleProduct(object $scheduleProduct);
 
     public function updateItemsForSeller(string $scheduleUuid, string $orderUuid, object $payload);
+
+    public function attachInvoiceSummary(array $orders);
 }

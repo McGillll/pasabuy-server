@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
+use App\Interfaces\Invoice\InvoiceServiceInterface;
 use App\Interfaces\Order\OrderRepositoryInterface;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
@@ -18,11 +19,16 @@ class OrderService implements OrderServiceInterface
         protected OrderRepositoryInterface $orderRepository,
         protected PasabuyScheduleRepositoryInterface $pasabuyScheduleRepository,
         protected ProductRepositoryInterface $productRepository,
+        protected InvoiceServiceInterface $invoiceService,
     ) {}
 
     public function all(object $payload)
     {
-        return $this->orderRepository->all($payload);
+        $orders = $this->orderRepository->all($payload);
+
+        $this->attachInvoiceSummary($orders->items());
+
+        return $orders;
     }
 
     public function updateStatus(string $uuid, object $payload)
@@ -118,6 +124,19 @@ class OrderService implements OrderServiceInterface
         return $order;
     }
 
+    public function findOwnedBySellerUuid(string $uuid, object $payload)
+    {
+        $order = $this->orderRepository->findByUuid($uuid);
+
+        if (! $order) {
+            throw new NotFoundException('Order not found.');
+        }
+
+        $this->ensureOrderOwnership($order, $payload->user_id);
+
+        return $order;
+    }
+
     public function cancelForCustomer(string $uuid, object $payload)
     {
         $order = $this->orderRepository->findOwnedByUuid($uuid, $payload->user->id);
@@ -193,6 +212,15 @@ class OrderService implements OrderServiceInterface
         return DB::transaction(function () use ($order, $resolvedItems) {
             return $this->orderRepository->replaceItems($order, (object) ['items' => $resolvedItems]);
         });
+    }
+
+    public function attachInvoiceSummary(array $orders)
+    {
+        foreach ($orders as $order) {
+            $summary = $this->invoiceService->summaryForOrder($order);
+            $order->amount_paid = $summary['amount_paid'];
+            $order->amount_due = $summary['balance_due'];
+        }
     }
 
     protected function ensureOrderOwnership(PasabuyOrder $order, int $userId)

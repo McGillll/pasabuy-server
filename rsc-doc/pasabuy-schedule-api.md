@@ -230,7 +230,7 @@ product_status=none
 
 ## GET /api/admin/pasabuy-schedules/{uuid}/orders
 
-Returns every order placed against this schedule, newest first, each with its `items` (see `order-api.md` for the `Order`/`OrderItem` shape).
+Returns every order placed against this schedule, newest first, each with its `items` (see `order-api.md` for the `Order`/`OrderItem` shape). Like `GET /api/admin/orders`, each order here is also populated with `amount_paid`/`amount_due` (computed via the invoice summary, see `order-api.md`) rather than serializing them as `null`.
 
 ### Error responses
 

@@ -109,7 +109,11 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         $this->findByUuid($uuid);
 
-        return $this->pasabuyScheduleRepository->orders($uuid);
+        $orders = $this->pasabuyScheduleRepository->orders($uuid);
+
+        $this->orderService->attachInvoiceSummary($orders->all());
+
+        return $orders;
     }
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload)

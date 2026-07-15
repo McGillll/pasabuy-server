@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Exceptions\NotFoundException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\InvoiceResource;
 use App\Interfaces\Invoice\InvoiceServiceInterface;
-use App\Interfaces\Order\OrderRepositoryInterface;
+use App\Interfaces\Order\OrderServiceInterface;
 use App\Traits\ApiResponse;
+use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
@@ -15,16 +15,21 @@ class InvoiceController extends Controller
 
     public function __construct(
         protected InvoiceServiceInterface $invoiceService,
-        protected OrderRepositoryInterface $orderRepository,
+        protected OrderServiceInterface $orderService,
     ) {}
 
-    public function show(string $orderUuid)
+    public function show(Request $request, string $orderUuid)
     {
-        $order = $this->orderRepository->findByUuid($orderUuid);
+        $order = $this->orderService->findOwnedBySellerUuid($orderUuid, (object) ['user_id' => $request->user()->id]);
 
-        if (! $order) {
-            throw new NotFoundException('Order not found.');
-        }
+        $invoice = $this->invoiceService->buildForOrder($order);
+
+        return $this->success(new InvoiceResource($invoice));
+    }
+
+    public function myInvoice(Request $request, string $orderUuid)
+    {
+        $order = $this->orderService->findOwnedByUuid($orderUuid, (object) ['user' => $request->user()]);
 
         $invoice = $this->invoiceService->buildForOrder($order);
 

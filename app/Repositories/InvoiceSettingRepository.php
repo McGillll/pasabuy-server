@@ -7,8 +7,16 @@ use App\Models\PasabuySellerInvoiceSetting;
 
 class InvoiceSettingRepository implements InvoiceSettingRepositoryInterface
 {
+    // Per-request memoization — avoids re-querying the same seller's settings
+    // when computing invoice totals across a list of many orders.
+    protected static array $cache = [];
+
     public function getForUser(int $userId)
     {
+        if (array_key_exists($userId, static::$cache)) {
+            return static::$cache[$userId];
+        }
+
         $setting = PasabuySellerInvoiceSetting::where('user_id', $userId)->first();
 
         if (! $setting) {
@@ -26,7 +34,7 @@ class InvoiceSettingRepository implements InvoiceSettingRepositoryInterface
             $setting->save();
         }
 
-        return $setting;
+        return static::$cache[$userId] = $setting;
     }
 
     public function update(object $payload, int $userId)
@@ -43,6 +51,8 @@ class InvoiceSettingRepository implements InvoiceSettingRepositoryInterface
         $setting->interest_base = $payload->interest_base;
         $setting->is_active = $payload->is_active ?? $setting->is_active;
         $setting->save();
+
+        static::$cache[$userId] = $setting;
 
         return $setting;
     }
