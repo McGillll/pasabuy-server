@@ -11,4 +11,6 @@ interface AuthRepositoryInterface
     public function updateProfile(object $payload);
 
     public function updatePassword(object $payload);
+
+    public function markEmailAsVerified(object $payload);
 }

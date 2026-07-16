@@ -17,4 +17,8 @@ interface AuthServiceInterface
     public function forgotPassword(object $payload);
 
     public function resetPassword(object $payload);
+
+    public function sendVerificationEmail(object $payload);
+
+    public function verifyEmail(object $payload);
 }

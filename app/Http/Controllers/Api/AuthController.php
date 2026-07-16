@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AuthForgotPasswordRequest;
 use App\Http\Requests\AuthLoginRequest;
 use App\Http\Requests\AuthResetPasswordRequest;
+use App\Http\Requests\AuthVerifyEmailRequest;
 use App\Http\Requests\PasswordUpdateRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Resources\UserResource;
@@ -77,5 +78,19 @@ class AuthController extends Controller
         $this->authService->resetPassword((object) $request->validated());
 
         return $this->success(null, 'Password has been reset successfully');
+    }
+
+    public function sendVerificationEmail(Request $request)
+    {
+        $this->authService->sendVerificationEmail((object) ['user' => $request->user()]);
+
+        return $this->success(null, 'Verification link sent.');
+    }
+
+    public function verifyEmail(AuthVerifyEmailRequest $request)
+    {
+        $this->authService->verifyEmail((object) $request->validated());
+
+        return $this->success(null, 'Email verified successfully');
     }
 }

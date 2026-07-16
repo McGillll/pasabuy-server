@@ -1,24 +1,30 @@
 # Auth API
 
-Sanctum personal-access-token authentication, shared by both the seller/admin app and customer accounts — `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `PATCH /api/auth/me`, `PATCH /api/auth/me/password`, `POST /api/auth/forgot-password`, and `POST /api/auth/reset-password` work identically regardless of `role`. Customer registration and admin approval are separate endpoints documented in `customer-api.md`; this module covers logging in, self-service "My Account" profile/password management, and forgot/reset password for an already-registered account (admin or customer).
+Sanctum personal-access-token authentication, shared by both the seller/admin app and customer accounts — `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `PATCH /api/auth/me`, `PATCH /api/auth/me/password`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `POST /api/auth/email/verify`, and `POST /api/auth/email/verification-notification` work identically regardless of `role`. Customer registration and admin approval are separate endpoints documented in `customer-api.md`; this module covers logging in, self-service "My Account" profile/password management, forgot/reset password, and email verification for an already-registered account (admin or customer).
+
+Email verification does **not** block login — an unverified user can still authenticate and call every read-only endpoint. It only gates specific mutation endpoints (creating/updating/closing/finishing a pasabuy schedule, confirming schedule product prices, managing checklist items, updating order items, and recording/deleting order payments), which reject with **403** until `email_verified_at` is set.
 
 ## Endpoints overview
 
-| Method | Endpoint                       | Auth required | Description                          |
-|--------|----------------------------------|----------------|---------------------------------------|
-| POST   | `/api/auth/login`               | No             | Exchange email/password for a token   |
-| POST   | `/api/auth/logout`               | Yes            | Revoke the current token              |
-| GET    | `/api/auth/me`                   | Yes            | Get the authenticated user            |
-| PATCH  | `/api/auth/me`                   | Yes            | Update own profile (name/email)       |
-| PATCH  | `/api/auth/me/password`          | Yes            | Change own password                   |
-| POST   | `/api/auth/forgot-password`      | No             | Request a password reset email        |
-| POST   | `/api/auth/reset-password`       | No             | Reset password using an emailed token |
+| Method | Endpoint                                | Auth required | Description                          |
+|--------|--------------------------------------------|----------------|---------------------------------------|
+| POST   | `/api/auth/login`                          | No             | Exchange email/password for a token   |
+| POST   | `/api/auth/logout`                          | Yes            | Revoke the current token              |
+| GET    | `/api/auth/me`                              | Yes            | Get the authenticated user            |
+| PATCH  | `/api/auth/me`                              | Yes            | Update own profile (name/email)       |
+| PATCH  | `/api/auth/me/password`                     | Yes            | Change own password                   |
+| POST   | `/api/auth/forgot-password`                 | No             | Request a password reset email        |
+| POST   | `/api/auth/reset-password`                  | No             | Reset password using an emailed token |
+| POST   | `/api/auth/email/verify`                    | No             | Confirm email using the emailed signed link |
+| POST   | `/api/auth/email/verification-notification` | Yes            | Resend the verification email         |
 
 All requests must send `Accept: application/json`. Authenticated requests send `Authorization: Bearer {token}`.
 
 `POST /api/auth/login` is rate-limited to 5 attempts/minute per email+IP combination (`throttle:login`). Exceeding it returns a standard Laravel `429` response.
 
 `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` are both rate-limited to 3 attempts/minute per email+IP combination (`throttle:forgot-password`). Exceeding it returns a standard Laravel `429` response.
+
+`POST /api/auth/email/verify` is rate-limited to 10 attempts/minute per IP (`throttle:verify-email`). `POST /api/auth/email/verification-notification` is rate-limited to 3 attempts/minute per user (`throttle:resend-verification`). Exceeding either returns a standard Laravel `429` response.
 
 ## Response envelope
 
@@ -43,6 +49,7 @@ Every response — success or failure — uses:
 | contact_number | string\|null  |                                  |
 | role           | string        | `"admin"` or `"customer"`        |
 | is_approved    | boolean       | Always `true` for `admin`. For `customer`, `false` until an admin approves the registration — a pending customer can still log in and call `/auth/me` to see this flag, but every ordering endpoint rejects with **403** until it flips to `true` (see `customer-api.md`) |
+| is_verified    | boolean       | `true` once the account's email has been confirmed via the `email/verify` link. `false` does not block login, but blocks the mutation endpoints listed above |
 
 ---
 
@@ -312,15 +319,81 @@ POST /api/auth/reset-password
 
 ---
 
+## POST /api/auth/email/verify
+
+No auth required — the frontend calls this after landing on `/verify-email?id=...&hash=...&expires=...&signature=...` from the emailed link (sent on registration, or via the resend endpoint). The four query params from that link are forwarded as-is in the request body; the backend validates them as a signed URL (60-minute expiry) before marking the account verified.
+
+### Request body
+
+| Field     | Type   | Required | Notes                                  |
+|-----------|--------|----------|------------------------------------------|
+| id        | string | Yes      | User `uuid` from the link                |
+| hash      | string | Yes      | `sha1(email)` from the link              |
+| expires   | string | Yes      | Signature expiry timestamp from the link |
+| signature | string | Yes      | Signed-URL signature from the link       |
+
+### Example request
+
+```json
+POST /api/auth/email/verify
+{
+  "id": "97ba3fd3-3826-4814-a49a-896a443d490e",
+  "hash": "1c8bfe8f801d79625b1de92b74b8db6f4123fed0",
+  "expires": "1752680400",
+  "signature": "9f8c1e2a..."
+}
+```
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Email verified successfully", "data": null }
+```
+
+Calling this again after the email is already verified still returns the same success response (idempotent).
+
+### Error responses
+
+- **422** — validation failure (missing fields). Standard Laravel validation error shape.
+- **422** — `id`/`hash` doesn't match a real account, or the signature is invalid/expired:
+  ```json
+  { "success": false, "message": "This verification link is invalid.", "data": null }
+  ```
+  ```json
+  { "success": false, "message": "This verification link is invalid or has expired.", "data": null }
+  ```
+- **429** — too many attempts (rate limited).
+
+---
+
+## POST /api/auth/email/verification-notification
+
+Requires `Authorization: Bearer {token}`. Re-sends the verification email to the authenticated user's own address. No-op (still returns success) if the account is already verified.
+
+### Success response — 200
+
+```json
+{ "success": true, "message": "Verification link sent.", "data": null }
+```
+
+### Error responses
+
+- **401** — missing/invalid/expired token.
+- **429** — too many attempts (rate limited).
+
+---
+
 ## Error status summary
 
 | Status | Meaning                          | Applies to           |
 |--------|-----------------------------------|-----------------------|
-| 401    | Bad credentials, or missing/invalid/expired token | login, logout, me, PATCH me, PATCH me/password |
+| 401    | Bad credentials, or missing/invalid/expired token | login, logout, me, PATCH me, PATCH me/password, verification-notification |
 | 401    | Incorrect `current_password`      | PATCH me/password     |
-| 422    | Validation failure                | login, PATCH me, PATCH me/password, forgot-password, reset-password |
+| 403    | Email not verified                | schedule create/update/close/reopen/finish, confirm-price, checklist toggle/regenerate/share-link regenerate, order items update, order payments create/delete |
+| 422    | Validation failure                | login, PATCH me, PATCH me/password, forgot-password, reset-password, email/verify |
 | 422    | Reset token invalid or expired     | reset-password         |
-| 429    | Rate limited                      | login, forgot-password, reset-password |
+| 422    | Verification link invalid or expired | email/verify         |
+| 429    | Rate limited                      | login, forgot-password, reset-password, email/verify, verification-notification |
 
 ## Seeded credentials (local/dev only)
 

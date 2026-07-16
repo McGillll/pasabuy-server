@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
+use App\Interfaces\Auth\AuthServiceInterface;
 use App\Interfaces\Customer\CustomerRepositoryInterface;
 use App\Interfaces\Customer\CustomerServiceInterface;
 
@@ -11,6 +12,7 @@ class CustomerService implements CustomerServiceInterface
 {
     public function __construct(
         protected CustomerRepositoryInterface $customerRepository,
+        protected AuthServiceInterface $authService,
     ) {}
 
     public function all(object $payload)
@@ -35,7 +37,11 @@ class CustomerService implements CustomerServiceInterface
             throw new InvalidPayloadException('An account with this email already exists.');
         }
 
-        return $this->customerRepository->create($payload);
+        $customer = $this->customerRepository->create($payload);
+
+        $this->authService->sendVerificationEmail((object) ['user' => $customer]);
+
+        return $customer;
     }
 
     public function approve(string $uuid)

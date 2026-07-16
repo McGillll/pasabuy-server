@@ -6,11 +6,15 @@ use App\Exceptions\AuthenticationFailedException;
 use App\Exceptions\InvalidPayloadException;
 use App\Interfaces\Auth\AuthRepositoryInterface;
 use App\Interfaces\Auth\AuthServiceInterface;
+use App\Mail\EmailVerificationMail;
 use App\Mail\PasswordResetMail;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\URL;
 
 class AuthService implements AuthServiceInterface
 {
@@ -94,5 +98,55 @@ class AuthService implements AuthServiceInterface
         if ($status !== Password::PASSWORD_RESET) {
             throw new InvalidPayloadException('This password reset link is invalid or has expired.');
         }
+    }
+
+    public function sendVerificationEmail(object $payload)
+    {
+        $user = $payload->user;
+
+        if ($user->hasVerifiedEmail()) {
+            return;
+        }
+
+        Mail::to($user->email)->queue(new EmailVerificationMail($user, $this->buildVerificationUrl($user)));
+    }
+
+    public function verifyEmail(object $payload)
+    {
+        $user = $this->authRepository->findByUuid($payload->id);
+
+        if (! $user || ! hash_equals(sha1($user->email), (string) $payload->hash)) {
+            throw new InvalidPayloadException('This verification link is invalid.');
+        }
+
+        $signedRequest = Request::create(URL::route('api.verify-email', [
+            'id' => $payload->id,
+            'hash' => $payload->hash,
+            'expires' => $payload->expires,
+            'signature' => $payload->signature,
+        ], true));
+
+        if (! $signedRequest->hasValidSignature()) {
+            throw new InvalidPayloadException('This verification link is invalid or has expired.');
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return $user;
+        }
+
+        return $this->authRepository->markEmailAsVerified((object) ['user' => $user]);
+    }
+
+    protected function buildVerificationUrl(User $user)
+    {
+        $signedRoute = URL::temporarySignedRoute(
+            'api.verify-email',
+            Carbon::now()->addMinutes(60),
+            ['id' => $user->uuid, 'hash' => sha1($user->email)]
+        );
+
+        $query = parse_url($signedRoute, PHP_URL_QUERY);
+
+        return rtrim(config('app.frontend_url'), '/').'/verify-email?'.$query;
     }
 }

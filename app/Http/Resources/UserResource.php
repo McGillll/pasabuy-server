@@ -17,6 +17,7 @@ class UserResource extends JsonResource
             'contact_number' => $this->contact_number,
             'role' => $this->role,
             'is_approved' => $this->is_approved,
+            'is_verified' => $this->email_verified_at !== null,
         ];
     }
 }

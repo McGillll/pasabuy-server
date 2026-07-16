@@ -36,4 +36,12 @@ class AuthRepository implements AuthRepositoryInterface
 
         return $user;
     }
+
+    public function markEmailAsVerified(object $payload)
+    {
+        $user = $payload->user;
+        $user->markEmailAsVerified();
+
+        return $user;
+    }
 }
