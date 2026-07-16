@@ -170,7 +170,7 @@ Transitions `closed` → `finished`. No request body. `finished` is a terminal s
 
 **Blocked while any order on this schedule is still `pending`** — the seller must confirm or cancel every order first (`confirmed` orders are fine; only `pending` blocks the transition). This guard applies to both this endpoint and setting `status: "finished"` via the generic `PUT` update above.
 
-**Side effect:** once the status change is persisted, a `PasabuyInvoiceMail` (queued, `database` connection) is dispatched to every `pending`/`confirmed` order's customer email (`order.user.email`) on this schedule, built from `InvoiceService::buildForOrder()`. Orders without a customer email, or whose invoice fails to build, are skipped and logged — this never fails the `finish` request itself.
+**Side effect:** once the status change is persisted, every `confirmed` order on this schedule is passed to `InvoiceMailerService::sendIfDue($order, 'schedule_finish')`. The invoice is only actually emailed if the seller's invoice setting `due_date_reference` is `schedule_finish` — if it's `delivery`, the email is deferred to the order's delivery instead (see `order-api.md`), since `due_date` would otherwise resolve to `null` (the reference event hasn't happened yet) and the invoice would misleadingly show "Due: N/A". Each order is only ever emailed once (`Order.invoice_sent_at` guards against duplicates on retries or re-triggers). Orders without a customer email, or whose invoice fails to build, are skipped and logged — this never fails the `finish` request itself.
 
 ### Success response — 200
 

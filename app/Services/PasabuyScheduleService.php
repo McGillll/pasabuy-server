@@ -7,17 +7,12 @@ use App\Events\ChecklistRegenerated;
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
-use App\Interfaces\Invoice\InvoiceServiceInterface;
+use App\Interfaces\Invoice\InvoiceMailerServiceInterface;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
-use App\Mail\PasabuyInvoiceMail;
-use App\Models\PasabuyOrder;
 use App\Models\PasabuySchedule;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Throwable;
 
 class PasabuyScheduleService implements PasabuyScheduleServiceInterface
 {
@@ -25,7 +20,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         protected PasabuyScheduleRepositoryInterface $pasabuyScheduleRepository,
         protected ProductRepositoryInterface $productRepository,
         protected OrderServiceInterface $orderService,
-        protected InvoiceServiceInterface $invoiceService,
+        protected InvoiceMailerServiceInterface $invoiceMailer,
     ) {}
 
     public function all(object $payload)
@@ -285,33 +280,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         $orders = $this->pasabuyScheduleRepository->orders($uuid);
 
         foreach ($orders as $order) {
-            if (! in_array($order->status, PasabuyOrder::LIVE_STATUSES, true)) {
-                continue;
-            }
-
-            $this->sendInvoiceEmail($order);
-        }
-    }
-
-    protected function sendInvoiceEmail(PasabuyOrder $order)
-    {
-        if (! $order->user || ! $order->user->email) {
-            Log::warning('Skipped pasabuy invoice email — order has no customer email on file.', [
-                'order_uuid' => $order->uuid,
-            ]);
-
-            return;
-        }
-
-        try {
-            $invoice = $this->invoiceService->buildForOrder($order);
-
-            Mail::to($order->user->email)->queue(new PasabuyInvoiceMail($order, $invoice));
-        } catch (Throwable $exception) {
-            Log::warning('Failed to queue pasabuy invoice email for order.', [
-                'order_uuid' => $order->uuid,
-                'error' => $exception->getMessage(),
-            ]);
+            $this->invoiceMailer->sendIfDue($order, 'schedule_finish');
         }
     }
 

@@ -25,6 +25,8 @@ class PasabuyOrder extends Model
     {
         return [
             'delivered_at' => 'datetime',
+            'invoice_sent_at' => 'datetime',
+            'last_overdue_reminder_at' => 'datetime',
         ];
     }
 

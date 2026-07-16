@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Interfaces\Invoice\InvoiceMailerServiceInterface;
 use App\Interfaces\Invoice\InvoiceServiceInterface;
 use App\Mail\OverdueInvoiceDigest;
 use App\Models\PasabuyOrder;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 #[Signature('invoices:send-overdue-digest')]
-#[Description('Email each seller a digest of their overdue, unpaid invoices')]
+#[Description('Email each seller a digest of their overdue, unpaid invoices, and remind each overdue customer on a day 1/7/14/weekly cadence')]
 class SendOverdueInvoiceDigest extends Command
 {
     /**
@@ -21,10 +22,11 @@ class SendOverdueInvoiceDigest extends Command
     public function handle()
     {
         $invoiceService = app(InvoiceServiceInterface::class);
+        $invoiceMailer = app(InvoiceMailerServiceInterface::class);
 
         $orders = PasabuyOrder::where('status', 'confirmed')
             ->whereIn('payment_status', ['unpaid', 'partially_paid'])
-            ->with('pasabuySchedule.user', 'items', 'payments')
+            ->with('pasabuySchedule.user', 'user', 'items', 'payments')
             ->get();
 
         $overdueBySeller = collect();
@@ -41,6 +43,8 @@ class SendOverdueInvoiceDigest extends Command
             if (! $invoice['is_overdue'] || $invoice['balance_due'] <= 0) {
                 continue;
             }
+
+            $invoiceMailer->sendOverdueReminderIfDue($order, $invoice);
 
             $overdueBySeller->push([
                 'seller' => $seller,
