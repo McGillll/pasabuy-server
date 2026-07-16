@@ -12,7 +12,8 @@ class PasabuyOrderFilter extends ModelFilter
     {
         return $this->where(function ($q) use ($query) {
             $q->where('customer_name', 'like', "%{$query}%")
-                ->orWhere('customer_contact', 'like', "%{$query}%");
+                ->orWhere('customer_contact', 'like', "%{$query}%")
+                ->orWhere('order_no', 'like', "%{$query}%");
         });
     }
 

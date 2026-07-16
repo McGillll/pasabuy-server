@@ -32,7 +32,17 @@ class PasabuyOrder extends Model
     {
         static::creating(function (PasabuyOrder $order) {
             $order->uuid = Str::uuid()->toString();
+            $order->order_no = static::generateOrderNo();
         });
+    }
+
+    protected static function generateOrderNo()
+    {
+        do {
+            $orderNo = sprintf('PSBY-%s-%s', now()->format('Ymd'), Str::upper(Str::random(6)));
+        } while (static::where('order_no', $orderNo)->exists());
+
+        return $orderNo;
     }
 
     public function pasabuySchedule()

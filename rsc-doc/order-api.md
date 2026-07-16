@@ -26,6 +26,7 @@ There is no order-level status change from this recalculation — an order's `st
 | Field                      | Type          | Notes                                             |
 |-----------------------------|---------------|--------------------------------------------------|
 | uuid                       | string        | Public identifier                                  |
+| order_no                   | string        | Human-readable order reference, format `PSBY-YYYYMMDD-RNDM` (e.g. `PSBY-20260716-4F7A2C`) — unique, auto-generated on creation, never set directly |
 | customer_name              | string        | Snapshot of the owning customer's name at order time |
 | customer_contact           | string        | Snapshot of the owning customer's contact number at order time |
 | status                     | string        | `pending` \| `confirmed` \| `cancelled` |
@@ -72,7 +73,7 @@ Lists orders across all schedules (paginated), for the cross-schedule admin Orde
 | payment_status  | string | No       | `unpaid` \| `partially_paid` \| `paid`                          |
 | delivery_status | string | No       | `not_delivered` \| `delivered`                                  |
 | schedule_uuid   | string | No       | Restrict to orders belonging to a single `PasabuySchedule` (by its uuid) |
-| search          | string | No       | Matches against `customer_name` or `customer_contact`          |
+| search          | string | No       | Matches against `customer_name`, `customer_contact`, or `order_no`          |
 
 ### Success response — 200
 
@@ -183,6 +184,10 @@ A payment ledger against an order — supports multiple partial/installment paym
 No validation currently caps total payments at the order's `total_amount` — overpayment (tips, rounding, later price adjustments) is allowed by design.
 
 Deleting an order (cascade) removes all its payments.
+
+**Side effect (create):** when recording a payment transitions `Order.payment_status` from something other than `paid` to `paid` (i.e. the ledger sum first reaches `total_amount`), a `PaymentConfirmationMail` (queued, `database` connection) is dispatched to the order's customer email (`order.user.email`), built from `InvoiceService::buildForOrder()`. It does **not** fire again on subsequent payments while already `paid` (e.g. an overpayment), and is skipped and logged (never fails the request) if the order has no customer email on file or the invoice fails to build.
+
+**Side effect (delete):** voiding a payment never sends any customer-facing email — reversing a payment is an admin correction, and an automatic "you now owe money again" email would be confusing (often the admin is about to re-enter the corrected payment anyway). If deleting the payment drops `Order.payment_status` out of `paid`, a warning is logged (`order_uuid`, `voided_payment_uuid`, `voided_amount`, `new_payment_status`) so it's visible in logs/admin activity without alarming the customer.
 
 ## Error status summary
 

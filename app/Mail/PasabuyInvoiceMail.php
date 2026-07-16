@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Interfaces\Settings\SettingsRepositoryInterface;
 use App\Models\PasabuyOrder;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,7 +33,7 @@ class PasabuyInvoiceMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your Pasabuy Invoice — '.$this->order->pasabuySchedule->title,
+            subject: 'Your Pasabuy Invoice for '.$this->order->pasabuySchedule->title,
         );
     }
 
@@ -42,7 +43,10 @@ class PasabuyInvoiceMail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.pasabuy-invoice',
+            view: 'emails.pasabuy-invoice',
+            with: [
+                'businessName' => app(SettingsRepositoryInterface::class)->get()?->business_name,
+            ],
         );
     }
 }

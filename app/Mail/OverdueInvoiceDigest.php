@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Interfaces\Settings\SettingsRepositoryInterface;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -42,7 +43,10 @@ class OverdueInvoiceDigest extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.overdue-invoice-digest',
+            view: 'emails.overdue-invoice-digest',
+            with: [
+                'businessName' => app(SettingsRepositoryInterface::class)->get()?->business_name,
+            ],
         );
     }
 }
