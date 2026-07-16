@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PasabuyScheduleController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin/orders')->middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
@@ -11,6 +12,7 @@ Route::prefix('admin/orders')->middleware(['auth:sanctum', 'abilities:admin'])->
 });
 
 Route::middleware(['auth:sanctum', 'abilities:customer', 'customer.approved'])->group(function () {
+    Route::get('/customer/pasabuy-schedules', [PasabuyScheduleController::class, 'browseOpenForCustomer']);
     Route::post('/customer/pasabuy-schedules/{scheduleUuid}/orders', [OrderController::class, 'storeForCustomer']);
     Route::get('/customer/orders', [OrderController::class, 'myOrders']);
     Route::get('/customer/orders/{uuid}', [OrderController::class, 'myOrderShow']);

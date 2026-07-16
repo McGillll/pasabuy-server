@@ -14,6 +14,7 @@ Customer registration, admin approval, and everything a logged-in customer can d
 | Method | Endpoint                                                    | Auth required            | Description                        |
 |--------|--------------------------------------------------------------|---------------------------|--------------------------------------|
 | POST   | `/api/public/customers/register`                              | No                         | Register a new customer account (pending approval) |
+| GET    | `/api/customer/pasabuy-schedules`                              | Yes (customer, approved)  | Browse open pasabuy schedules available to order from |
 | POST   | `/api/customer/pasabuy-schedules/{scheduleUuid}/orders`       | Yes (customer, approved)  | Place an order against an open schedule |
 | GET    | `/api/customer/orders`                                        | Yes (customer, approved)  | List the authenticated customer's own orders |
 | GET    | `/api/customer/orders/{uuid}`                                 | Yes (customer, approved)  | View one of the authenticated customer's own orders |
@@ -98,11 +99,50 @@ The seller verifies the applicant manually, outside the system, before approving
 
 ---
 
+## GET /api/customer/pasabuy-schedules
+
+Lists pasabuy schedules currently open for ordering (paginated), so a customer can browse and pick one before placing an order. Only schedules with `status: "open"` **and** (no `pasabuy_schedule_date` or that date still in the future) are returned — i.e. only schedules where `is_open` would be `true`. Closed/finished schedules and schedules past their cutoff date never appear here.
+
+### Query params
+
+| Field           | Type   | Required | Notes                                                       |
+|-----------------|--------|----------|--------------------------------------------------------------|
+| page            | int    | No       | Default `1`                                                   |
+| per_page        | int    | No       | Default `15`                                                   |
+| search          | string | No       | Matches against `title`                                       |
+| month           | int    | No       | Filters by `pasabuy_schedule_date` month                       |
+| year            | int    | No       | Filters by `pasabuy_schedule_date` year                        |
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "data": [ { "uuid": "...", "title": "Grocery Run", "description": "...", "pasabuy_schedule_date": "2026-07-20", "status": "open", "is_open": true, "seller_name": "Maria Santos", "product_count": 12, "created_at": "..." } ],
+    "current_page": 1,
+    "last_page": 2,
+    "total": 18
+  }
+}
+```
+
+`products` is omitted here (not loaded) — to view a single schedule's full product list before ordering, use the existing public single-schedule lookup `GET /api/public/pasabuy-schedules/{uuid}` (see `public-pasabuy-api.md`), which returns the full `products` array.
+
+### Error responses
+
+- **403** — `"Your account is pending admin approval."`
+
+---
+
 ## POST /api/customer/pasabuy-schedules/{scheduleUuid}/orders
 
 Replaces the old anonymous public order-placement endpoint. Creates the order and its items in one call, owned by the authenticated customer — `customer_name`/`customer_contact` are snapshotted from the customer's account, not sent in the request body. The server computes `subtotal`/`total_amount` itself from each product's current schedule price.
 
 **One active order per customer per schedule.** A customer can only have one `pending`/`confirmed` order against a given schedule at a time — placing a second one returns **422**. To change items, use `PUT /api/customer/orders/{uuid}` on the existing order instead (see below). A new order is only allowed again if the previous one was `cancelled`.
+
+**No new orders while any order is unpaid.** If the customer has any `pending`/`confirmed` order (in any schedule) whose `payment_status` is not `paid`, placing a new order anywhere returns **422**. The customer must settle (or the seller must cancel) the outstanding order first.
 
 ### Request body (JSON)
 
@@ -129,7 +169,7 @@ POST /api/customer/pasabuy-schedules/e9400549-.../orders
 
 - **403** — `"Your account is pending admin approval."`
 - **404** — no schedule with that uuid.
-- **422** — `"This pasabuy is closed for orders."` / `"You already have an order for this pasabuy. Edit your existing order instead."` / `"Product {uuid} is not available in this pasabuy."` / standard field validation.
+- **422** — `"This pasabuy is closed for orders."` / `"You already have an order for this pasabuy. Edit your existing order instead."` / `"You have an unpaid order pending. Please settle it before placing a new order."` / `"Product {uuid} is not available in this pasabuy."` / standard field validation.
 
 ---
 

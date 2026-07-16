@@ -45,6 +45,14 @@ class OrderRepository implements OrderRepositoryInterface
             ->first();
     }
 
+    public function findUnpaidLiveOrderForUser(int $userId)
+    {
+        return PasabuyOrder::where('user_id', $userId)
+            ->whereIn('status', PasabuyOrder::LIVE_STATUSES)
+            ->where('payment_status', '!=', 'paid')
+            ->first();
+    }
+
     public function myOrders(int $userId, object $payload)
     {
         return PasabuyOrder::filter((array) $payload)

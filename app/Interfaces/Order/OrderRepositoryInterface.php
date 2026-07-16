@@ -14,6 +14,8 @@ interface OrderRepositoryInterface
 
     public function findActiveForSchedule(int $userId, int $scheduleId);
 
+    public function findUnpaidLiveOrderForUser(int $userId);
+
     public function myOrders(int $userId, object $payload);
 
     public function updateStatus(string $uuid, object $payload);

@@ -21,6 +21,20 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             ->paginate($payload->per_page ?? 15);
     }
 
+    public function openForCustomer(object $payload)
+    {
+        return PasabuySchedule::filter((array) $payload)
+            ->where('status', 'open')
+            ->where(function ($query) {
+                $query->whereNull('pasabuy_schedule_date')
+                    ->orWhereDate('pasabuy_schedule_date', '>', now()->toDateString());
+            })
+            ->with('user')
+            ->withCount('scheduleProducts')
+            ->latest()
+            ->paginate($payload->per_page ?? 15);
+    }
+
     public function findByUuid(string $uuid)
     {
         return PasabuySchedule::with([

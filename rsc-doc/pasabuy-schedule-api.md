@@ -47,6 +47,8 @@ All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin
 | pasabuy_schedule_date | date\|null | The date the seller physically goes to the store — also doubles as the ordering deadline: ordering closes as soon as this date arrives. Distinct from `created_at` (record creation). Drives the `month`/`year` list filters. Required on `POST`/`PUT`. |
 | status      | string        | `open` \| `closed` \| `finished`, default `open`. Only `open` (and before `pasabuy_schedule_date`) accepts customer orders. Valid transitions: `open`→`closed`, `closed`→`open`, `closed`→`finished`. `finished` is terminal. |
 | is_open     | boolean       | Computed: `status === 'open' && (!pasabuy_schedule_date || pasabuy_schedule_date is in the future)` — use this to gate the UI |
+| seller_name | string\|null  | Owning seller's full name — only present when the `user` relation is loaded (e.g. `GET /api/customer/pasabuy-schedules`, see `customer-api.md`); `null`/omitted elsewhere |
+| product_count | int\|null   | Count of attached schedule products — only present when loaded with a count (e.g. `GET /api/customer/pasabuy-schedules`); `null`/omitted elsewhere |
 | products    | array         | Only the products someone has actually ordered so far on this schedule — see schedule-product object below |
 | created_at  | datetime      |                                                                            |
 

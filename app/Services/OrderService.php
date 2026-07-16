@@ -71,6 +71,10 @@ class OrderService implements OrderServiceInterface
             throw new InvalidPayloadException('You already have an order for this pasabuy. Edit your existing order instead.');
         }
 
+        if ($this->orderRepository->findUnpaidLiveOrderForUser($payload->user->id)) {
+            throw new InvalidPayloadException('You have an unpaid order pending. Please settle it before placing a new order.');
+        }
+
         $resolvedItems = $this->resolveItems($schedule, $payload->items);
 
         return DB::transaction(function () use ($schedule, $payload, $resolvedItems) {

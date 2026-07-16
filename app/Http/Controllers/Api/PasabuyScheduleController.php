@@ -40,6 +40,18 @@ class PasabuyScheduleController extends Controller
         ]);
     }
 
+    public function browseOpenForCustomer(Request $request)
+    {
+        $schedules = $this->pasabuyScheduleService->openForCustomer((object) $request->query());
+
+        return $this->success([
+            'data' => PasabuyScheduleResource::collection($schedules->items()),
+            'current_page' => $schedules->currentPage(),
+            'last_page' => $schedules->lastPage(),
+            'total' => $schedules->total(),
+        ]);
+    }
+
     public function show(string $uuid)
     {
         $schedule = $this->pasabuyScheduleService->findByUuid($uuid);

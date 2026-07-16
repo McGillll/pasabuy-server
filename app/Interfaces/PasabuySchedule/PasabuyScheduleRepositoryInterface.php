@@ -9,6 +9,8 @@ interface PasabuyScheduleRepositoryInterface
 {
     public function all(object $payload);
 
+    public function openForCustomer(object $payload);
+
     public function findByUuid(string $uuid);
 
     public function create(object $payload);

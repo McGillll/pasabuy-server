@@ -33,6 +33,11 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         return $this->pasabuyScheduleRepository->all($payload);
     }
 
+    public function openForCustomer(object $payload)
+    {
+        return $this->pasabuyScheduleRepository->openForCustomer($payload);
+    }
+
     public function findByUuid(string $uuid)
     {
         $schedule = $this->pasabuyScheduleRepository->findByUuid($uuid);
