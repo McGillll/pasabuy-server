@@ -3,7 +3,9 @@
 namespace App\Repositories;
 
 use App\Interfaces\Auth\AuthRepositoryInterface;
+use App\Models\EmailVerificationToken;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 class AuthRepository implements AuthRepositoryInterface
 {
@@ -12,9 +14,28 @@ class AuthRepository implements AuthRepositoryInterface
         return User::where('email', $email)->first();
     }
 
-    public function findByUuid(string $uuid)
+    public function createEmailVerificationToken(object $payload)
     {
-        return User::where('uuid', $uuid)->first();
+        $token = new EmailVerificationToken;
+        $token->user_id = $payload->user->id;
+        $token->token = $payload->token;
+        $token->expires_at = $payload->expiresAt;
+        $token->save();
+
+        return $token;
+    }
+
+    public function findValidEmailVerificationToken(object $payload)
+    {
+        return EmailVerificationToken::with('user')
+            ->where('token', $payload->token)
+            ->where('expires_at', '>', Carbon::now())
+            ->first();
+    }
+
+    public function deleteEmailVerificationTokens(object $payload)
+    {
+        EmailVerificationToken::where('user_id', $payload->user->id)->delete();
     }
 
     public function updateProfile(object $payload)

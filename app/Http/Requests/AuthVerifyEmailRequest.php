@@ -14,10 +14,7 @@ class AuthVerifyEmailRequest extends FormRequest
     public function rules()
     {
         return [
-            'id' => ['required', 'string'],
-            'hash' => ['required', 'string'],
-            'expires' => ['required', 'string'],
-            'signature' => ['required', 'string'],
+            'token' => ['required', 'string'],
         ];
     }
 }

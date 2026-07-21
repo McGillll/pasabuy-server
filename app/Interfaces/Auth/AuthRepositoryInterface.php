@@ -6,7 +6,11 @@ interface AuthRepositoryInterface
 {
     public function findByEmail(string $email);
 
-    public function findByUuid(string $uuid);
+    public function createEmailVerificationToken(object $payload);
+
+    public function findValidEmailVerificationToken(object $payload);
+
+    public function deleteEmailVerificationTokens(object $payload);
 
     public function updateProfile(object $payload);
 

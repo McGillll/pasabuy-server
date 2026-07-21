@@ -10,11 +10,10 @@ use App\Mail\EmailVerificationMail;
 use App\Mail\PasswordResetMail;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class AuthService implements AuthServiceInterface
 {
@@ -113,40 +112,35 @@ class AuthService implements AuthServiceInterface
 
     public function verifyEmail(object $payload)
     {
-        $user = $this->authRepository->findByUuid($payload->id);
+        $tokenRecord = $this->authRepository->findValidEmailVerificationToken(
+            (object) ['token' => hash('sha256', $payload->token)]
+        );
 
-        if (! $user || ! hash_equals(sha1($user->email), (string) $payload->hash)) {
-            throw new InvalidPayloadException('This verification link is invalid.');
-        }
-
-        $signedRequest = Request::create(URL::route('api.verify-email', [
-            'id' => $payload->id,
-            'hash' => $payload->hash,
-            'expires' => $payload->expires,
-            'signature' => $payload->signature,
-        ], true));
-
-        if (! $signedRequest->hasValidSignature()) {
+        if (! $tokenRecord) {
             throw new InvalidPayloadException('This verification link is invalid or has expired.');
         }
 
-        if ($user->hasVerifiedEmail()) {
-            return $user;
+        $user = $tokenRecord->user;
+
+        if (! $user->hasVerifiedEmail()) {
+            $this->authRepository->markEmailAsVerified((object) ['user' => $user]);
         }
 
-        return $this->authRepository->markEmailAsVerified((object) ['user' => $user]);
+        $this->authRepository->deleteEmailVerificationTokens((object) ['user' => $user]);
+
+        return $user;
     }
 
     protected function buildVerificationUrl(User $user)
     {
-        $signedRoute = URL::temporarySignedRoute(
-            'api.verify-email',
-            Carbon::now()->addMinutes(60),
-            ['id' => $user->uuid, 'hash' => sha1($user->email)]
-        );
+        $token = Str::random(64);
 
-        $query = parse_url($signedRoute, PHP_URL_QUERY);
+        $this->authRepository->createEmailVerificationToken((object) [
+            'user' => $user,
+            'token' => hash('sha256', $token),
+            'expiresAt' => Carbon::now()->addMinutes(60),
+        ]);
 
-        return rtrim(config('app.frontend_url'), '/').'/verify-email?'.$query;
+        return rtrim(config('app.frontend_url'), '/').'/verify-email?token='.$token;
     }
 }

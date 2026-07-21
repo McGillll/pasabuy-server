@@ -15,7 +15,7 @@ Email verification does **not** block login — an unverified user can still aut
 | PATCH  | `/api/auth/me/password`                     | Yes            | Change own password                   |
 | POST   | `/api/auth/forgot-password`                 | No             | Request a password reset email        |
 | POST   | `/api/auth/reset-password`                  | No             | Reset password using an emailed token |
-| POST   | `/api/auth/email/verify`                    | No             | Confirm email using the emailed signed link |
+| POST   | `/api/auth/email/verify`                    | No             | Confirm email using the emailed token |
 | POST   | `/api/auth/email/verification-notification` | Yes            | Resend the verification email         |
 
 All requests must send `Accept: application/json`. Authenticated requests send `Authorization: Bearer {token}`.
@@ -321,26 +321,20 @@ POST /api/auth/reset-password
 
 ## POST /api/auth/email/verify
 
-No auth required — the frontend calls this after landing on `/verify-email?id=...&hash=...&expires=...&signature=...` from the emailed link (sent on registration, or via the resend endpoint). The four query params from that link are forwarded as-is in the request body; the backend validates them as a signed URL (60-minute expiry) before marking the account verified.
+No auth required — the frontend calls this after landing on `/verify-email?token=...` from the emailed link (sent on registration, or via the resend endpoint). The token is a random 64-character string; the backend stores only its SHA-256 hash server-side (in `email_verification_tokens`) alongside a 60-minute expiry, so validation is a plain database lookup rather than a signed-URL check. The token is single-use — it's deleted once consumed.
 
 ### Request body
 
-| Field     | Type   | Required | Notes                                  |
-|-----------|--------|----------|------------------------------------------|
-| id        | string | Yes      | User `uuid` from the link                |
-| hash      | string | Yes      | `sha1(email)` from the link              |
-| expires   | string | Yes      | Signature expiry timestamp from the link |
-| signature | string | Yes      | Signed-URL signature from the link       |
+| Field | Type   | Required | Notes                       |
+|-------|--------|----------|-------------------------------|
+| token | string | Yes      | Token from the emailed link  |
 
 ### Example request
 
 ```json
 POST /api/auth/email/verify
 {
-  "id": "97ba3fd3-3826-4814-a49a-896a443d490e",
-  "hash": "1c8bfe8f801d79625b1de92b74b8db6f4123fed0",
-  "expires": "1752680400",
-  "signature": "9f8c1e2a..."
+  "token": "9f8c1e2a3b4c5d6e7f8091a2b3c4d5e6f7081920a1b2c3d4e5f60718293a4b5c"
 }
 ```
 
@@ -350,15 +344,12 @@ POST /api/auth/email/verify
 { "success": true, "message": "Email verified successfully", "data": null }
 ```
 
-Calling this again after the email is already verified still returns the same success response (idempotent).
+Calling this again after the email is already verified still returns the same success response (idempotent) as long as the token hasn't already been consumed/deleted by the first call.
 
 ### Error responses
 
-- **422** — validation failure (missing fields). Standard Laravel validation error shape.
-- **422** — `id`/`hash` doesn't match a real account, or the signature is invalid/expired:
-  ```json
-  { "success": false, "message": "This verification link is invalid.", "data": null }
-  ```
+- **422** — validation failure (missing `token`). Standard Laravel validation error shape.
+- **422** — token doesn't match any stored record, or has expired:
   ```json
   { "success": false, "message": "This verification link is invalid or has expired.", "data": null }
   ```
