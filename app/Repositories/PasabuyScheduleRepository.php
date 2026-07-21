@@ -21,6 +21,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     public function all(object $payload)
     {
         return PasabuySchedule::filter((array) $payload)
+            ->where('user_id', $payload->seller_id)
             ->latest()
             ->paginate($payload->per_page ?? 15);
     }

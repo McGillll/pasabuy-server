@@ -22,7 +22,10 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $orders = $this->orderService->all((object) $request->query());
+        $payload = (object) $request->query();
+        $payload->seller_id = $request->user()->id;
+
+        $orders = $this->orderService->all($payload);
 
         return $this->success([
             'data' => OrderResource::collection($orders->items()),

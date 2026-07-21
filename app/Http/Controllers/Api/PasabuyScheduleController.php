@@ -30,7 +30,10 @@ class PasabuyScheduleController extends Controller
 
     public function index(Request $request)
     {
-        $schedules = $this->pasabuyScheduleService->all((object) $request->query());
+        $payload = (object) $request->query();
+        $payload->seller_id = $request->user()->id;
+
+        $schedules = $this->pasabuyScheduleService->all($payload);
 
         return $this->success([
             'data' => PasabuyScheduleResource::collection($schedules->items()),
