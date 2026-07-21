@@ -4,29 +4,51 @@ namespace App\Repositories;
 
 use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Models\PasabuyProduct;
+use App\Traits\InteractsWithCache;
+use Illuminate\Support\Facades\Cache;
 
 class ProductRepository implements ProductRepositoryInterface
 {
+    use InteractsWithCache;
+
     public function all(object $payload)
     {
-        return PasabuyProduct::filter((array) $payload)
-            ->with('latestScheduleProduct', 'category')
-            ->orderBy('name')
-            ->paginate($payload->per_page ?? 15);
+        $version = $this->cacheVersion('products');
+
+        return Cache::remember(
+            "products:all:v{$version}:".md5(json_encode($payload)),
+            300,
+            fn () => PasabuyProduct::filter((array) $payload)
+                ->with('latestScheduleProduct', 'category')
+                ->orderBy('name')
+                ->paginate($payload->per_page ?? 15)
+        );
     }
 
     public function publicCatalog(object $payload)
     {
-        return PasabuyProduct::filter((array) $payload)
-            ->where('is_active', true)
-            ->with('category')
-            ->orderBy('name')
-            ->paginate($payload->per_page ?? 200);
+        $version = $this->cacheVersion('products');
+
+        return Cache::remember(
+            "products:public_catalog:v{$version}:".md5(json_encode($payload)),
+            300,
+            fn () => PasabuyProduct::filter((array) $payload)
+                ->where('is_active', true)
+                ->with('category')
+                ->orderBy('name')
+                ->paginate($payload->per_page ?? 200)
+        );
     }
 
     public function findByUuid(string $uuid)
     {
-        return PasabuyProduct::with('category')->where('uuid', $uuid)->first();
+        $version = $this->cacheVersion('products');
+
+        return Cache::remember(
+            "products:uuid:v{$version}:{$uuid}",
+            600,
+            fn () => PasabuyProduct::with('category')->where('uuid', $uuid)->first()
+        );
     }
 
     public function create(object $payload)
@@ -41,12 +63,15 @@ class ProductRepository implements ProductRepositoryInterface
         $product->default_product_status = $payload->default_product_status ?? 'none';
         $product->save();
 
+        $this->bumpCacheVersion('products');
+        $this->bumpCacheVersion('pasabuy_schedules');
+
         return $product;
     }
 
     public function update(string $uuid, object $payload)
     {
-        $product = $this->findByUuid($uuid);
+        $product = PasabuyProduct::where('uuid', $uuid)->first();
 
         $product->name = $payload->name;
         $product->description = $payload->description ?? null;
@@ -59,13 +84,19 @@ class ProductRepository implements ProductRepositoryInterface
         $product->default_product_status = $payload->default_product_status ?? $product->default_product_status;
         $product->save();
 
+        $this->bumpCacheVersion('products');
+        $this->bumpCacheVersion('pasabuy_schedules');
+
         return $product;
     }
 
     public function delete(string $uuid)
     {
-        $product = $this->findByUuid($uuid);
+        $product = PasabuyProduct::where('uuid', $uuid)->first();
         $product->delete();
+
+        $this->bumpCacheVersion('products');
+        $this->bumpCacheVersion('pasabuy_schedules');
 
         return $product;
     }

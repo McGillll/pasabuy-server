@@ -9,11 +9,15 @@ use App\Models\PasabuyProduct;
 use App\Models\PasabuySchedule;
 use App\Models\PasabuyScheduleChecklistItem;
 use App\Models\PasabuyScheduleProduct;
+use App\Traits\InteractsWithCache;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 {
+    use InteractsWithCache;
+
     public function all(object $payload)
     {
         return PasabuySchedule::filter((array) $payload)
@@ -37,10 +41,16 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
 
     public function findByUuid(string $uuid)
     {
-        return PasabuySchedule::with([
-            'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
-            'scheduleProducts.product.category',
-        ])->where('uuid', $uuid)->first();
+        $version = $this->cacheVersion('pasabuy_schedules');
+
+        return Cache::remember(
+            "pasabuy_schedules:uuid:v{$version}:{$uuid}",
+            120,
+            fn () => PasabuySchedule::with([
+                'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
+                'scheduleProducts.product.category',
+            ])->where('uuid', $uuid)->first()
+        );
     }
 
     public function updateStatus(string $uuid, string $status)
@@ -49,6 +59,8 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $schedule->status = $status;
         $schedule->finished_at = $status === 'finished' ? ($schedule->finished_at ?? now()) : $schedule->finished_at;
         $schedule->save();
+
+        $this->bumpCacheVersion('pasabuy_schedules');
 
         return $schedule->fresh([
             'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
@@ -79,6 +91,8 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $schedule->status = $payload->status ?? $schedule->status;
         $schedule->save();
 
+        $this->bumpCacheVersion('pasabuy_schedules');
+
         return $schedule;
     }
 
@@ -87,15 +101,23 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
         $schedule->delete();
 
+        $this->bumpCacheVersion('pasabuy_schedules');
+
         return $schedule;
     }
 
     public function findOrCreateScheduleProduct(PasabuySchedule $schedule, PasabuyProduct $product)
     {
-        return PasabuyScheduleProduct::firstOrCreate(
+        $scheduleProduct = PasabuyScheduleProduct::firstOrCreate(
             ['pasabuy_schedule_id' => $schedule->id, 'product_id' => $product->id],
             ['product_status' => $product->default_product_status, 'actual_price' => null, 'is_disabled' => false],
         );
+
+        if ($scheduleProduct->wasRecentlyCreated) {
+            $this->bumpCacheVersion('pasabuy_schedules');
+        }
+
+        return $scheduleProduct;
     }
 
     public function orders(string $uuid)
@@ -119,6 +141,8 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $scheduleProduct->product_status = $payload->product_status;
         $scheduleProduct->price_confirmed_at = now();
         $scheduleProduct->save();
+
+        $this->bumpCacheVersion('pasabuy_schedules');
 
         return $scheduleProduct->fresh('product');
     }

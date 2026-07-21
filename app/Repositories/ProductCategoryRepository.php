@@ -4,19 +4,35 @@ namespace App\Repositories;
 
 use App\Interfaces\ProductCategory\ProductCategoryRepositoryInterface;
 use App\Models\ProductCategory;
+use App\Traits\InteractsWithCache;
+use Illuminate\Support\Facades\Cache;
 
 class ProductCategoryRepository implements ProductCategoryRepositoryInterface
 {
+    use InteractsWithCache;
+
     public function all(object $payload)
     {
-        return ProductCategory::filter((array) $payload)
-            ->orderBy('name')
-            ->paginate($payload->per_page ?? 15);
+        $version = $this->cacheVersion('product_categories');
+
+        return Cache::remember(
+            "product_categories:all:v{$version}:".md5(json_encode($payload)),
+            300,
+            fn () => ProductCategory::filter((array) $payload)
+                ->orderBy('name')
+                ->paginate($payload->per_page ?? 15)
+        );
     }
 
     public function findByUuid(string $uuid)
     {
-        return ProductCategory::where('uuid', $uuid)->first();
+        $version = $this->cacheVersion('product_categories');
+
+        return Cache::remember(
+            "product_categories:uuid:v{$version}:{$uuid}",
+            600,
+            fn () => ProductCategory::where('uuid', $uuid)->first()
+        );
     }
 
     public function create(object $payload)
@@ -27,25 +43,37 @@ class ProductCategoryRepository implements ProductCategoryRepositoryInterface
         $category->is_active = $payload->is_active ?? true;
         $category->save();
 
+        $this->bumpCacheVersion('product_categories');
+        $this->bumpCacheVersion('products');
+        $this->bumpCacheVersion('pasabuy_schedules');
+
         return $category;
     }
 
     public function update(string $uuid, object $payload)
     {
-        $category = $this->findByUuid($uuid);
+        $category = ProductCategory::where('uuid', $uuid)->first();
 
         $category->name = $payload->name;
         $category->description = $payload->description ?? null;
         $category->is_active = $payload->is_active ?? $category->is_active;
         $category->save();
 
+        $this->bumpCacheVersion('product_categories');
+        $this->bumpCacheVersion('products');
+        $this->bumpCacheVersion('pasabuy_schedules');
+
         return $category;
     }
 
     public function delete(string $uuid)
     {
-        $category = $this->findByUuid($uuid);
+        $category = ProductCategory::where('uuid', $uuid)->first();
         $category->delete();
+
+        $this->bumpCacheVersion('product_categories');
+        $this->bumpCacheVersion('products');
+        $this->bumpCacheVersion('pasabuy_schedules');
 
         return $category;
     }
