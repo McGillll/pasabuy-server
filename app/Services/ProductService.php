@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\WebpEncoder;
 use Intervention\Image\ImageManager;
+use RuntimeException;
 
 class ProductService implements ProductServiceInterface
 {
@@ -57,10 +58,12 @@ class ProductService implements ProductServiceInterface
         $this->resolveCategory($payload);
 
         if (isset($payload->image)) {
-            if ($product->image_path) {
-                Storage::delete($product->image_path);
-            }
+            $previousImagePath = $product->image_path;
             $payload->image_path = $this->storeImage($payload);
+
+            if ($previousImagePath) {
+                Storage::delete($previousImagePath);
+            }
         }
 
         return $this->productRepository->update($uuid, $payload);
@@ -73,7 +76,10 @@ class ProductService implements ProductServiceInterface
         $encoded = $image->encode(new WebpEncoder(quality: 82));
 
         $path = 'products/'.Str::slug($payload->name).'-'.uniqid().'.webp';
-        Storage::put($path, (string) $encoded);
+
+        if (! Storage::put($path, (string) $encoded)) {
+            throw new RuntimeException("Failed to store product image at {$path}.");
+        }
 
         return $path;
     }
