@@ -18,6 +18,7 @@ class CustomerResource extends JsonResource
             'messenger_name' => $this->messenger_name,
             'is_approved' => $this->is_approved,
             'approved_at' => $this->approved_at,
+            'terms_accepted_at' => $this->terms_accepted_at,
             'created_at' => $this->created_at,
         ];
     }

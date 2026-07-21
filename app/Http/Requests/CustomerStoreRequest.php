@@ -20,6 +20,15 @@ class CustomerStoreRequest extends FormRequest
             'contact_number' => ['nullable', 'string', 'max:50'],
             'messenger_name' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'terms_accepted' => ['required', 'accepted'],
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            'terms_accepted.required' => 'You must accept the Terms of Service and Privacy Policy to register.',
+            'terms_accepted.accepted' => 'You must accept the Terms of Service and Privacy Policy to register.',
         ];
     }
 }

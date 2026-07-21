@@ -38,6 +38,7 @@ class CustomerRepository implements CustomerRepositoryInterface
         $customer->messenger_name = $payload->messenger_name ?? null;
         $customer->password = Hash::make($payload->password);
         $customer->role = 'customer';
+        $customer->terms_accepted_at = Carbon::now();
         $customer->save();
 
         return $customer;

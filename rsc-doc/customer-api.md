@@ -45,6 +45,7 @@ Returned by admin-side customer endpoints (a customer is just a `User` with `rol
 | messenger_name | string\|null  | Facebook Messenger display name             |
 | is_approved    | boolean       |                                              |
 | approved_at    | datetime\|null|                                              |
+| terms_accepted_at | datetime\|null | When the customer accepted the Terms of Service / Privacy Policy |
 | created_at     | datetime      | When the customer registered                |
 
 ## Order object
@@ -65,6 +66,7 @@ Same shape as the admin `Order` object in `order-api.md`, including `is_editable
 | password              | string | Yes      | Min 8 chars, must be confirmed (`password_confirmation`) |
 | contact_number        | string | No       |                                     |
 | messenger_name        | string | No       | Facebook Messenger display name    |
+| terms_accepted        | boolean| Yes      | Must be `true` — customer must accept the Terms of Service / Privacy Policy to register |
 
 ### Example request
 
@@ -76,7 +78,8 @@ POST /api/public/customers/register
   "email": "juan@example.com",
   "password": "password123",
   "password_confirmation": "password123",
-  "contact_number": "09171234567"
+  "contact_number": "09171234567",
+  "terms_accepted": true
 }
 ```
 
@@ -86,15 +89,15 @@ POST /api/public/customers/register
 {
   "success": true,
   "message": "Registration submitted. Please wait for admin approval.",
-  "data": { "uuid": "...", "first_name": "Juan", "last_name": "Dela Cruz", "email": "juan@example.com", "contact_number": "09171234567", "messenger_name": null, "is_approved": false, "approved_at": null }
+  "data": { "uuid": "...", "first_name": "Juan", "last_name": "Dela Cruz", "email": "juan@example.com", "contact_number": "09171234567", "messenger_name": null, "is_approved": false, "approved_at": null, "terms_accepted_at": "2026-07-21T12:00:00.000000Z" }
 }
 ```
 
-The seller verifies the applicant manually, outside the system, before approving — there is no automated verification step.
+The seller verifies the applicant manually, outside the system, before approving — there is no automated verification step. `terms_accepted_at` is stamped server-side at registration time and is not accepted as an input field.
 
 ### Error responses
 
-- **422** — validation failure, or `"An account with this email already exists."`
+- **422** — validation failure (including `"You must accept the Terms of Service and Privacy Policy to register."` if `terms_accepted` is missing/false), or `"An account with this email already exists."`
 - **429** — rate limited (5/minute per IP).
 
 ---
