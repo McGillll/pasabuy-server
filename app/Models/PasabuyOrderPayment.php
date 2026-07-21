@@ -2,22 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuid;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 #[Fillable(['amount', 'method', 'reference_number', 'notes', 'paid_at'])]
 class PasabuyOrderPayment extends Model
 {
-    use HasFactory;
-
-    protected static function booted()
-    {
-        static::creating(function (PasabuyOrderPayment $payment) {
-            $payment->uuid = Str::uuid()->toString();
-        });
-    }
+    use HasFactory, UsesUuid;
 
     protected function casts()
     {

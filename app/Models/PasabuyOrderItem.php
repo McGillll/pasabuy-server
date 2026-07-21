@@ -2,20 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuid;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 #[Fillable(['product_name', 'estimated_price', 'actual_price', 'quantity', 'bonus_quantity', 'subtotal'])]
 class PasabuyOrderItem extends Model
 {
-    protected static function booted()
-    {
-        static::creating(function (PasabuyOrderItem $item) {
-            $item->uuid = Str::uuid()->toString();
-        });
-    }
+    use UsesUuid;
 
     protected function isOutOfStock(): Attribute
     {

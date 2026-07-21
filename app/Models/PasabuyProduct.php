@@ -2,24 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuid;
 use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 
 #[Fillable(['name', 'description', 'image_path', 'is_active', 'category_id', 'default_price', 'default_product_status'])]
 class PasabuyProduct extends Model
 {
-    use Filterable, HasFactory, SoftDeletes;
-
-    protected static function booted()
-    {
-        static::creating(function (PasabuyProduct $product) {
-            $product->uuid = Str::uuid()->toString();
-        });
-    }
+    use Filterable, HasFactory, SoftDeletes, UsesUuid;
 
     protected function casts()
     {

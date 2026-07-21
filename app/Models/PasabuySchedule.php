@@ -2,30 +2,23 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuid;
 use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 #[Fillable(['title', 'description', 'pasabuy_schedule_date', 'status'])]
 class PasabuySchedule extends Model
 {
-    use Filterable, HasFactory;
+    use Filterable, HasFactory, UsesUuid;
 
     public const ALLOWED_STATUS_TRANSITIONS = [
         'open' => ['closed'],
         'closed' => ['open', 'finished'],
         'finished' => [],
     ];
-
-    protected static function booted()
-    {
-        static::creating(function (PasabuySchedule $schedule) {
-            $schedule->uuid = Str::uuid()->toString();
-        });
-    }
 
     protected function casts()
     {

@@ -2,19 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuid;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 #[Fillable(['pasabuy_schedule_id', 'product_id', 'actual_price', 'product_status', 'price_confirmed_at', 'is_disabled'])]
 class PasabuyScheduleProduct extends Model
 {
-    protected static function booted()
-    {
-        static::creating(function (PasabuyScheduleProduct $scheduleProduct) {
-            $scheduleProduct->uuid = Str::uuid()->toString();
-        });
-    }
+    use UsesUuid;
 
     protected function casts()
     {

@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuid;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 #[Fillable([
     'markup_threshold_amount',
@@ -19,18 +19,13 @@ use Illuminate\Support\Str;
 ])]
 class PasabuySellerInvoiceSetting extends Model
 {
+    use UsesUuid;
+
     public const DUE_DATE_REFERENCES = ['delivery', 'schedule_finish'];
 
     public const INTEREST_PERIODS = ['day', 'week', 'month'];
 
     public const INTEREST_BASES = ['outstanding_balance', 'full_total'];
-
-    protected static function booted()
-    {
-        static::creating(function (PasabuySellerInvoiceSetting $setting) {
-            $setting->uuid = Str::uuid()->toString();
-        });
-    }
 
     protected function casts()
     {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuid;
 use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Support\Str;
 #[Fillable(['customer_name', 'customer_contact', 'status', 'total_amount', 'payment_status', 'delivery_status'])]
 class PasabuyOrder extends Model
 {
-    use Filterable, HasFactory;
+    use Filterable, HasFactory, UsesUuid;
 
     public const EDITABLE_STATUSES = ['pending'];
 
@@ -33,7 +34,6 @@ class PasabuyOrder extends Model
     protected static function booted()
     {
         static::creating(function (PasabuyOrder $order) {
-            $order->uuid = Str::uuid()->toString();
             $order->order_no = static::generateOrderNo();
         });
     }

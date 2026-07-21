@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuid;
 use App\ModelFilters\CustomerFilter;
 use Database\Factories\UserFactory;
 use EloquentFilter\Filterable;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['first_name', 'last_name', 'email', 'password', 'role', 'contact_number', 'messenger_name'])]
@@ -21,14 +21,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use Filterable, HasApiTokens, HasFactory, MustVerifyEmailTrait, Notifiable, SoftDeletes;
-
-    protected static function booted()
-    {
-        static::creating(function (User $user) {
-            $user->uuid = Str::uuid()->toString();
-        });
-    }
+    use Filterable, HasApiTokens, HasFactory, MustVerifyEmailTrait, Notifiable, SoftDeletes, UsesUuid;
 
     public function modelFilter()
     {
