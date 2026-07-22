@@ -3,6 +3,7 @@
 namespace App\ModelFilters;
 
 use EloquentFilter\ModelFilter;
+use Illuminate\Support\Carbon;
 
 class PasabuyOrderFilter extends ModelFilter
 {
@@ -30,6 +31,16 @@ class PasabuyOrderFilter extends ModelFilter
     public function deliveryStatus($value)
     {
         return $this->where('delivery_status', $value);
+    }
+
+    public function dateFrom($value)
+    {
+        return $this->where('created_at', '>=', Carbon::parse($value)->startOfDay());
+    }
+
+    public function dateTo($value)
+    {
+        return $this->where('created_at', '<=', Carbon::parse($value)->endOfDay());
     }
 
     public function scheduleUuid($value)

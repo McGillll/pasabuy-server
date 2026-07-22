@@ -184,6 +184,10 @@ POST /api/customer/pasabuy-schedules/e9400549-.../orders
 |----------|--------|----------|----------------|
 | per_page | int    | No       | Default 15      |
 | status   | string | No       | `pending` \| `confirmed` \| `cancelled` |
+| payment_status | string | No | `unpaid` \| `partially_paid` \| `paid` |
+| delivery_status | string | No | `not_delivered` \| `delivered` |
+| date_from | date (`Y-m-d`) | No | Restrict to orders with `created_at` on/after this date (start of day) |
+| date_to | date (`Y-m-d`) | No | Restrict to orders with `created_at` on/before this date (end of day) |
 | schedule_title | string | No | Case-insensitive match against the parent pasabuy schedule's `title` |
 
 ### Success response — 200
