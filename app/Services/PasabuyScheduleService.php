@@ -8,10 +8,12 @@ use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
 use App\Interfaces\Invoice\InvoiceMailerServiceInterface;
+use App\Interfaces\InvoiceSetting\InvoiceSettingRepositoryInterface;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
+use App\Interfaces\ScheduleInvoiceSetting\ScheduleInvoiceSettingRepositoryInterface;
 use App\Models\PasabuySchedule;
 
 class PasabuyScheduleService implements PasabuyScheduleServiceInterface
@@ -21,6 +23,8 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         protected ProductRepositoryInterface $productRepository,
         protected OrderServiceInterface $orderService,
         protected InvoiceMailerServiceInterface $invoiceMailer,
+        protected InvoiceSettingRepositoryInterface $invoiceSettingRepository,
+        protected ScheduleInvoiceSettingRepositoryInterface $scheduleInvoiceSettingRepository,
     ) {}
 
     public function all(object $payload)
@@ -100,6 +104,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
 
         $updated = $this->pasabuyScheduleRepository->updateStatus($uuid, 'finished');
 
+        $this->snapshotInvoiceSettings($updated);
         $this->sendInvoiceEmails($uuid);
 
         return $updated;
@@ -273,6 +278,13 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         if ($schedule->status === 'finished') {
             throw new InvalidPayloadException('This pasabuy schedule is finished and can no longer be edited.');
         }
+    }
+
+    protected function snapshotInvoiceSettings(PasabuySchedule $schedule)
+    {
+        $settings = $this->invoiceSettingRepository->getForUser($schedule->user_id);
+
+        $this->scheduleInvoiceSettingRepository->createFromSource($schedule, $settings);
     }
 
     protected function sendInvoiceEmails(string $uuid)

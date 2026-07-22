@@ -2,6 +2,8 @@
 
 Per-seller invoice rules: markup calculation and overdue compounding interest. Every seller (`admin`-ability user) has exactly one invoice-settings row, auto-created with sensible defaults on first access. Endpoints always operate on "my own settings" — there is no identifier in the URL.
 
+**Retroactivity:** updating these settings only affects orders on schedules that are still `open`/`closed`. When a schedule is `finished`, the current rules are snapshotted onto that schedule (`pasabuy_schedule_invoice_settings`) and used for all its orders from then on — later edits here do not change due dates or markup for already-finished schedules. See `invoice-api.md`.
+
 ## Endpoints overview
 
 | Method | Endpoint                     | Auth required      | Description                       |

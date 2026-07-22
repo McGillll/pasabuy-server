@@ -1,6 +1,6 @@
 # Invoice API
 
-Computes an order's invoice breakdown — markup, due date, and overdue compounding interest — on the fly, using the seller's `invoice-settings` (see `invoice-setting-api.md`). Nothing is persisted; the numbers always reflect the current settings and recorded payments as of "now".
+Computes an order's invoice breakdown — markup, due date, and overdue compounding interest — using the seller's invoice rules and recorded payments as of "now". While the order's schedule is still `open`/`closed`, the rules are read live from `invoice-settings` (see `invoice-setting-api.md`), so seller edits immediately affect the preview. Once the schedule is `finished`, a snapshot of the invoice rules taken at finish time is used instead — later edits to `invoice-settings` no longer change the due date or markup for orders on already-finished schedules. Interest ledger calculations still walk forward from "now" using that frozen rule set.
 
 ## Endpoints overview
 

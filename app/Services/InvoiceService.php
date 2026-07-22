@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Interfaces\Invoice\InvoiceServiceInterface;
 use App\Interfaces\InvoiceSetting\InvoiceSettingRepositoryInterface;
+use App\Interfaces\ScheduleInvoiceSetting\ScheduleInvoiceSettingRepositoryInterface;
 use App\Models\PasabuyOrder;
 use Illuminate\Support\Carbon;
 
@@ -11,6 +12,7 @@ class InvoiceService implements InvoiceServiceInterface
 {
     public function __construct(
         protected InvoiceSettingRepositoryInterface $invoiceSettingRepository,
+        protected ScheduleInvoiceSettingRepositoryInterface $scheduleInvoiceSettingRepository,
     ) {}
 
     public function buildForOrder(PasabuyOrder $order)
@@ -39,7 +41,9 @@ class InvoiceService implements InvoiceServiceInterface
             $order->load('payments');
         }
 
-        $settings = $this->invoiceSettingRepository->getForUser($order->pasabuySchedule->user_id);
+        $settings = $order->pasabuySchedule->status === 'finished'
+            ? $this->scheduleInvoiceSettingRepository->findForSchedule($order->pasabuy_schedule_id)
+            : $this->invoiceSettingRepository->getForUser($order->pasabuySchedule->user_id);
 
         $subtotal = (float) $order->total_amount;
         $markupAmount = $subtotal > (float) $settings->markup_threshold_amount

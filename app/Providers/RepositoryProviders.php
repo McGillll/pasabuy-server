@@ -10,6 +10,7 @@ use App\Interfaces\OrderPayment\OrderPaymentRepositoryInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Interfaces\ProductCategory\ProductCategoryRepositoryInterface;
+use App\Interfaces\ScheduleInvoiceSetting\ScheduleInvoiceSettingRepositoryInterface;
 use App\Interfaces\Settings\SettingsRepositoryInterface;
 use App\Repositories\AuthRepository;
 use App\Repositories\CustomerRepository;
@@ -19,6 +20,7 @@ use App\Repositories\OrderRepository;
 use App\Repositories\PasabuyScheduleRepository;
 use App\Repositories\ProductRepository;
 use App\Repositories\ProductCategoryRepository;
+use App\Repositories\ScheduleInvoiceSettingRepository;
 use App\Repositories\SettingsRepository;
 use Illuminate\Support\ServiceProvider;
 
@@ -35,5 +37,6 @@ class RepositoryProviders extends ServiceProvider
         $this->app->bind(CustomerRepositoryInterface::class, CustomerRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
         $this->app->bind(InvoiceSettingRepositoryInterface::class, InvoiceSettingRepository::class);
+        $this->app->bind(ScheduleInvoiceSettingRepositoryInterface::class, ScheduleInvoiceSettingRepository::class);
     }
 }
