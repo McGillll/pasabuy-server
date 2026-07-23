@@ -36,7 +36,7 @@ class ProductSeeder extends Seeder
         ['name' => 'Motts 100% Apple juice', 'description' => '2.5 L', 'image_path' => 'products/motts-100-apple-juice-6a5f588ddd1d9.webp', 'category' => 'Juices | Tea', 'default_price' => 339.00, 'default_product_status' => 'none'],
         ['name' => 'Lotte Mandarin Juice', 'description' => '1.5L', 'image_path' => 'products/lotte-mandarin-juice-6a5f58f5dbb8e.webp', 'category' => 'Juices | Tea', 'default_price' => 129.00, 'default_product_status' => 'none'],
         ['name' => 'Corn pops', 'description' => '520g', 'image_path' => 'products/corn-pops-6a5f595d2e840.webp', 'category' => 'Crackers | Biscuits', 'default_price' => 159.00, 'default_product_status' => 'none'],
-        ['name' => 'Corn balls', 'description' => '420g', 'image_path' => 'products/corn-balls-6a5f59c9291f8.webp', 'category' => 'Crackers | Biscuits', 'default_price' => 29.00, 'default_product_status' => 'none'],
+        ['name' => 'Corn balls', 'description' => '420g', 'image_path' => 'products/corn-balls-6a5f59c9291f8.webp', 'category' => 'Crackers | Biscuits', 'default_price' => 219.00, 'default_product_status' => 'none'],
         ['name' => 'Gourmet veg crackers', 'description' => null, 'image_path' => 'products/gourmet-veg-crackers-6a60674fd7cf0.webp', 'category' => 'Crackers | Biscuits', 'default_price' => 159.00, 'default_product_status' => 'none'],
         ['name' => 'Krit b1t1', 'description' => null, 'image_path' => 'products/krit-b1t1-6a60679821eeb.webp', 'category' => 'Buy1 Take1', 'default_price' => 189.00, 'default_product_status' => 'none'],
         ['name' => 'SKIPPY', 'description' => '1.3 kg', 'image_path' => 'products/skippy-6a6068a250e4e.webp', 'category' => 'Spread/ Palaman', 'default_price' => 498.00, 'default_product_status' => 'none'],
@@ -62,6 +62,10 @@ class ProductSeeder extends Seeder
         ['name' => 'Maxon', 'description' => null, 'image_path' => 'products/maxon-6a61aed2f1fea.webp', 'category' => 'Buy1 Take1', 'default_price' => 159.00, 'default_product_status' => 'none'],
         ['name' => 'Cetaphil Cleanser', 'description' => null, 'image_path' => 'products/cetaphil-cleanser-6a61b08375207.webp', 'category' => 'Personal & Body Care', 'default_price' => 849.00, 'default_product_status' => 'none'],
         ['name' => 'Cetaphil Lotion', 'description' => null, 'image_path' => 'products/cetaphil-lotion-6a61b0c0e8fd1.webp', 'category' => 'Personal & Body Care', 'default_price' => 849.00, 'default_product_status' => 'none'],
+        ['name' => 'Folgers Instant Classic Roast Coffee', 'description' => '16 oz', 'image_path' => null, 'category' => 'Coffee • Milk • Creamer', 'default_price' => 849.00, 'default_product_status' => 'none'],
+        ['name' => 'Member\'s Value 100% Colombian Instant Decaf', 'description' => null, 'image_path' => null, 'category' => 'Coffee • Milk • Creamer', 'default_price' => 599.00, 'default_product_status' => 'none'],
+        ['name' => 'Nescafe Gold', 'description' => '190g', 'image_path' => null, 'category' => 'Coffee • Milk • Creamer', 'default_price' => 564.00, 'default_product_status' => 'none'],
+        ['name' => 'Nescafe Tradicao Forte', 'description' => '200g', 'image_path' => null, 'category' => 'Coffee • Milk • Creamer', 'default_price' => 569.00, 'default_product_status' => 'b1t1'],
     ];
 
     public function run()

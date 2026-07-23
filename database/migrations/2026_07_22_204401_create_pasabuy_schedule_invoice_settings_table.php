@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('pasabuy_schedule_id')->unique()->constrained('pasabuy_schedules')->cascadeOnDelete();
-            $table->foreignId('source_invoice_setting_id')->nullable()->constrained('pasabuy_seller_invoice_settings')->nullOnDelete();
+            $table->foreignId('source_invoice_setting_id')->nullable()->constrained('pasabuy_seller_invoice_settings', 'id', 'sched_invoice_settings_source_id_foreign')->nullOnDelete();
             $table->decimal('markup_threshold_amount', 10, 2);
             $table->decimal('markup_percentage', 5, 2);
             $table->decimal('markup_fixed_amount', 10, 2);
