@@ -7,7 +7,27 @@ use Illuminate\Database\Seeder;
 
 class ProductCategorySeeder extends Seeder
 {
-    protected const CATEGORIES = ['Noodles & Canned Goods', 'Beverages', 'Pantry Staples', 'Household'];
+    protected const CATEGORIES = [
+        'Detergents',
+        'Sweets',
+        'Spread',
+        'Bath Soap',
+        'Shampoo',
+        'Conditioner',
+        'Cooking Oil',
+        'Seasonings',
+        'Snacks | Junkfoods | Nuts',
+        'Appliances',
+        'Cangoods',
+        'Coffee | Milk | Creamer',
+        'Dishwashing',
+        'Sauce',
+        'Noodles',
+        'Juices | Tea',
+        'Biscuits',
+        'Buy1 Take1',
+        'Personal & Body Care',
+    ];
 
     public function run()
     {
