@@ -25,4 +25,24 @@ class PasabuyProductFilter extends ModelFilter
             $query->where('uuid', $uuid);
         });
     }
+
+    public function status($status)
+    {
+        return $this->where('default_product_status', $status);
+    }
+
+    public function priceMin($price)
+    {
+        return $this->where('default_price', '>=', $price);
+    }
+
+    public function priceMax($price)
+    {
+        return $this->where('default_price', '<=', $price);
+    }
+
+    public function sortByPrice($direction)
+    {
+        return $this->orderBy('default_price', strtolower($direction) === 'desc' ? 'desc' : 'asc');
+    }
 }

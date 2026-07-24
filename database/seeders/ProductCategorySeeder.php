@@ -8,25 +8,24 @@ use Illuminate\Database\Seeder;
 class ProductCategorySeeder extends Seeder
 {
     protected const CATEGORIES = [
-        'Detergents',
-        'Sweets',
-        'Spread',
-        'Bath Soap',
-        'Shampoo',
-        'Conditioner',
         'Cooking Oil',
-        'Seasonings',
-        'Snacks | Junkfoods | Nuts',
-        'Appliances',
-        'Cangoods',
-        'Coffee | Milk | Creamer',
+        'Spread | Palaman',
+        'Detergents',
         'Dishwashing',
+        'Coffee | Milk | Creamer',
         'Sauce',
         'Noodles',
         'Juices | Tea',
-        'Biscuits',
-        'Buy1 Take1',
+        'Crackers | Biscuits',
         'Personal & Body Care',
+        'Snacks | Junkfoods | Nuts',
+        'Sweets',
+        'Bakery',
+        'Meat',
+        'Household Items',
+        'Dairy',
+        'Cereals',
+        'Appliances',
     ];
 
     public function run()

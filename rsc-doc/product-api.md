@@ -42,10 +42,15 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
 
 ### Query params
 
-| Field    | Type   | Required | Notes                          |
-|----------|--------|----------|----------------------------------|
-| search   | string | No       | Filter by name (partial match)   |
-| per_page | int    | No       | Default 15                       |
+| Field          | Type   | Required | Notes                          |
+|----------------|--------|----------|----------------------------------|
+| search         | string | No       | Filter by name (partial match)   |
+| category_uuid  | string | No       | Filter to one `ProductCategory` uuid |
+| status         | string | No       | `none`\|`b1t1`\|`out_of_stock` — filter by `default_product_status` |
+| price_min      | number | No       | Filter to products with `default_price >=` this value |
+| price_max      | number | No       | Filter to products with `default_price <=` this value |
+| sort_by_price   | string | No       | `asc`\|`desc` — sorts by `default_price`; name is still used as a tie-breaker |
+| per_page       | int    | No       | Default 15                       |
 
 ### Success response — 200
 
@@ -143,10 +148,15 @@ Unauthenticated. Returns only `is_active` products — this is the product sourc
 
 ### Query params
 
-| Field    | Type   | Required | Notes                          |
-|----------|--------|----------|----------------------------------|
-| search   | string | No       | Filter by name (partial match)   |
-| per_page | int    | No       | Default 200 (this endpoint is meant to return the whole catalog at once) |
+| Field          | Type   | Required | Notes                          |
+|----------------|--------|----------|----------------------------------|
+| search         | string | No       | Filter by name (partial match)   |
+| category_uuid  | string | No       | Filter to one `ProductCategory` uuid |
+| status         | string | No       | `none`\|`b1t1`\|`out_of_stock` — filter by `default_product_status` |
+| price_min      | number | No       | Filter to products with `default_price >=` this value |
+| price_max      | number | No       | Filter to products with `default_price <=` this value |
+| sort_by_price   | string | No       | `asc`\|`desc` — sorts by `default_price`; name is still used as a tie-breaker |
+| per_page       | int    | No       | Default 200 (this endpoint is meant to return the whole catalog at once) |
 
 ### Success response — 200
 
