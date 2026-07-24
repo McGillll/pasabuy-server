@@ -8,11 +8,12 @@ use App\Http\Requests\ProductUpdateRequest;
 use App\Http\Resources\ProductResource;
 use App\Interfaces\Product\ProductServiceInterface;
 use App\Traits\ApiResponse;
+use App\Traits\InteractsWithCache;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, InteractsWithCache;
 
     public function __construct(
         protected ProductServiceInterface $productService,
@@ -20,21 +21,34 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $products = $this->productService->all((object) $request->query());
+        $payload = (object) $request->query();
+        $etag = $this->etagFor('products', $payload);
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
+
+        $products = $this->productService->all($payload);
 
         return $this->success([
             'data' => ProductResource::collection($products->items()),
             'current_page' => $products->currentPage(),
             'last_page' => $products->lastPage(),
             'total' => $products->total(),
-        ]);
+        ])->header('ETag', $etag);
     }
 
-    public function show(string $uuid)
+    public function show(Request $request, string $uuid)
     {
+        $etag = $this->etagFor('products', (object) ['uuid' => $uuid]);
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
+
         $product = $this->productService->findByUuid($uuid);
 
-        return $this->success(new ProductResource($product));
+        return $this->success(new ProductResource($product))->header('ETag', $etag);
     }
 
     public function store(ProductStoreRequest $request)

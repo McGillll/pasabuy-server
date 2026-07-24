@@ -4,9 +4,12 @@ namespace App\Repositories;
 
 use App\Interfaces\Settings\SettingsRepositoryInterface;
 use App\Models\PasabuySetting;
+use App\Traits\InteractsWithCache;
 
 class SettingsRepository implements SettingsRepositoryInterface
 {
+    use InteractsWithCache;
+
     public function get()
     {
         return PasabuySetting::first();
@@ -21,6 +24,8 @@ class SettingsRepository implements SettingsRepositoryInterface
         $setting->contact_phone = $payload->contact_phone ?? null;
         $setting->address = $payload->address ?? null;
         $setting->save();
+
+        $this->bumpCacheVersion('settings');
 
         return $setting;
     }

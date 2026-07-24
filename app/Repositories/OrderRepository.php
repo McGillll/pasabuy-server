@@ -5,9 +5,12 @@ namespace App\Repositories;
 use App\Interfaces\Order\OrderRepositoryInterface;
 use App\Models\PasabuyOrder;
 use App\Models\PasabuyOrderItem;
+use App\Traits\InteractsWithCache;
 
 class OrderRepository implements OrderRepositoryInterface
 {
+    use InteractsWithCache;
+
     public function all(object $payload)
     {
         return PasabuyOrder::filter((array) $payload)
@@ -69,6 +72,8 @@ class OrderRepository implements OrderRepositoryInterface
         $order->status = $payload->status;
         $order->save();
 
+        $this->bumpCacheVersion('orders');
+
         return $order->fresh(['items.pasabuyScheduleProduct.product', 'pasabuySchedule']);
     }
 
@@ -78,6 +83,8 @@ class OrderRepository implements OrderRepositoryInterface
         $order->delivery_status = $payload->delivery_status;
         $order->delivered_at = $payload->delivery_status === 'delivered' ? ($order->delivered_at ?? now()) : null;
         $order->save();
+
+        $this->bumpCacheVersion('orders');
 
         return $order->fresh(['items.pasabuyScheduleProduct.product', 'pasabuySchedule']);
     }
@@ -98,6 +105,8 @@ class OrderRepository implements OrderRepositoryInterface
 
         $order->payment_status = $locked->payment_status;
 
+        $this->bumpCacheVersion('orders');
+
         return $order;
     }
 
@@ -111,6 +120,8 @@ class OrderRepository implements OrderRepositoryInterface
         $order->status = 'pending';
         $order->total_amount = 0;
         $order->save();
+
+        $this->bumpCacheVersion('orders');
 
         return $order;
     }
@@ -147,6 +158,8 @@ class OrderRepository implements OrderRepositoryInterface
         $order->status = 'cancelled';
         $order->save();
 
+        $this->bumpCacheVersion('orders');
+
         return $order->fresh(['items.pasabuyScheduleProduct.product', 'pasabuySchedule']);
     }
 
@@ -181,5 +194,7 @@ class OrderRepository implements OrderRepositoryInterface
     {
         $order->total_amount = $order->items()->sum('subtotal');
         $order->save();
+
+        $this->bumpCacheVersion('orders');
     }
 }

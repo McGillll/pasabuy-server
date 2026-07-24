@@ -8,11 +8,12 @@ use App\Http\Requests\ProductCategoryUpdateRequest;
 use App\Http\Resources\ProductCategoryResource;
 use App\Interfaces\ProductCategory\ProductCategoryServiceInterface;
 use App\Traits\ApiResponse;
+use App\Traits\InteractsWithCache;
 use Illuminate\Http\Request;
 
 class ProductCategoryController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, InteractsWithCache;
 
     public function __construct(
         protected ProductCategoryServiceInterface $productCategoryService,
@@ -20,21 +21,34 @@ class ProductCategoryController extends Controller
 
     public function index(Request $request)
     {
-        $categories = $this->productCategoryService->all((object) $request->query());
+        $payload = (object) $request->query();
+        $etag = $this->etagFor('product_categories', $payload);
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
+
+        $categories = $this->productCategoryService->all($payload);
 
         return $this->success([
             'data' => ProductCategoryResource::collection($categories->items()),
             'current_page' => $categories->currentPage(),
             'last_page' => $categories->lastPage(),
             'total' => $categories->total(),
-        ]);
+        ])->header('ETag', $etag);
     }
 
-    public function show(string $uuid)
+    public function show(Request $request, string $uuid)
     {
+        $etag = $this->etagFor('product_categories', (object) ['uuid' => $uuid]);
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
+
         $category = $this->productCategoryService->findByUuid($uuid);
 
-        return $this->success(new ProductCategoryResource($category));
+        return $this->success(new ProductCategoryResource($category))->header('ETag', $etag);
     }
 
     public function store(ProductCategoryStoreRequest $request)

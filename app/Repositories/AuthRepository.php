@@ -5,10 +5,14 @@ namespace App\Repositories;
 use App\Interfaces\Auth\AuthRepositoryInterface;
 use App\Models\EmailVerificationToken;
 use App\Models\User;
+use App\Traits\InteractsWithCache;
 use Illuminate\Support\Carbon;
 
 class AuthRepository implements AuthRepositoryInterface
 {
+    use InteractsWithCache;
+
+
     public function findByEmail(string $email)
     {
         return User::where('email', $email)->first();
@@ -45,6 +49,10 @@ class AuthRepository implements AuthRepositoryInterface
         $user->last_name = $payload->last_name;
         $user->email = $payload->email;
         $user->save();
+
+        if ($user->role === 'customer') {
+            $this->bumpCacheVersion('customers');
+        }
 
         return $user;
     }

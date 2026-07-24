@@ -4,11 +4,14 @@ namespace App\Repositories;
 
 use App\Interfaces\Customer\CustomerRepositoryInterface;
 use App\Models\User;
+use App\Traits\InteractsWithCache;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 
 class CustomerRepository implements CustomerRepositoryInterface
 {
+    use InteractsWithCache;
+
     public function all(object $payload)
     {
         return User::where('role', 'customer')
@@ -41,6 +44,8 @@ class CustomerRepository implements CustomerRepositoryInterface
         $customer->terms_accepted_at = Carbon::now();
         $customer->save();
 
+        $this->bumpCacheVersion('customers');
+
         return $customer;
     }
 
@@ -50,6 +55,8 @@ class CustomerRepository implements CustomerRepositoryInterface
         $customer->approved_at = Carbon::now();
         $customer->save();
 
+        $this->bumpCacheVersion('customers');
+
         return $customer;
     }
 
@@ -58,6 +65,8 @@ class CustomerRepository implements CustomerRepositoryInterface
         $customer = $this->findByUuid($uuid);
         $customer->approved_at = null;
         $customer->save();
+
+        $this->bumpCacheVersion('customers');
 
         return $customer;
     }

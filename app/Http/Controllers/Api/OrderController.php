@@ -10,11 +10,12 @@ use App\Http\Requests\OrderStatusUpdateRequest;
 use App\Http\Resources\OrderResource;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Traits\ApiResponse;
+use App\Traits\InteractsWithCache;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, InteractsWithCache;
 
     public function __construct(
         protected OrderServiceInterface $orderService,
@@ -24,6 +25,11 @@ class OrderController extends Controller
     {
         $payload = (object) $request->query();
         $payload->seller_id = $request->user()->id;
+        $etag = $this->etagFor('orders', $payload);
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
 
         $orders = $this->orderService->all($payload);
 
@@ -32,7 +38,7 @@ class OrderController extends Controller
             'current_page' => $orders->currentPage(),
             'last_page' => $orders->lastPage(),
             'total' => $orders->total(),
-        ]);
+        ])->header('ETag', $etag);
     }
 
     public function updateStatus(OrderStatusUpdateRequest $request, string $uuid)
@@ -69,6 +75,11 @@ class OrderController extends Controller
     {
         $payload = (object) $request->query();
         $payload->user = $request->user();
+        $etag = $this->etagFor('orders', (object) array_merge($request->query(), ['user_id' => $request->user()->id]));
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
 
         $orders = $this->orderService->myOrders($payload);
 
@@ -77,14 +88,20 @@ class OrderController extends Controller
             'current_page' => $orders->currentPage(),
             'last_page' => $orders->lastPage(),
             'total' => $orders->total(),
-        ]);
+        ])->header('ETag', $etag);
     }
 
     public function myOrderShow(Request $request, string $uuid)
     {
+        $etag = $this->etagFor('orders', (object) ['uuid' => $uuid, 'user_id' => $request->user()->id]);
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
+
         $order = $this->orderService->findOwnedByUuid($uuid, (object) ['user' => $request->user()]);
 
-        return $this->success(new OrderResource($order));
+        return $this->success(new OrderResource($order))->header('ETag', $etag);
     }
 
     public function updateMyOrder(OrderItemsUpdateRequest $request, string $uuid)

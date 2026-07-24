@@ -17,11 +17,12 @@ use App\Http\Resources\PasabuyScheduleSummaryItemResource;
 use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Traits\ApiResponse;
+use App\Traits\InteractsWithCache;
 use Illuminate\Http\Request;
 
 class PasabuyScheduleController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, InteractsWithCache;
 
     public function __construct(
         protected PasabuyScheduleServiceInterface $pasabuyScheduleService,
@@ -32,6 +33,11 @@ class PasabuyScheduleController extends Controller
     {
         $payload = (object) $request->query();
         $payload->seller_id = $request->user()->id;
+        $etag = $this->etagFor('pasabuy_schedules', $payload);
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
 
         $schedules = $this->pasabuyScheduleService->all($payload);
 
@@ -40,7 +46,7 @@ class PasabuyScheduleController extends Controller
             'current_page' => $schedules->currentPage(),
             'last_page' => $schedules->lastPage(),
             'total' => $schedules->total(),
-        ]);
+        ])->header('ETag', $etag);
     }
 
     public function browseOpenForCustomer(Request $request)
@@ -55,11 +61,17 @@ class PasabuyScheduleController extends Controller
         ]);
     }
 
-    public function show(string $uuid)
+    public function show(Request $request, string $uuid)
     {
+        $etag = $this->etagFor('pasabuy_schedules', (object) ['uuid' => $uuid]);
+
+        if ($notModified = $this->notModified($request, $etag)) {
+            return $notModified;
+        }
+
         $schedule = $this->pasabuyScheduleService->findByUuid($uuid);
 
-        return $this->success(new PasabuyScheduleResource($schedule));
+        return $this->success(new PasabuyScheduleResource($schedule))->header('ETag', $etag);
     }
 
     public function store(PasabuyScheduleStoreRequest $request)

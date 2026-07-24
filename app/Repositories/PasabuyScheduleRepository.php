@@ -79,6 +79,8 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $schedule->status = $payload->status ?? 'open';
         $schedule->save();
 
+        $this->bumpCacheVersion('pasabuy_schedules');
+
         return $schedule;
     }
 
