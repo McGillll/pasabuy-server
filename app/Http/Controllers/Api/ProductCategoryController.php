@@ -31,7 +31,7 @@ class ProductCategoryController extends Controller
         $categories = $this->productCategoryService->all($payload);
 
         return $this->success([
-            'data' => ProductCategoryResource::collection($categories->items()),
+            'items' => ProductCategoryResource::collection($categories->items()),
             'current_page' => $categories->currentPage(),
             'last_page' => $categories->lastPage(),
             'total' => $categories->total(),

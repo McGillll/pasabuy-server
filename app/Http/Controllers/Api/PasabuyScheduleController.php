@@ -42,7 +42,7 @@ class PasabuyScheduleController extends Controller
         $schedules = $this->pasabuyScheduleService->all($payload);
 
         return $this->success([
-            'data' => PasabuyScheduleResource::collection($schedules->items()),
+            'items' => PasabuyScheduleResource::collection($schedules->items()),
             'current_page' => $schedules->currentPage(),
             'last_page' => $schedules->lastPage(),
             'total' => $schedules->total(),
@@ -54,7 +54,7 @@ class PasabuyScheduleController extends Controller
         $schedules = $this->pasabuyScheduleService->openForCustomer((object) $request->query());
 
         return $this->success([
-            'data' => PasabuyScheduleResource::collection($schedules->items()),
+            'items' => PasabuyScheduleResource::collection($schedules->items()),
             'current_page' => $schedules->currentPage(),
             'last_page' => $schedules->lastPage(),
             'total' => $schedules->total(),

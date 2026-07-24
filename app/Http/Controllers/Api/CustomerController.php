@@ -30,7 +30,7 @@ class CustomerController extends Controller
         $customers = $this->customerService->all($payload);
 
         return $this->success([
-            'data' => CustomerResource::collection($customers->items()),
+            'items' => CustomerResource::collection($customers->items()),
             'current_page' => $customers->currentPage(),
             'last_page' => $customers->lastPage(),
             'total' => $customers->total(),

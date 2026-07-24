@@ -34,7 +34,7 @@ class OrderController extends Controller
         $orders = $this->orderService->all($payload);
 
         return $this->success([
-            'data' => OrderResource::collection($orders->items()),
+            'items' => OrderResource::collection($orders->items()),
             'current_page' => $orders->currentPage(),
             'last_page' => $orders->lastPage(),
             'total' => $orders->total(),
@@ -84,7 +84,7 @@ class OrderController extends Controller
         $orders = $this->orderService->myOrders($payload);
 
         return $this->success([
-            'data' => OrderResource::collection($orders->items()),
+            'items' => OrderResource::collection($orders->items()),
             'current_page' => $orders->currentPage(),
             'last_page' => $orders->lastPage(),
             'total' => $orders->total(),

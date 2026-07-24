@@ -29,7 +29,7 @@ class PublicProductController extends Controller
         $products = $this->productService->publicCatalog($payload);
 
         return $this->success([
-            'data' => ProductResource::collection($products->items()),
+            'items' => ProductResource::collection($products->items()),
             'current_page' => $products->currentPage(),
             'last_page' => $products->lastPage(),
             'total' => $products->total(),
