@@ -14,7 +14,7 @@ class PasabuyScheduleProductResource extends JsonResource
             'actual_price' => $this->actual_price,
             'product_status' => $this->product_status,
             'price_confirmed_at' => $this->price_confirmed_at,
-            'product' => new ProductResource($this->whenLoaded('product')),
+            'product' => $this->whenLoaded('product', fn () => $this->product ? new ProductResource($this->product) : null),
         ];
     }
 }
