@@ -168,7 +168,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             ->get();
 
         $scheduleProducts = PasabuyScheduleProduct::whereIn('id', $rows->pluck('pasabuy_schedule_product_id'))
-            ->with('product.category')
+            ->with(['product' => fn ($query) => $query->withTrashed()->with('category')])
             ->get()
             ->keyBy('id');
 
@@ -203,7 +203,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
 
         return PasabuyScheduleChecklistItem::where('pasabuy_schedule_id', $schedule->id)
-            ->with('product.category')
+            ->with(['product' => fn ($query) => $query->withTrashed()->with('category')])
             ->orderBy('product_name')
             ->get();
     }

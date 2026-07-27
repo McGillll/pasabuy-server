@@ -10,9 +10,9 @@ class PasabuyScheduleChecklistItemResource extends JsonResource
     public function toArray(Request $request)
     {
         return [
-            'product_uuid' => $this->product->uuid,
+            'product_uuid' => $this->product?->uuid,
             'product_name' => $this->product_name,
-            'category_name' => $this->product->category?->name,
+            'category_name' => $this->product?->category?->name,
             'quantity' => $this->quantity,
             'is_checked' => $this->is_checked,
             'checked_at' => $this->checked_at,
