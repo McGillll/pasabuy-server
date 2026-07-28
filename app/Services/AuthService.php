@@ -25,8 +25,12 @@ class AuthService implements AuthServiceInterface
     {
         $user = $this->authRepository->findByEmail($payload->email);
 
-        if (! $user || ! Hash::check($payload->password, $user->password)) {
-            throw new AuthenticationFailedException('These credentials do not match our records.');
+        if (! $user) {
+            throw new AuthenticationFailedException('No account found with this email address.', ['email' => ['No account found with this email address.']]);
+        }
+
+        if (! Hash::check($payload->password, $user->password)) {
+            throw new AuthenticationFailedException('Incorrect password.', ['password' => ['Incorrect password.']]);
         }
 
         $expiresAt = ($payload->remember ?? false)

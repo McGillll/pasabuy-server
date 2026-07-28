@@ -41,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'success' => false,
                 'message' => $e->getMessage(),
                 'data' => null,
+                'errors' => $e->getErrors(),
             ], Response::HTTP_UNAUTHORIZED);
         });
 

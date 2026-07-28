@@ -98,10 +98,15 @@ Store `data.token` and send it as `Authorization: Bearer {token}` on all subsequ
 ### Error responses
 
 - **422** — validation failure (missing/invalid `email` or `password`). Standard Laravel validation error shape (`message` + `errors` object), not the success envelope.
-- **401** — credentials don't match any user:
+- **401** — no account with that email:
   ```json
-  { "success": false, "message": "These credentials do not match our records.", "data": null }
+  { "success": false, "message": "No account found with this email address.", "data": null, "errors": { "email": ["No account found with this email address."] } }
   ```
+- **401** — email found but password incorrect:
+  ```json
+  { "success": false, "message": "Incorrect password.", "data": null, "errors": { "password": ["Incorrect password."] } }
+  ```
+  `errors` follows the same `{ field: string[] }` shape as 422 validation errors, so the frontend can attach the message to the matching form field.
 - **429** — too many attempts (rate limited).
 
 ---
