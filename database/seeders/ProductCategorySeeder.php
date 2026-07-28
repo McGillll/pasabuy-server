@@ -33,11 +33,11 @@ class ProductCategorySeeder extends Seeder
 
     public function run()
     {
-        if (ProductCategory::exists()) {
-            return;
-        }
-
         foreach (self::CATEGORIES as $name) {
+            if (ProductCategory::where('name', $name)->exists()) {
+                continue;
+            }
+
             $category = new ProductCategory;
             $category->name = $name;
             $category->is_active = true;
