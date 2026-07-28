@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\PasabuyProduct;
 use App\Models\ProductCategory;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ProductBatch2Seeder extends Seeder
 {
@@ -107,22 +108,24 @@ class ProductBatch2Seeder extends Seeder
 
     public function run()
     {
-        $categories = ProductCategory::pluck('id', 'name');
+        DB::transaction(function () {
+            $categories = ProductCategory::pluck('id', 'name');
 
-        foreach (self::PRODUCTS as $item) {
-            if (PasabuyProduct::where('name', $item['name'])->exists()) {
-                continue;
+            foreach (self::PRODUCTS as $item) {
+                if (PasabuyProduct::where('name', $item['name'])->exists()) {
+                    continue;
+                }
+
+                $product = new PasabuyProduct;
+                $product->name = $item['name'];
+                $product->description = $item['description'];
+                $product->image_path = $item['image_path'];
+                $product->is_active = true;
+                $product->category_id = $item['category'] ? $categories[$item['category']] : null;
+                $product->default_price = $item['default_price'];
+                $product->default_product_status = $item['default_product_status'];
+                $product->save();
             }
-
-            $product = new PasabuyProduct;
-            $product->name = $item['name'];
-            $product->description = $item['description'];
-            $product->image_path = $item['image_path'];
-            $product->is_active = true;
-            $product->category_id = $item['category'] ? $categories[$item['category']] : null;
-            $product->default_price = $item['default_price'];
-            $product->default_product_status = $item['default_product_status'];
-            $product->save();
-        }
+        });
     }
 }
