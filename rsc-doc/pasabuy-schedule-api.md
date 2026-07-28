@@ -128,11 +128,13 @@ Same as `POST`, plus **403** (not owner), **404**, and **422** if `status` names
 
 ## DELETE /api/admin/pasabuy-schedules/{uuid}
 
-Hard-deletes the schedule and cascades to its attached products, checklist, and its orders (`ON DELETE CASCADE`). There is no confirmation step server-side — confirm in the UI before calling this.
+Hard-deletes the schedule and cascades to its attached products, checklist, and its orders — including their order items and payments (`ON DELETE CASCADE`). There is no confirmation step server-side — confirm in the UI before calling this.
+
+Only allowed while the schedule is **open**. Returns **422** `"This pasabuy schedule is no longer open and can no longer be deleted."` once `closed` or `finished`, since a closed schedule can already have confirmed orders and a finished one can have paid ones — this endpoint must never be reachable once real commitments exist.
 
 ### Error responses
 
-- **403** (not owner), **404**
+- **403** (not owner), **404**, **422** (not open)
 
 ---
 

@@ -185,6 +185,8 @@ A payment ledger against an order — supports multiple partial/installment paym
 
 No validation currently caps total payments at the order's `total_amount` — overpayment (tips, rounding, later price adjustments) is allowed by design.
 
+`POST` is only allowed once the order's pasabuy schedule status is `finished` — returns **422** `"Payments can only be recorded once the pasabuy schedule is finished."` otherwise. `DELETE` (voiding a payment) has no such restriction.
+
 Deleting an order (cascade) removes all its payments.
 
 **Side effect (create):** when recording a payment transitions `Order.payment_status` from something other than `paid` to `paid` (i.e. the ledger sum first reaches `total_amount`), a `PaymentConfirmationMail` (queued, `database` connection) is dispatched to the order's customer email (`order.user.email`), built from `InvoiceService::buildForOrder()`. It does **not** fire again on subsequent payments while already `paid` (e.g. an overpayment), and is skipped and logged (never fails the request) if the order has no customer email on file or the invoice fails to build.

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
 use App\Interfaces\Invoice\InvoiceServiceInterface;
@@ -45,6 +46,10 @@ class OrderPaymentService implements OrderPaymentServiceInterface
         }
 
         $this->ensureOrderOwnership($order, $payload->user_id);
+
+        if ($order->pasabuySchedule->status !== 'finished') {
+            throw new InvalidPayloadException('Payments can only be recorded once the pasabuy schedule is finished.');
+        }
 
         $payload->order = $order;
         $wasAlreadyPaid = $order->payment_status === 'paid';

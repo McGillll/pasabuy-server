@@ -70,7 +70,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         $schedule = $this->findByUuid($uuid);
         $this->ensureOwnership($schedule, $userId);
-        $this->assertNotFinished($schedule);
+        $this->assertOpen($schedule);
 
         return $this->pasabuyScheduleRepository->delete($uuid);
     }
@@ -277,6 +277,13 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         if ($schedule->status === 'finished') {
             throw new InvalidPayloadException('This pasabuy schedule is finished and can no longer be edited.');
+        }
+    }
+
+    protected function assertOpen(PasabuySchedule $schedule)
+    {
+        if ($schedule->status !== 'open') {
+            throw new InvalidPayloadException('This pasabuy schedule is no longer open and can no longer be deleted.');
         }
     }
 
