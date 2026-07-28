@@ -26,6 +26,9 @@ class ProductCategorySeeder extends Seeder
         'Dairy',
         'Cereals',
         'Appliances',
+        'Canned Goods',
+        'Vitamins | Supplements',
+        'Spices | Seasoning',
     ];
 
     public function run()

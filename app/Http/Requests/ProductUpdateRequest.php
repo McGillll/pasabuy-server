@@ -16,7 +16,7 @@ class ProductUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'is_active' => ['sometimes', 'boolean'],
             'default_price' => ['required', 'numeric', 'min:0'],
             'default_product_status' => ['sometimes', 'in:none,b1t1,out_of_stock'],
