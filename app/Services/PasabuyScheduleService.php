@@ -153,7 +153,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         $this->findByUuid($scheduleUuid);
 
-        $product = $this->productRepository->findByUuid($productUuid);
+        $product = $this->productRepository->findByUuidWithTrashed($productUuid);
 
         if (! $product) {
             throw new NotFoundException('Product not found.');

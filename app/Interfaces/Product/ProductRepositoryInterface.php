@@ -10,6 +10,8 @@ interface ProductRepositoryInterface
 
     public function findByUuid(string $uuid);
 
+    public function findByUuidWithTrashed(string $uuid);
+
     public function create(object $payload);
 
     public function update(string $uuid, object $payload);

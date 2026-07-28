@@ -128,7 +128,10 @@ Same as `POST`, plus **404** if the uuid doesn't exist.
 
 ## DELETE /api/admin/products/{uuid}
 
-Soft-deletes the product (reversible in the database — no restore endpoint is exposed yet). Safe to call even if the product is referenced by past orders, since `pasabuy_order_items` stores its own name/price snapshot.
+Soft-deletes the product (reversible in the database — no restore endpoint is exposed yet).
+
+- **Open schedules**: the product is removed from any still-open pasabuy schedule — its `pasabuy_schedule_product` row and any customer order items pointing at it are hard-deleted, and affected orders' `total_amount` is recalculated. Customers currently viewing/ordering that open schedule will no longer see the product or any order lines for it.
+- **Closed/finished schedules**: left untouched. Buyers list, checklist, and order history for the product on those schedules remain fully accessible via `withTrashed()` lookups, since `pasabuy_order_items` also stores its own name/price snapshot independent of the live product record.
 
 ### Success response — 200
 

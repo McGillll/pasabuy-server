@@ -44,4 +44,6 @@ interface PasabuyScheduleRepositoryInterface
     public function getOrCreateChecklistShareToken(string $uuid);
 
     public function regenerateChecklistShareToken(string $uuid);
+
+    public function removeProductFromOpenSchedules(int $productId);
 }

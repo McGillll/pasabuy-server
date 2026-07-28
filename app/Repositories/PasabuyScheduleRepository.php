@@ -184,7 +184,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     public function productBuyers(string $scheduleUuid, string $productUuid)
     {
         $schedule = PasabuySchedule::where('uuid', $scheduleUuid)->first();
-        $product = PasabuyProduct::where('uuid', $productUuid)->first();
+        $product = PasabuyProduct::withTrashed()->where('uuid', $productUuid)->first();
 
         $scheduleProduct = $this->findScheduleProduct($schedule->id, $product->id);
 
@@ -246,7 +246,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     public function toggleChecklistItem(string $scheduleUuid, string $productUuid, bool $isChecked)
     {
         $schedule = PasabuySchedule::where('uuid', $scheduleUuid)->first();
-        $product = PasabuyProduct::where('uuid', $productUuid)->first();
+        $product = PasabuyProduct::withTrashed()->where('uuid', $productUuid)->first();
 
         $item = PasabuyScheduleChecklistItem::where('pasabuy_schedule_id', $schedule->id)
             ->where('product_id', $product->id)
@@ -326,5 +326,38 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
                     $item->save();
                 });
         });
+    }
+
+    public function removeProductFromOpenSchedules(int $productId)
+    {
+        $scheduleProductIds = PasabuyScheduleProduct::where('product_id', $productId)
+            ->whereHas('pasabuySchedule', fn ($query) => $query->where('status', 'open')
+                ->where(function ($query) {
+                    $query->whereNull('pasabuy_schedule_date')
+                        ->orWhereDate('pasabuy_schedule_date', '>', now()->toDateString());
+                }))
+            ->pluck('id');
+
+        if ($scheduleProductIds->isEmpty()) {
+            return;
+        }
+
+        DB::transaction(function () use ($scheduleProductIds) {
+            $affectedOrderIds = PasabuyOrderItem::whereIn('pasabuy_schedule_product_id', $scheduleProductIds)
+                ->pluck('order_id')
+                ->unique();
+
+            PasabuyOrderItem::whereIn('pasabuy_schedule_product_id', $scheduleProductIds)->delete();
+
+            PasabuyOrder::whereIn('id', $affectedOrderIds)->get()->each(function (PasabuyOrder $order) {
+                $order->total_amount = $order->items()->sum('subtotal');
+                $order->save();
+            });
+
+            PasabuyScheduleProduct::whereIn('id', $scheduleProductIds)->delete();
+        });
+
+        $this->bumpCacheVersion('pasabuy_schedules');
+        $this->bumpCacheVersion('orders');
     }
 }

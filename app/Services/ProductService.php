@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\NotFoundException;
+use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Interfaces\Product\ProductServiceInterface;
 use App\Interfaces\ProductCategory\ProductCategoryRepositoryInterface;
@@ -18,6 +19,7 @@ class ProductService implements ProductServiceInterface
     public function __construct(
         protected ProductRepositoryInterface $productRepository,
         protected ProductCategoryRepositoryInterface $productCategoryRepository,
+        protected PasabuyScheduleRepositoryInterface $pasabuyScheduleRepository,
     ) {}
 
     public function all(object $payload)
@@ -104,6 +106,8 @@ class ProductService implements ProductServiceInterface
     public function delete(string $uuid)
     {
         $product = $this->findByUuid($uuid);
+
+        $this->pasabuyScheduleRepository->removeProductFromOpenSchedules($product->id);
 
         if ($product->image_path) {
             Storage::delete($product->image_path);

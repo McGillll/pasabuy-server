@@ -51,6 +51,17 @@ class ProductRepository implements ProductRepositoryInterface
         );
     }
 
+    public function findByUuidWithTrashed(string $uuid)
+    {
+        $version = $this->cacheVersion('products');
+
+        return Cache::remember(
+            "products:uuid_with_trashed:v{$version}:{$uuid}",
+            600,
+            fn () => PasabuyProduct::withTrashed()->with('category')->where('uuid', $uuid)->first()
+        );
+    }
+
     public function create(object $payload)
     {
         $product = new PasabuyProduct;
