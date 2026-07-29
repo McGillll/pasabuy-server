@@ -19,6 +19,7 @@ class ProductResource extends JsonResource
             'default_price' => $this->default_price,
             'default_product_status' => $this->default_product_status,
             'category' => new ProductCategoryResource($this->whenLoaded('category')),
+            'brand' => new BrandResource($this->whenLoaded('brand')),
             'last_confirmed_price' => $this->whenLoaded('latestScheduleProduct', fn () => $this->latestScheduleProduct?->actual_price),
             'last_product_status' => $this->whenLoaded('latestScheduleProduct', fn () => $this->latestScheduleProduct?->product_status),
         ];

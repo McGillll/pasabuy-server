@@ -26,6 +26,13 @@ class PasabuyProductFilter extends ModelFilter
         });
     }
 
+    public function brandUuid($uuid)
+    {
+        return $this->whereHas('brand', function ($query) use ($uuid) {
+            $query->where('uuid', $uuid);
+        });
+    }
+
     public function status($status)
     {
         return $this->where('default_product_status', $status);

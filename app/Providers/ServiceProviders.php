@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Interfaces\Auth\AuthServiceInterface;
+use App\Interfaces\Brand\BrandServiceInterface;
 use App\Interfaces\Customer\CustomerServiceInterface;
 use App\Interfaces\Invoice\InvoiceMailerServiceInterface;
 use App\Interfaces\Invoice\InvoiceServiceInterface;
@@ -14,6 +15,7 @@ use App\Interfaces\Product\ProductServiceInterface;
 use App\Interfaces\ProductCategory\ProductCategoryServiceInterface;
 use App\Interfaces\Settings\SettingsServiceInterface;
 use App\Services\AuthService;
+use App\Services\BrandService;
 use App\Services\CustomerService;
 use App\Services\InvoiceMailerService;
 use App\Services\InvoiceService;
@@ -33,6 +35,7 @@ class ServiceProviders extends ServiceProvider
         $this->app->bind(AuthServiceInterface::class, AuthService::class);
         $this->app->bind(ProductServiceInterface::class, ProductService::class);
         $this->app->bind(ProductCategoryServiceInterface::class, ProductCategoryService::class);
+        $this->app->bind(BrandServiceInterface::class, BrandService::class);
         $this->app->bind(PasabuyScheduleServiceInterface::class, PasabuyScheduleService::class);
         $this->app->bind(OrderServiceInterface::class, OrderService::class);
         $this->app->bind(OrderPaymentServiceInterface::class, OrderPaymentService::class);

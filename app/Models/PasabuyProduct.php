@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'description', 'image_path', 'is_active', 'category_id', 'default_price', 'default_product_status'])]
+#[Fillable(['name', 'description', 'image_path', 'is_active', 'category_id', 'brand_id', 'default_price', 'default_product_status'])]
 class PasabuyProduct extends Model
 {
     use Filterable, HasFactory, SoftDeletes, UsesUuid;
@@ -29,5 +29,10 @@ class PasabuyProduct extends Model
     public function category()
     {
         return $this->belongsTo(ProductCategory::class, 'category_id');
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
     }
 }

@@ -21,6 +21,7 @@ class ProductStoreRequest extends FormRequest
             'default_price' => ['required', 'numeric', 'min:0'],
             'default_product_status' => ['sometimes', 'in:none,b1t1,out_of_stock'],
             'category_uuid' => ['nullable', 'string', 'exists:product_categories,uuid'],
+            'brand_uuid' => ['nullable', 'string', 'exists:brands,uuid'],
         ];
     }
 }
