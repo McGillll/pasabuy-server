@@ -16,20 +16,26 @@ class ScheduleInvoiceSettingRepository implements ScheduleInvoiceSettingReposito
 
     public function createFromSource(PasabuySchedule $schedule, PasabuySellerInvoiceSetting $source)
     {
-        return PasabuyScheduleInvoiceSetting::firstOrCreate(
-            ['pasabuy_schedule_id' => $schedule->id],
-            [
-                'source_invoice_setting_id' => $source->id,
-                'markup_threshold_amount' => $source->markup_threshold_amount,
-                'markup_percentage' => $source->markup_percentage,
-                'markup_fixed_amount' => $source->markup_fixed_amount,
-                'due_days' => $source->due_days,
-                'due_date_reference' => $source->due_date_reference,
-                'interest_rate' => $source->interest_rate,
-                'interest_period' => $source->interest_period,
-                'interest_base' => $source->interest_base,
-                'is_active' => $source->is_active,
-            ],
-        );
+        $existing = $this->findForSchedule($schedule->id);
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $setting = new PasabuyScheduleInvoiceSetting;
+        $setting->pasabuy_schedule_id = $schedule->id;
+        $setting->source_invoice_setting_id = $source->id;
+        $setting->markup_threshold_amount = $source->markup_threshold_amount;
+        $setting->markup_percentage = $source->markup_percentage;
+        $setting->markup_fixed_amount = $source->markup_fixed_amount;
+        $setting->due_days = $source->due_days;
+        $setting->due_date_reference = $source->due_date_reference;
+        $setting->interest_rate = $source->interest_rate;
+        $setting->interest_period = $source->interest_period;
+        $setting->interest_base = $source->interest_base;
+        $setting->is_active = $source->is_active;
+        $setting->save();
+
+        return $setting;
     }
 }
