@@ -3,6 +3,8 @@
 namespace App\Repositories;
 
 use App\Interfaces\Product\ProductRepositoryInterface;
+use App\Models\PasabuyOrder;
+use App\Models\PasabuyOrderItem;
 use App\Models\PasabuyProduct;
 use App\Traits\InteractsWithCache;
 use Illuminate\Support\Facades\Cache;
@@ -112,5 +114,23 @@ class ProductRepository implements ProductRepositoryInterface
         $this->bumpCacheVersion('pasabuy_schedules');
 
         return $product;
+    }
+
+    public function topSelling(object $payload)
+    {
+        $year = $payload->year ?? now()->year;
+        $month = $payload->month ?? now()->month;
+
+        return PasabuyOrderItem::selectRaw('pasabuy_products.id, pasabuy_products.uuid, pasabuy_products.name, SUM(pasabuy_order_items.quantity) as total_quantity')
+            ->join('pasabuy_schedule_products', 'pasabuy_schedule_products.id', '=', 'pasabuy_order_items.pasabuy_schedule_product_id')
+            ->join('pasabuy_products', 'pasabuy_products.id', '=', 'pasabuy_schedule_products.product_id')
+            ->whereHas('order', fn ($query) => $query->whereHas('pasabuySchedule', fn ($q2) => $q2->where('user_id', $payload->seller_id))
+                ->whereIn('status', PasabuyOrder::LIVE_STATUSES)
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month))
+            ->groupBy('pasabuy_products.id', 'pasabuy_products.uuid', 'pasabuy_products.name')
+            ->orderByDesc('total_quantity')
+            ->limit($payload->limit ?? 5)
+            ->get();
     }
 }

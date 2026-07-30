@@ -17,4 +17,6 @@ interface ProductRepositoryInterface
     public function update(string $uuid, object $payload);
 
     public function delete(string $uuid);
+
+    public function topSelling(object $payload);
 }

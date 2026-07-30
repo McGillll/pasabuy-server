@@ -22,6 +22,7 @@ Customer registration, admin approval, and everything a logged-in customer can d
 | PATCH  | `/api/customer/orders/{uuid}/cancel`                          | Yes (customer, approved)  | Cancel an order outright (only while `pending`, and while the schedule is still open) |
 | GET    | `/api/admin/customers`                                        | Yes (admin)                | List customers (paginated, filterable) |
 | GET    | `/api/admin/customers/{uuid}/orders`                           | Yes (admin)                | List every order placed by one customer |
+| GET    | `/api/admin/customers/top-buyers`                              | Yes (admin)                | Top 5 customers by total spend, across all of the seller's schedules, scoped to a calendar month (defaults to current) |
 | POST   | `/api/admin/customers/{uuid}/approve`                          | Yes (admin)                | Approve a pending customer |
 | POST   | `/api/admin/customers/{uuid}/reject`                           | Yes (admin)                | Revoke a customer's approval |
 
@@ -315,6 +316,34 @@ Not paginated — returns the customer's full order history in one array, same a
 ### Error responses
 
 - **404** — `"Customer not found."`
+
+---
+
+## GET /api/admin/customers/top-buyers
+
+Admin-only. Returns the seller's top 5 customers by total spend (`pasabuy_orders.total_amount` summed), aggregated across all of the seller's pasabuy schedules and scoped to `pending`/`confirmed` orders only (cancelled excluded, same as `order-api.md`'s `LIVE_STATUSES`), within a single calendar month (defaults to the current month). Grouped by the order's real `user_id` FK, not the denormalized `customer_name` snapshot.
+
+### Query params
+
+| Field | Type | Required | Notes            |
+|-------|------|----------|----------------------|
+| limit | int  | No       | Default `5`           |
+| month | int  | No       | 1-12. Defaults to the current month. |
+| year  | int  | No       | Defaults to the current year. |
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    { "uuid": "...", "name": "Juan Dela Cruz", "total_spend": "4500.00", "order_count": 6 }
+  ]
+}
+```
+
+Not paginated — fixed top-N list.
 
 ---
 

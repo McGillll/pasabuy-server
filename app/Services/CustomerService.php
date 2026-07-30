@@ -64,4 +64,9 @@ class CustomerService implements CustomerServiceInterface
 
         return $this->customerRepository->orders($uuid);
     }
+
+    public function topBuyers(object $payload)
+    {
+        return $this->customerRepository->topBuyers($payload);
+    }
 }

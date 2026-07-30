@@ -11,6 +11,7 @@ Global product catalog, managed by the seller/admin. Each product has its own au
 | GET    | `/api/admin/products/{uuid}`  | Yes (admin)    | Get one product           |
 | POST   | `/api/admin/products/{uuid}`  | Yes (admin)    | Update a product          |
 | DELETE | `/api/admin/products/{uuid}`  | Yes (admin)    | Soft-delete a product     |
+| GET    | `/api/admin/products/top-selling` | Yes (admin) | Top 5 products by ordered quantity across all of the seller's schedules, scoped to a calendar month (defaults to current) |
 | GET    | `/api/public/products`        | No             | Full active catalog — this is what customers order from on any pasabuy schedule (see `pasabuy-schedule-api.md`) |
 
 All requests send `Accept: application/json` and `Authorization: Bearer {token}` (token must carry the `admin` ability — see `auth-api.md`). `POST` bodies are `multipart/form-data`. Update also uses `POST` (not `PUT`) because PHP does not parse multipart bodies on real `PUT` requests.
@@ -145,6 +146,35 @@ Soft-deletes the product (reversible in the database — no restore endpoint is 
 ### Error responses
 
 - **404** — no product with that uuid.
+
+---
+
+## GET /api/admin/products/top-selling
+
+Returns the seller's top-selling products by total ordered quantity, aggregated across **all** of the seller's pasabuy schedules (not just one), scoped to a single calendar month (defaults to the current month). Only `pending`/`confirmed` order items count towards `total_quantity` — cancelled orders are excluded. Fixed to the top 5, no pagination.
+
+### Query params
+
+| Field | Type | Required | Notes                                          |
+|-------|------|----------|-------------------------------------------------|
+| limit | int  | No       | Defaults to 5. Caps how many top products are returned. |
+| month | int  | No       | 1-12. Defaults to the current month. |
+| year  | int  | No       | Defaults to the current year. |
+
+### Success response — 200
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": [
+    { "uuid": "...", "name": "Instant Noodles", "total_quantity": 142 },
+    { "uuid": "...", "name": "Canned Tuna", "total_quantity": 98 }
+  ]
+}
+```
+
+`data` is a plain array (not a paginator) sorted by `total_quantity` descending.
 
 ---
 

@@ -136,4 +136,9 @@ class ProductService implements ProductServiceInterface
 
         return $this->productRepository->delete($uuid);
     }
+
+    public function topSelling(object $payload)
+    {
+        return $this->productRepository->topSelling($payload);
+    }
 }
