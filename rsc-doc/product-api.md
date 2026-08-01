@@ -86,7 +86,7 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
 | is_active     | bool   | No       | Defaults to `true`          |
 | default_price | number | Yes      | >= 0                        |
 | default_product_status | string | No | `none`\|`b1t1`\|`out_of_stock`, defaults to `none` |
-| category_uuid | string | No       | Must be an existing `ProductCategory` uuid; omit for uncategorized |
+| category_uuid | string | No       | Must be an existing `ProductCategory` uuid, and that category must be a leaf (`has_children: false` — see `product-category-api.md`); omit for uncategorized |
 | brand_uuid    | string | No       | Must be an existing `Brand` uuid; omit for unbranded |
 
 ### Success response — 201
@@ -98,7 +98,7 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
 ### Error responses
 
 - **404** — `category_uuid` doesn't match an existing category, or `brand_uuid` doesn't match an existing brand.
-- **422** — validation failure (missing `name`/`default_price`, or `image` not a valid image).
+- **422** — validation failure (missing `name`/`default_price`, `image` not a valid image, or `category_uuid` points to a parent category with subcategories).
 
 ---
 
@@ -151,15 +151,15 @@ Soft-deletes the product (reversible in the database — no restore endpoint is 
 
 ## GET /api/admin/products/top-selling
 
-Returns the seller's top-selling products by total ordered quantity, aggregated across **all** of the seller's pasabuy schedules (not just one), scoped to a single calendar month (defaults to the current month). Only `pending`/`confirmed` order items count towards `total_quantity` — cancelled orders are excluded. Fixed to the top 5, no pagination.
+Returns the seller's top-selling products by total ordered quantity, aggregated across **all** of the seller's pasabuy schedules (not just one), scoped to a single calendar month (defaults to the current month). The month/year filter matches on the related pasabuy schedule's `pasabuy_schedule_date` (the run's own date), not the order's `created_at` — an order counts toward the month its schedule is dated, regardless of when the order was placed. Only `pending`/`confirmed` order items count towards `total_quantity` — cancelled orders are excluded. Fixed to the top 5, no pagination.
 
 ### Query params
 
 | Field | Type | Required | Notes                                          |
 |-------|------|----------|-------------------------------------------------|
 | limit | int  | No       | Defaults to 5. Caps how many top products are returned. |
-| month | int  | No       | 1-12. Defaults to the current month. |
-| year  | int  | No       | Defaults to the current year. |
+| month | int  | No       | 1-12. Defaults to the current month. Matched against the schedule's `pasabuy_schedule_date`. |
+| year  | int  | No       | Defaults to the current year. Matched against the schedule's `pasabuy_schedule_date`. |
 
 ### Success response — 200
 

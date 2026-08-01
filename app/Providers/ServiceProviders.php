@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Interfaces\Auth\AuthServiceInterface;
 use App\Interfaces\Brand\BrandServiceInterface;
 use App\Interfaces\Customer\CustomerServiceInterface;
+use App\Interfaces\DailyVerse\DailyVerseServiceInterface;
 use App\Interfaces\Invoice\InvoiceMailerServiceInterface;
 use App\Interfaces\Invoice\InvoiceServiceInterface;
 use App\Interfaces\InvoiceSetting\InvoiceSettingServiceInterface;
@@ -17,6 +18,7 @@ use App\Interfaces\Settings\SettingsServiceInterface;
 use App\Services\AuthService;
 use App\Services\BrandService;
 use App\Services\CustomerService;
+use App\Services\DailyVerseService;
 use App\Services\InvoiceMailerService;
 use App\Services\InvoiceService;
 use App\Services\InvoiceSettingService;
@@ -44,5 +46,6 @@ class ServiceProviders extends ServiceProvider
         $this->app->bind(InvoiceSettingServiceInterface::class, InvoiceSettingService::class);
         $this->app->bind(InvoiceServiceInterface::class, InvoiceService::class);
         $this->app->bind(InvoiceMailerServiceInterface::class, InvoiceMailerService::class);
+        $this->app->bind(DailyVerseServiceInterface::class, DailyVerseService::class);
     }
 }

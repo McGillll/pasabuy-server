@@ -321,15 +321,15 @@ Not paginated — returns the customer's full order history in one array, same a
 
 ## GET /api/admin/customers/top-buyers
 
-Admin-only. Returns the seller's top 5 customers by total spend (`pasabuy_orders.total_amount` summed), aggregated across all of the seller's pasabuy schedules and scoped to `pending`/`confirmed` orders only (cancelled excluded, same as `order-api.md`'s `LIVE_STATUSES`), within a single calendar month (defaults to the current month). Grouped by the order's real `user_id` FK, not the denormalized `customer_name` snapshot.
+Admin-only. Returns the seller's top 5 customers by total spend (`pasabuy_orders.total_amount` summed), aggregated across all of the seller's pasabuy schedules and scoped to `pending`/`confirmed` orders only (cancelled excluded, same as `order-api.md`'s `LIVE_STATUSES`), within a single calendar month (defaults to the current month). Grouped by the order's real `user_id` FK, not the denormalized `customer_name` snapshot. The month/year filter matches on the related pasabuy schedule's `pasabuy_schedule_date`, not the order's `created_at` — an order counts toward the month its schedule is dated, regardless of when the order was placed.
 
 ### Query params
 
 | Field | Type | Required | Notes            |
 |-------|------|----------|----------------------|
 | limit | int  | No       | Default `5`           |
-| month | int  | No       | 1-12. Defaults to the current month. |
-| year  | int  | No       | Defaults to the current year. |
+| month | int  | No       | 1-12. Defaults to the current month. Matched against the schedule's `pasabuy_schedule_date`. |
+| year  | int  | No       | Defaults to the current year. Matched against the schedule's `pasabuy_schedule_date`. |
 
 ### Success response — 200
 

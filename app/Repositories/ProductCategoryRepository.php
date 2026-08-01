@@ -19,6 +19,15 @@ class ProductCategoryRepository implements ProductCategoryRepositoryInterface
             "product_categories:all:v{$version}:".md5(json_encode($payload)),
             300,
             fn () => ProductCategory::filter((array) $payload)
+                ->withCount('children')
+                ->when(
+                    isset($payload->parent_id),
+                    fn ($query) => $query->where('parent_id', $payload->parent_id)
+                )
+                ->when(
+                    ! isset($payload->parent_id) && empty($payload->leaf_only),
+                    fn ($query) => $query->whereNull('parent_id')
+                )
                 ->orderBy('name')
                 ->paginate($payload->per_page ?? 15)
         );
@@ -40,7 +49,9 @@ class ProductCategoryRepository implements ProductCategoryRepositoryInterface
         $category = new ProductCategory;
         $category->name = $payload->name;
         $category->description = $payload->description ?? null;
+        $category->image_url = $payload->image_url ?? null;
         $category->is_active = $payload->is_active ?? true;
+        $category->parent_id = $payload->parent_id ?? null;
         $category->save();
 
         $this->bumpCacheVersion('product_categories');
@@ -56,7 +67,9 @@ class ProductCategoryRepository implements ProductCategoryRepositoryInterface
 
         $category->name = $payload->name;
         $category->description = $payload->description ?? null;
+        $category->image_url = $payload->image_url ?? null;
         $category->is_active = $payload->is_active ?? $category->is_active;
+        $category->parent_id = $payload->parent_id ?? null;
         $category->save();
 
         $this->bumpCacheVersion('product_categories');

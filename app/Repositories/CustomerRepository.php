@@ -86,10 +86,10 @@ class CustomerRepository implements CustomerRepositoryInterface
 
         return PasabuyOrder::selectRaw('users.id, users.uuid, users.first_name, users.last_name, SUM(pasabuy_orders.total_amount) as total_spend, COUNT(*) as order_count')
             ->join('users', 'users.id', '=', 'pasabuy_orders.user_id')
-            ->whereHas('pasabuySchedule', fn ($query) => $query->where('user_id', $payload->seller_id))
+            ->whereHas('pasabuySchedule', fn ($query) => $query->where('user_id', $payload->seller_id)
+                ->whereYear('pasabuy_schedule_date', $year)
+                ->whereMonth('pasabuy_schedule_date', $month))
             ->whereIn('status', PasabuyOrder::LIVE_STATUSES)
-            ->whereYear('pasabuy_orders.created_at', $year)
-            ->whereMonth('pasabuy_orders.created_at', $month)
             ->groupBy('users.id', 'users.uuid', 'users.first_name', 'users.last_name')
             ->orderByDesc('total_spend')
             ->limit($payload->limit ?? 5)

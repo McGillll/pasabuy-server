@@ -14,3 +14,4 @@ Route::prefix('public')->group(base_path('routes/api/public.php'));
 Route::group([], base_path('routes/api/settings.php'));
 Route::group([], base_path('routes/api/invoice_settings.php'));
 Route::group([], base_path('routes/api/invoices.php'));
+Route::group([], base_path('routes/api/daily_verse.php'));

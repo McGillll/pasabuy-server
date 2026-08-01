@@ -1,5 +1,15 @@
 # Latest Updates
 
+## 2026-08-01 — Top products / top buyers now scoped by the schedule's date, not order placement date
+
+**What changed:** `GET /api/admin/products/top-selling` and `GET /api/admin/customers/top-buyers` now filter `month`/`year` against the related pasabuy schedule's `pasabuy_schedule_date`, instead of the order's own `created_at`. Query params and response shape are unchanged.
+
+**Why:** Customers place orders against a schedule before its `pasabuy_schedule_date` arrives (that's the whole cutoff mechanic), so an order's `created_at` is often in an earlier month than the schedule it belongs to. Filtering by `created_at` meant browsing "this month" could show nothing even when a schedule dated this month had plenty of orders, because those orders were all placed last month. Filtering by the schedule's own date makes "this month" mean "runs happening this month," matching how the rest of the app already treats `pasabuy_schedule_date` as the authoritative date for a schedule.
+
+**Docs updated:** `product-api.md` (`GET /top-selling`), `customer-api.md` (`GET /top-buyers`).
+
+**Frontend impact:** none required — same request/response contract. `client/app/components/RankedList.vue` also gained prev/next month arrows (emits `change-month`) so the dashboard's Top products/Top buyers card is no longer locked to the current calendar month.
+
 ## 2026-08-01 — Handling fee added to invoice settings
 
 **What changed:**

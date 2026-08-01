@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Interfaces\Brand\BrandRepositoryInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
@@ -102,6 +103,10 @@ class ProductService implements ProductServiceInterface
 
         if (! $category) {
             throw new NotFoundException("Product category {$payload->category_uuid} not found.");
+        }
+
+        if ($category->children()->exists()) {
+            throw new InvalidPayloadException('Products can only be assigned to a subcategory, not a parent category.');
         }
 
         $payload->category_id = $category->id;

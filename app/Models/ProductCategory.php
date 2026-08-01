@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'description', 'is_active'])]
+#[Fillable(['name', 'description', 'image_url', 'is_active'])]
 class ProductCategory extends Model
 {
     use Filterable, HasFactory, SoftDeletes, UsesUuid;
@@ -32,5 +32,15 @@ class ProductCategory extends Model
     public function products()
     {
         return $this->hasMany(PasabuyProduct::class, 'category_id');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(ProductCategory::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(ProductCategory::class, 'parent_id');
     }
 }
