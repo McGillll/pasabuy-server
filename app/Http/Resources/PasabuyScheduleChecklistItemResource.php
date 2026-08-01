@@ -18,6 +18,9 @@ class PasabuyScheduleChecklistItemResource extends JsonResource
             'checked_at' => $this->checked_at,
             'additional_quantity' => $this->additional_quantity,
             'return_quantity' => $this->return_quantity,
+            'default_price' => $this->product?->default_price,
+            'actual_price' => $this->schedule_product?->actual_price,
+            'product_status' => $this->schedule_product?->product_status,
         ];
     }
 }

@@ -47,6 +47,7 @@ All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin
 | pasabuy_schedule_date | date\|null | The date the seller physically goes to the store — also doubles as the ordering deadline: ordering closes as soon as this date arrives. Distinct from `created_at` (record creation). Drives the `month`/`year` list filters. Required on `POST`/`PUT`. |
 | status      | string        | `open` \| `closed` \| `finished`, default `open`. Only `open` (and before `pasabuy_schedule_date`) accepts customer orders. Valid transitions: `open`→`closed`, `closed`→`open`, `closed`→`finished`. `finished` is terminal. |
 | is_open     | boolean       | Computed: `status === 'open' && (!pasabuy_schedule_date || pasabuy_schedule_date is in the future)` — use this to gate the UI |
+| due_date    | date\|null    | Invoice due date for every order on this schedule. `null` until `finish` is called — set mandatorily then, immutable afterward |
 | seller_name | string\|null  | Owning seller's full name — only present when the `user` relation is loaded (e.g. `GET /api/customer/pasabuy-schedules`, see `customer-api.md`); `null`/omitted elsewhere |
 | product_count | int\|null   | Count of attached schedule products — only present when loaded with a count (e.g. `GET /api/customer/pasabuy-schedules`); `null`/omitted elsewhere |
 | products    | array         | Only the products someone has actually ordered so far on this schedule — see schedule-product object below |
@@ -168,21 +169,36 @@ Transitions `closed` → `open`. Same shape/errors as `close`. Does not touch th
 
 ## POST /api/admin/pasabuy-schedules/{uuid}/finish
 
-Transitions `closed` → `finished`. No request body. `finished` is a terminal state — there is no transition back to `open`/`closed` from it. Use this once the batch has been fully delivered/settled. Does not touch the checklist or pricing.
+Transitions `closed` → `finished`. `finished` is a terminal state — there is no transition back to `open`/`closed` from it. Use this once the batch has been fully delivered/settled. Does not touch the checklist or pricing.
+
+**Requires a `due_date` in the request body** — this becomes the due date for every order's invoice on this schedule (`pasabuy_schedules.due_date`). There is no other way to set it; it cannot be changed after the schedule is finished.
+
+### Request body
+
+| Field    | Type   | Required | Notes |
+|----------|--------|----------|-------|
+| due_date | string | Yes      | ISO date (`YYYY-MM-DD`). Must be today or later — a past date returns **422** |
 
 **Blocked while any order on this schedule is still `pending`** — the seller must confirm or cancel every order first (`confirmed` orders are fine; only `pending` blocks the transition). This guard applies to both this endpoint and setting `status: "finished"` via the generic `PUT` update above.
 
-**Side effect:** once the status change is persisted, every `confirmed` order on this schedule is passed to `InvoiceMailerService::sendIfDue($order, 'schedule_finish')`. The invoice is only actually emailed if the seller's invoice setting `due_date_reference` is `schedule_finish` — if it's `delivery`, the email is deferred to the order's delivery instead (see `order-api.md`), since `due_date` would otherwise resolve to `null` (the reference event hasn't happened yet) and the invoice would misleadingly show "Due: N/A". Each order is only ever emailed once (`Order.invoice_sent_at` guards against duplicates on retries or re-triggers). Orders without a customer email, or whose invoice fails to build, are skipped and logged — this never fails the `finish` request itself.
+**Side effect:** once the status change and `due_date` are persisted, every `confirmed`/`pending`-turned-`confirmed` order on this schedule is passed to `InvoiceMailerService::sendIfDue($order)`, which queues `PasabuyInvoiceMail` (built from `InvoiceService`, now reading `due_date` straight off the schedule). Each order is only ever emailed once (`Order.invoice_sent_at` guards against duplicates on retries or re-triggers). Orders without a customer email, or whose invoice fails to build, are skipped and logged — this never fails the `finish` request itself.
+
+### Example request
+
+```json
+POST /api/admin/pasabuy-schedules/{uuid}/finish
+{ "due_date": "2026-08-15" }
+```
 
 ### Success response — 200
 
 ```json
-{ "success": true, "message": "Pasabuy schedule finished", "data": { "uuid": "...", "status": "finished", ... } }
+{ "success": true, "message": "Pasabuy schedule finished", "data": { "uuid": "...", "status": "finished", "due_date": "2026-08-15", ... } }
 ```
 
 ### Error responses
 
-- **403** (not owner), **404**, **422** — invalid transition (e.g. schedule isn't `closed` yet), or `pending` orders still exist (`"Cannot finish this schedule while it has pending orders that have not been confirmed or cancelled."`).
+- **403** (not owner), **404**, **422** — invalid transition (e.g. schedule isn't `closed` yet), `pending` orders still exist (`"Cannot finish this schedule while it has pending orders that have not been confirmed or cancelled."`), `due_date` missing/invalid, or `due_date` in the past (`"The invoice due date cannot be in the past."`).
 
 ---
 

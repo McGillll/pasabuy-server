@@ -13,6 +13,7 @@ class InvoiceResource extends JsonResource
             'items' => $this->resource['items'],
             'subtotal' => $this->resource['subtotal'],
             'markup_amount' => $this->resource['markup_amount'],
+            'handling_fee' => $this->resource['handling_fee'],
             'total' => $this->resource['total'],
             'due_date' => $this->resource['due_date']?->toIso8601String(),
             'is_overdue' => $this->resource['is_overdue'],

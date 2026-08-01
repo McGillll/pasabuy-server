@@ -74,6 +74,12 @@ Thanks for your order! This pasabuy run has finished for <strong style="color:#1
 <td style="padding:4px 0; font-size:13px; color:#6b7280;">Markup</td>
 <td align="right" style="padding:4px 0; font-size:13px; color:#6b7280;">{{ number_format($invoice['markup_amount'], 2) }}</td>
 </tr>
+@if ($invoice['handling_fee'] > 0)
+<tr>
+<td style="padding:4px 0; font-size:13px; color:#6b7280;">Handling fee</td>
+<td align="right" style="padding:4px 0; font-size:13px; color:#6b7280;">{{ number_format($invoice['handling_fee'], 2) }}</td>
+</tr>
+@endif
 <tr>
 <td style="padding:8px 0 0; font-size:14px; font-weight:700; color:#111827; border-top:1px solid #e5e7eb;">Total</td>
 <td align="right" style="padding:8px 0 0; font-size:14px; font-weight:700; color:#111827; border-top:1px solid #e5e7eb;">{{ number_format($invoice['total'], 2) }}</td>

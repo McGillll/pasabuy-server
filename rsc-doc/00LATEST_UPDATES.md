@@ -1,5 +1,34 @@
 # Latest Updates
 
+## 2026-08-01 — Handling fee added to invoice settings
+
+**What changed:**
+- New `handling_fee` decimal column (default `0.00`) on `pasabuy_seller_invoice_settings` and `pasabuy_schedule_invoice_settings`, added via additive migrations (`2026_08_01_190512_...`, `2026_08_01_190513_...`).
+- `InvoiceSettingResource`/`InvoiceSettingUpdateRequest` now include `handling_fee` (required, numeric, min 0).
+- `InvoiceService`'s `total` calculation is now `subtotal + markup_amount + handling_fee` (was `subtotal + markup_amount`). `InvoiceResource` exposes the new `handling_fee` field alongside `markup_amount`.
+- `ScheduleInvoiceSettingRepository::createFromSource()` snapshots `handling_fee` onto the schedule the same way it already does for the markup fields.
+- Default `0.00` means existing sellers see no change to `total` until they set a non-zero handling fee.
+
+**Why:** Sellers need a flat fee (e.g. courier/packing handling cost) added to every order alongside the existing markup, independent of the markup threshold split.
+
+**Docs updated:** `invoice-setting-api.md`, `invoice-api.md`.
+
+**Frontend impact:** `client/app/types/InvoiceSetting.ts` and `Invoice.ts` gain `handling_fee`. `client/app/pages/admin/settings.vue`'s invoice form gains a "Handling fee" input (sent every `PATCH`, since that endpoint is a full replace). `client/app/components/order/InvoiceBreakdown.vue` shows a "Handling fee" line when non-zero. The invoice email template also shows it conditionally.
+
+## 2026-08-01 — Invoice due date moved from settings to the schedule, set mandatorily on finish
+
+**What changed:**
+- `due_days` and `due_date_reference` removed from `pasabuy_seller_invoice_settings` and `pasabuy_schedule_invoice_settings` (both the DB columns and every field in `InvoiceSettingResource`/`InvoiceSettingUpdateRequest`).
+- New `pasabuy_schedules.due_date` column (nullable date). `POST /api/admin/pasabuy-schedules/{uuid}/finish` now **requires** a `due_date` in the request body — guarded to be today or later (`422` if in the past). It's set once, at finish, and never changes afterward (the transition to `finished` is already terminal).
+- `InvoiceService`'s `due_date` calculation now reads `order.pasabuySchedule.due_date` directly — no more offset math, no more branching on a reference event.
+- `InvoiceMailerService::sendIfDue()` dropped its `$trigger` parameter and the `due_date_reference` gating — it's still guarded by `invoice_sent_at`/`LIVE_STATUSES`/customer-email-present, unchanged. The `delivery`-triggered invoice email on `PATCH /admin/orders/{uuid}/delivery-status` is removed entirely — invoice emails are now only ever queued once, at schedule finish.
+
+**Why:** `due_date_reference: delivery` let an order's due date depend on per-order delivery timing, which no longer matches the desired flow — the seller now picks one due date for the whole batch, at the moment they finish it, and every order on that schedule shares it.
+
+**Docs updated:** `invoice-setting-api.md`, `invoice-api.md`, `pasabuy-schedule-api.md` (`POST .../finish`), `order-api.md` (delivery-status side effect removed).
+
+**Frontend impact:** `client/app/types/InvoiceSetting.ts` and the invoice-settings form in `client/app/pages/admin/settings.vue` lose `due_days`/`due_date_reference` fields. The finish-schedule flow (`useScheduleWorkspace.ts` / `ScheduleStatusStepper.vue`) now must collect a mandatory `due_date` (date >= today) before calling `POST .../finish`, and `PasabuyScheduleService.ts#finishSchedule` takes a `{ due_date }` payload.
+
 ## 2026-07-30 — Top products / top buyers scoped to the current month
 
 **What changed:** `GET /api/admin/products/top-selling` and `GET /api/admin/customers/top-buyers` now filter by the order's `created_at` month/year, defaulting to the current calendar month if `month`/`year` aren't passed. Both accept optional `month` (1-12) and `year` query params to look at a different month later if a date picker is added.

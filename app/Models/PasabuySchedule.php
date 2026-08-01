@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['title', 'description', 'pasabuy_schedule_date', 'status'])]
+#[Fillable(['title', 'description', 'pasabuy_schedule_date', 'status', 'due_date'])]
 class PasabuySchedule extends Model
 {
     use Filterable, HasFactory, UsesUuid;
@@ -25,6 +25,7 @@ class PasabuySchedule extends Model
         return [
             'pasabuy_schedule_date' => 'date',
             'finished_at' => 'datetime',
+            'due_date' => 'date',
         ];
     }
 

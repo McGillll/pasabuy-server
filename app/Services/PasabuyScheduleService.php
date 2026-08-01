@@ -15,6 +15,7 @@ use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Interfaces\ScheduleInvoiceSetting\ScheduleInvoiceSettingRepositoryInterface;
 use App\Models\PasabuySchedule;
+use Illuminate\Support\Carbon;
 
 class PasabuyScheduleService implements PasabuyScheduleServiceInterface
 {
@@ -96,13 +97,14 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         return $this->pasabuyScheduleRepository->updateStatus($uuid, 'open');
     }
 
-    public function finish(string $uuid, int $userId)
+    public function finish(string $uuid, int $userId, string $dueDate)
     {
         $schedule = $this->findByUuid($uuid);
         $this->ensureOwnership($schedule, $userId);
         $this->assertValidTransition($schedule, 'finished');
+        $this->assertDueDateNotPast($dueDate);
 
-        $updated = $this->pasabuyScheduleRepository->updateStatus($uuid, 'finished');
+        $updated = $this->pasabuyScheduleRepository->updateStatus($uuid, 'finished', $dueDate);
 
         $this->snapshotInvoiceSettings($updated);
         $this->sendInvoiceEmails($uuid);
@@ -233,6 +235,33 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         return $item;
     }
 
+    public function publicConfirmChecklistItemPrice(string $token, string $productUuid, object $payload)
+    {
+        $schedule = $this->findByChecklistShareToken($token);
+
+        if ($payload->product_status !== 'out_of_stock' && (! isset($payload->actual_price) || $payload->actual_price < 0)) {
+            throw new InvalidPayloadException('A valid actual price is required unless marking the item out of stock.');
+        }
+
+        $scheduleProduct = $this->pasabuyScheduleRepository->confirmProductPriceByProductUuid($schedule->uuid, $productUuid, $payload);
+
+        if (! $scheduleProduct) {
+            throw new NotFoundException('Schedule product not found.');
+        }
+
+        $summary = $this->orderService->recalculateForScheduleProduct($scheduleProduct);
+
+        $item = $this->pasabuyScheduleRepository->toggleChecklistItem($schedule->uuid, $productUuid, true);
+
+        $this->broadcastChecklistItemToggled($schedule, $item);
+
+        return (object) [
+            'schedule_product' => $scheduleProduct,
+            'summary' => $summary,
+            'checklist_item' => $item,
+        ];
+    }
+
     protected function findByChecklistShareToken(string $token)
     {
         $schedule = $this->pasabuyScheduleRepository->findByChecklistShareToken($token);
@@ -299,7 +328,7 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         $orders = $this->pasabuyScheduleRepository->orders($uuid);
 
         foreach ($orders as $order) {
-            $this->invoiceMailer->sendIfDue($order, 'schedule_finish');
+            $this->invoiceMailer->sendIfDue($order);
         }
     }
 
@@ -320,6 +349,13 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     {
         if ($schedule->orders()->where('status', 'pending')->exists()) {
             throw new InvalidPayloadException('Cannot finish this schedule while it has pending orders that have not been confirmed or cancelled.');
+        }
+    }
+
+    protected function assertDueDateNotPast(string $dueDate)
+    {
+        if (Carbon::parse($dueDate)->startOfDay()->lt(now()->startOfDay())) {
+            throw new InvalidPayloadException('The invoice due date cannot be in the past.');
         }
     }
 }
