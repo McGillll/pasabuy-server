@@ -1,6 +1,6 @@
 # Product API
 
-Global product catalog, managed by the seller/admin. Each product has its own authoritative `default_price` and an optional `category` (see `product-category-api.md`) and optional `brand` (see `brand-api.md`) — pasabuy schedules no longer set their own price estimate; they just reference the product's `default_price`.
+Global product catalog, managed by the seller/admin. Each product has its own authoritative `default_price` and an optional `category` (see `product-category-api.md`) — pasabuy schedules no longer set their own price estimate; they just reference the product's `default_price`.
 
 ## Endpoints overview
 
@@ -32,7 +32,6 @@ Standard `{success, message, data}` envelope (see `auth-api.md`).
 | default_price | string        | Decimal string, e.g. `"25.00"` — the authoritative catalog price, used everywhere the product is scheduled/ordered/summarized |
 | default_product_status | string | `none` \| `b1t1` \| `out_of_stock`, default `none`. Seeded onto a schedule-product's `product_status` the first time this product is ordered on a given pasabuy schedule (see `pasabuy-schedule-api.md`) — set this if a product is *usually* running a promo so new schedules start from that instead of `none`. |
 | category    | object\|null    | The `ProductCategory` object (see `product-category-api.md`), or `null` if uncategorized |
-| brand       | object\|null    | The `Brand` object (see `brand-api.md`), or `null` if unbranded |
 | last_confirmed_price | string\|null | The most recent in-store `actual_price` confirmed for this product on any past pasabuy schedule. Only present on `GET /api/admin/products` (list); omitted on `show`/`store`/`update` responses. `null` if never confirmed. Purely informational history — does not affect `default_price`. |
 | last_product_status | string\|null | The product status (`none`\|`b1t1`\|`out_of_stock`) tied to `last_confirmed_price`. Same availability caveat. |
 
@@ -48,7 +47,6 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
 |----------------|--------|----------|----------------------------------|
 | search         | string | No       | Filter by name (partial match)   |
 | category_uuid  | string | No       | Filter to one `ProductCategory` uuid |
-| brand_uuid     | string | No       | Filter to one `Brand` uuid |
 | status         | string | No       | `none`\|`b1t1`\|`out_of_stock` — filter by `default_product_status` |
 | price_min      | number | No       | Filter to products with `default_price >=` this value |
 | price_max      | number | No       | Filter to products with `default_price <=` this value |
@@ -62,7 +60,7 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
   "success": true,
   "message": "Success",
   "data": {
-    "data": [ { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "default_price": "25.00", "category": { "uuid": "...", "name": "Noodles & Canned Goods", "description": null, "is_active": true }, "brand": { "uuid": "...", "name": "Lucky Me", "is_active": true }, "default_product_status": "none", "last_confirmed_price": "25.00", "last_product_status": "none" } ],
+    "data": [ { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "default_price": "25.00", "category": { "uuid": "...", "name": "Noodles & Canned Goods", "description": null, "is_active": true }, "default_product_status": "none", "last_confirmed_price": "25.00", "last_product_status": "none" } ],
     "current_page": 1,
     "last_page": 1,
     "total": 1
@@ -87,17 +85,16 @@ Soft-deleted products are excluded from `index`/`show` automatically but remain 
 | default_price | number | Yes      | >= 0                        |
 | default_product_status | string | No | `none`\|`b1t1`\|`out_of_stock`, defaults to `none` |
 | category_uuid | string | No       | Must be an existing `ProductCategory` uuid, and that category must be a leaf (`has_children: false` — see `product-category-api.md`); omit for uncategorized |
-| brand_uuid    | string | No       | Must be an existing `Brand` uuid; omit for unbranded |
 
 ### Success response — 201
 
 ```json
-{ "success": true, "message": "Product created successfully", "data": { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "default_price": "25.00", "category": null, "brand": null } }
+{ "success": true, "message": "Product created successfully", "data": { "uuid": "...", "name": "Instant Noodles", "description": "Spicy pack", "image_url": null, "is_active": true, "default_price": "25.00", "category": null } }
 ```
 
 ### Error responses
 
-- **404** — `category_uuid` doesn't match an existing category, or `brand_uuid` doesn't match an existing brand.
+- **404** — `category_uuid` doesn't match an existing category.
 - **422** — validation failure (missing `name`/`default_price`, `image` not a valid image, or `category_uuid` points to a parent category with subcategories).
 
 ---
@@ -188,7 +185,6 @@ Unauthenticated. Returns only `is_active` products — this is the product sourc
 |----------------|--------|----------|----------------------------------|
 | search         | string | No       | Filter by name (partial match)   |
 | category_uuid  | string | No       | Filter to one `ProductCategory` uuid |
-| brand_uuid     | string | No       | Filter to one `Brand` uuid |
 | status         | string | No       | `none`\|`b1t1`\|`out_of_stock` — filter by `default_product_status` |
 | price_min      | number | No       | Filter to products with `default_price >=` this value |
 | price_max      | number | No       | Filter to products with `default_price <=` this value |
@@ -204,5 +200,5 @@ Same paginator shape as `GET /api/admin/products`, but every item is `is_active:
 | Status | Meaning               | Applies to                  |
 |--------|------------------------|-------------------------------|
 | 401    | Missing/invalid token  | all admin endpoints            |
-| 404    | Product, category, or brand not found | show, update, destroy, store, update |
+| 404    | Product or category not found | show, update, destroy, store, update |
 | 422    | Validation failure     | store, update                  |

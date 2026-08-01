@@ -21,7 +21,7 @@ class ProductRepository implements ProductRepositoryInterface
             "products:all:v{$version}:".md5(json_encode($payload)),
             300,
             fn () => PasabuyProduct::filter((array) $payload)
-                ->with('latestScheduleProduct', 'category', 'brand')
+                ->with('latestScheduleProduct', 'category')
                 ->orderBy('name')
                 ->paginate($payload->per_page ?? 15)
         );
@@ -36,7 +36,7 @@ class ProductRepository implements ProductRepositoryInterface
             300,
             fn () => PasabuyProduct::filter((array) $payload)
                 ->where('is_active', true)
-                ->with('category', 'brand')
+                ->with('category')
                 ->orderBy('name')
                 ->paginate($payload->per_page ?? 200)
         );
@@ -49,7 +49,7 @@ class ProductRepository implements ProductRepositoryInterface
         return Cache::remember(
             "products:uuid:v{$version}:{$uuid}",
             600,
-            fn () => PasabuyProduct::with('category', 'brand')->where('uuid', $uuid)->first()
+            fn () => PasabuyProduct::with('category')->where('uuid', $uuid)->first()
         );
     }
 
@@ -60,7 +60,7 @@ class ProductRepository implements ProductRepositoryInterface
         return Cache::remember(
             "products:uuid_with_trashed:v{$version}:{$uuid}",
             600,
-            fn () => PasabuyProduct::withTrashed()->with('category', 'brand')->where('uuid', $uuid)->first()
+            fn () => PasabuyProduct::withTrashed()->with('category')->where('uuid', $uuid)->first()
         );
     }
 
@@ -72,7 +72,6 @@ class ProductRepository implements ProductRepositoryInterface
         $product->image_path = $payload->image_path ?? null;
         $product->is_active = $payload->is_active ?? true;
         $product->category_id = $payload->category_id ?? null;
-        $product->brand_id = $payload->brand_id ?? null;
         $product->default_price = $payload->default_price;
         $product->default_product_status = $payload->default_product_status ?? 'none';
         $product->save();
@@ -94,7 +93,6 @@ class ProductRepository implements ProductRepositoryInterface
         }
         $product->is_active = $payload->is_active ?? $product->is_active;
         $product->category_id = $payload->category_id ?? null;
-        $product->brand_id = $payload->brand_id ?? null;
         $product->default_price = $payload->default_price;
         $product->default_product_status = $payload->default_product_status ?? $product->default_product_status;
         $product->save();

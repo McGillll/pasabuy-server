@@ -49,7 +49,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             120,
             fn () => PasabuySchedule::with([
                 'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
-                'scheduleProducts.product' => fn ($query) => $query->withTrashed()->with('category', 'brand'),
+                'scheduleProducts.product' => fn ($query) => $query->withTrashed()->with('category'),
             ])->where('uuid', $uuid)->first()
         );
     }

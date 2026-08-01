@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
-use App\Interfaces\Brand\BrandRepositoryInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Interfaces\Product\ProductServiceInterface;
@@ -21,7 +20,6 @@ class ProductService implements ProductServiceInterface
     public function __construct(
         protected ProductRepositoryInterface $productRepository,
         protected ProductCategoryRepositoryInterface $productCategoryRepository,
-        protected BrandRepositoryInterface $brandRepository,
         protected PasabuyScheduleRepositoryInterface $pasabuyScheduleRepository,
     ) {}
 
@@ -49,7 +47,6 @@ class ProductService implements ProductServiceInterface
     public function create(object $payload)
     {
         $this->resolveCategory($payload);
-        $this->resolveBrand($payload);
 
         if (isset($payload->image)) {
             $payload->image_path = $this->storeImage($payload);
@@ -62,7 +59,6 @@ class ProductService implements ProductServiceInterface
     {
         $product = $this->findByUuid($uuid);
         $this->resolveCategory($payload);
-        $this->resolveBrand($payload);
 
         if (isset($payload->image)) {
             $previousImagePath = $product->image_path;
@@ -110,23 +106,6 @@ class ProductService implements ProductServiceInterface
         }
 
         $payload->category_id = $category->id;
-    }
-
-    protected function resolveBrand(object $payload)
-    {
-        if (! isset($payload->brand_uuid)) {
-            $payload->brand_id = null;
-
-            return;
-        }
-
-        $brand = $this->brandRepository->findByUuid($payload->brand_uuid);
-
-        if (! $brand) {
-            throw new NotFoundException("Brand {$payload->brand_uuid} not found.");
-        }
-
-        $payload->brand_id = $brand->id;
     }
 
     public function delete(string $uuid)

@@ -1,5 +1,18 @@
 # Latest Updates
 
+## 2026-08-02 — Brand feature removed entirely
+
+**What changed:**
+- The whole Brand module is deleted: `brands` table dropped, `pasabuy_products.brand_id` column dropped (via additive migration `2026_08_02_003430_drop_brand_feature`, which also documents the down-migration schema for reference). `Brand` model, repository, service, interfaces, controller, requests, resource, filter, and routes (`/admin/brands`) all removed.
+- `ProductResource` no longer includes a `brand` field; `ProductStoreRequest`/`ProductUpdateRequest` no longer accept `brand_uuid`; the `brand_uuid` filter param is gone from `GET /api/admin/products` and `GET /api/public/products`.
+- `brand-api.md` deleted.
+
+**Why:** Product requested full removal of the brand concept from the catalog.
+
+**Docs updated:** `product-api.md` (removed `brand` field, `brand_uuid` params, related response examples and error notes). `brand-api.md` deleted outright.
+
+**Frontend impact:** `client/app/types/Brand.ts`, `BrandService.ts`, `BrandsPanel.vue`, `BrandList.vue` deleted. `admin/products/index.vue` loses the "Brands" tab and all `allBrands` state/wiring. `ProductsPanel.vue` loses the brand filter, brand column, and brand form field — submits no longer send `brand_uuid`. `AdminProductList.vue`, `Product.ts`, `ProductService.ts`, `useProductDisplayName.ts`, and `pasabuy/[uuid].vue` (public schedule page's brand filter tabs) all had their brand references removed.
+
 ## 2026-08-01 — Top products / top buyers now scoped by the schedule's date, not order placement date
 
 **What changed:** `GET /api/admin/products/top-selling` and `GET /api/admin/customers/top-buyers` now filter `month`/`year` against the related pasabuy schedule's `pasabuy_schedule_date`, instead of the order's own `created_at`. Query params and response shape are unchanged.
