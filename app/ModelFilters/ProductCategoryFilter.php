@@ -18,4 +18,13 @@ class ProductCategoryFilter extends ModelFilter
     {
         return $this->where('name', 'like', "%{$query}%");
     }
+
+    public function leafOnly($query)
+    {
+        if (! filter_var($query, FILTER_VALIDATE_BOOLEAN)) {
+            return $this;
+        }
+
+        return $this->whereDoesntHave('children');
+    }
 }

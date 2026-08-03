@@ -49,16 +49,21 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             120,
             fn () => PasabuySchedule::with([
                 'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
-                'scheduleProducts.product' => fn ($query) => $query->withTrashed()->with('category', 'brand'),
+                'scheduleProducts.product' => fn ($query) => $query->withTrashed()->with('category'),
             ])->where('uuid', $uuid)->first()
         );
     }
 
-    public function updateStatus(string $uuid, string $status)
+    public function updateStatus(string $uuid, string $status, ?string $dueDate = null)
     {
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
         $schedule->status = $status;
         $schedule->finished_at = $status === 'finished' ? ($schedule->finished_at ?? now()) : $schedule->finished_at;
+
+        if ($status === 'finished') {
+            $schedule->due_date = $dueDate;
+        }
+
         $schedule->save();
 
         $this->bumpCacheVersion('pasabuy_schedules');
@@ -202,10 +207,45 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     {
         $schedule = PasabuySchedule::where('uuid', $uuid)->first();
 
-        return PasabuyScheduleChecklistItem::where('pasabuy_schedule_id', $schedule->id)
+        $items = PasabuyScheduleChecklistItem::where('pasabuy_schedule_id', $schedule->id)
             ->with(['product' => fn ($query) => $query->withTrashed()->with('category')])
             ->orderBy('product_name')
             ->get();
+
+        $scheduleProductsByProductId = PasabuyScheduleProduct::where('pasabuy_schedule_id', $schedule->id)
+            ->get()
+            ->keyBy('product_id');
+
+        $items->each(function (PasabuyScheduleChecklistItem $item) use ($scheduleProductsByProductId) {
+            $item->setAttribute('schedule_product', $scheduleProductsByProductId->get($item->product_id));
+        });
+
+        return $items;
+    }
+
+    public function confirmProductPriceByProductUuid(string $scheduleUuid, string $productUuid, object $payload)
+    {
+        $schedule = PasabuySchedule::where('uuid', $scheduleUuid)->first();
+        $product = PasabuyProduct::withTrashed()->where('uuid', $productUuid)->first();
+
+        if (! $schedule || ! $product) {
+            return null;
+        }
+
+        $scheduleProduct = $this->findScheduleProduct($schedule->id, $product->id);
+
+        if (! $scheduleProduct) {
+            return null;
+        }
+
+        $scheduleProduct->actual_price = $payload->product_status === 'out_of_stock' ? null : $payload->actual_price;
+        $scheduleProduct->product_status = $payload->product_status;
+        $scheduleProduct->price_confirmed_at = now();
+        $scheduleProduct->save();
+
+        $this->bumpCacheVersion('pasabuy_schedules');
+
+        return $scheduleProduct->fresh('product');
     }
 
     public function findByChecklistShareToken(string $token)

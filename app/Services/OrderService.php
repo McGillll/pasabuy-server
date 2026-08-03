@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
-use App\Interfaces\Invoice\InvoiceMailerServiceInterface;
 use App\Interfaces\Invoice\InvoiceServiceInterface;
 use App\Interfaces\Order\OrderRepositoryInterface;
 use App\Interfaces\Order\OrderServiceInterface;
@@ -21,7 +20,6 @@ class OrderService implements OrderServiceInterface
         protected PasabuyScheduleRepositoryInterface $pasabuyScheduleRepository,
         protected ProductRepositoryInterface $productRepository,
         protected InvoiceServiceInterface $invoiceService,
-        protected InvoiceMailerServiceInterface $invoiceMailer,
     ) {}
 
     public function all(object $payload)
@@ -56,13 +54,7 @@ class OrderService implements OrderServiceInterface
 
         $this->ensureOrderOwnership($order, $payload->user_id);
 
-        $updated = $this->orderRepository->updateDeliveryStatus($uuid, $payload);
-
-        if ($payload->delivery_status === 'delivered') {
-            $this->invoiceMailer->sendIfDue($updated, 'delivery');
-        }
-
-        return $updated;
+        return $this->orderRepository->updateDeliveryStatus($uuid, $payload);
     }
 
     public function createForSchedule(string $scheduleUuid, object $payload)

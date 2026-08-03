@@ -8,6 +8,10 @@ interface ProductRepositoryInterface
 
     public function publicCatalog(object $payload);
 
+    public function publicTopSelling(object $payload);
+
+    public function publicFindByUuid(string $uuid);
+
     public function findByUuid(string $uuid);
 
     public function findByUuidWithTrashed(string $uuid);
@@ -17,4 +21,6 @@ interface ProductRepositoryInterface
     public function update(string $uuid, object $payload);
 
     public function delete(string $uuid);
+
+    public function topSelling(object $payload);
 }

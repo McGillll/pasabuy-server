@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'youversion' => [
+        'app_key' => env('YOUVERSION_APP_KEY'),
+        'bible_id' => env('YOUVERSION_BIBLE_ID', 1932),
+    ],
+
 ];

@@ -20,7 +20,7 @@ interface PasabuyScheduleServiceInterface
 
     public function reopen(string $uuid, int $userId);
 
-    public function finish(string $uuid, int $userId);
+    public function finish(string $uuid, int $userId, string $dueDate);
 
     public function orders(string $uuid);
 
@@ -43,4 +43,6 @@ interface PasabuyScheduleServiceInterface
     public function publicChecklist(string $token);
 
     public function publicToggleChecklistItem(string $token, string $productUuid, bool $isChecked);
+
+    public function publicConfirmChecklistItemPrice(string $token, string $productUuid, object $payload);
 }

@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class BrandUpdateRequest extends FormRequest
+class PasabuyScheduleFinishRequest extends FormRequest
 {
     public function authorize()
     {
@@ -14,9 +14,7 @@ class BrandUpdateRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'logo_url' => ['nullable', 'string', 'max:2048'],
-            'is_active' => ['sometimes', 'boolean'],
+            'due_date' => ['required', 'date', 'after_or_equal:today'],
         ];
     }
 }

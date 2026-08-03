@@ -28,4 +28,9 @@ class PasabuyScheduleFilter extends ModelFilter
     {
         return $this->whereYear('pasabuy_schedule_date', $year);
     }
+
+    public function status($status)
+    {
+        return $this->where('status', $status);
+    }
 }

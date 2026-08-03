@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PasabuyScheduleChecklistToggleRequest;
+use App\Http\Requests\PasabuyScheduleFinishRequest;
 use App\Http\Requests\PasabuyScheduleProductConfirmPriceRequest;
 use App\Http\Requests\PasabuyScheduleOrderItemsUpdateRequest;
 use App\Http\Requests\PasabuyScheduleStoreRequest;
@@ -115,9 +116,11 @@ class PasabuyScheduleController extends Controller
         return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule reopened');
     }
 
-    public function finish(Request $request, string $uuid)
+    public function finish(PasabuyScheduleFinishRequest $request, string $uuid)
     {
-        $schedule = $this->pasabuyScheduleService->finish($uuid, $request->user()->id);
+        $payload = (object) $request->validated();
+
+        $schedule = $this->pasabuyScheduleService->finish($uuid, $request->user()->id, $payload->due_date);
 
         return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule finished');
     }

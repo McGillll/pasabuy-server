@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Interfaces\Auth\AuthRepositoryInterface;
-use App\Interfaces\Brand\BrandRepositoryInterface;
 use App\Interfaces\Customer\CustomerRepositoryInterface;
 use App\Interfaces\InvoiceSetting\InvoiceSettingRepositoryInterface;
 use App\Interfaces\Order\OrderRepositoryInterface;
@@ -14,7 +13,6 @@ use App\Interfaces\ProductCategory\ProductCategoryRepositoryInterface;
 use App\Interfaces\ScheduleInvoiceSetting\ScheduleInvoiceSettingRepositoryInterface;
 use App\Interfaces\Settings\SettingsRepositoryInterface;
 use App\Repositories\AuthRepository;
-use App\Repositories\BrandRepository;
 use App\Repositories\CustomerRepository;
 use App\Repositories\InvoiceSettingRepository;
 use App\Repositories\OrderPaymentRepository;
@@ -33,7 +31,6 @@ class RepositoryProviders extends ServiceProvider
         $this->app->bind(AuthRepositoryInterface::class, AuthRepository::class);
         $this->app->bind(ProductRepositoryInterface::class, ProductRepository::class);
         $this->app->bind(ProductCategoryRepositoryInterface::class, ProductCategoryRepository::class);
-        $this->app->bind(BrandRepositoryInterface::class, BrandRepository::class);
         $this->app->bind(PasabuyScheduleRepositoryInterface::class, PasabuyScheduleRepository::class);
         $this->app->bind(OrderRepositoryInterface::class, OrderRepository::class);
         $this->app->bind(OrderPaymentRepositoryInterface::class, OrderPaymentRepository::class);

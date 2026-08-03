@@ -19,11 +19,13 @@ interface PasabuyScheduleRepositoryInterface
 
     public function delete(string $uuid);
 
-    public function updateStatus(string $uuid, string $status);
+    public function updateStatus(string $uuid, string $status, ?string $dueDate = null);
 
     public function orders(string $uuid);
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload);
+
+    public function confirmProductPriceByProductUuid(string $scheduleUuid, string $productUuid, object $payload);
 
     public function findScheduleProduct(int $scheduleId, int $productId);
 

@@ -50,8 +50,9 @@ class InvoiceService implements InvoiceServiceInterface
             ? round($subtotal * (float) $settings->markup_percentage / 100, 2)
             : (float) $settings->markup_fixed_amount;
 
-        $total = round($subtotal + $markupAmount, 2);
-        $dueDate = $this->resolveDueDate($order, $settings);
+        $handlingFee = (float) $settings->handling_fee;
+        $total = round($subtotal + $markupAmount + $handlingFee, 2);
+        $dueDate = $order->pasabuySchedule->due_date;
         $isOverdue = $dueDate !== null && now()->gt($dueDate);
 
         $paymentLines = $this->buildPaymentLines($order);
@@ -85,6 +86,7 @@ class InvoiceService implements InvoiceServiceInterface
         return [
             'subtotal' => $subtotal,
             'markup_amount' => $markupAmount,
+            'handling_fee' => $handlingFee,
             'total' => $total,
             'due_date' => $dueDate,
             'is_overdue' => $isOverdue,
@@ -96,15 +98,6 @@ class InvoiceService implements InvoiceServiceInterface
             'amount_paid' => $amountPaid,
             'balance_due' => round($balanceDue, 2),
         ];
-    }
-
-    protected function resolveDueDate(PasabuyOrder $order, $settings)
-    {
-        $sourceDate = $settings->due_date_reference === 'schedule_finish'
-            ? $order->pasabuySchedule->finished_at
-            : $order->delivered_at;
-
-        return $sourceDate ? $sourceDate->copy()->addDays($settings->due_days) : null;
     }
 
     protected function resolveElapsedPeriods(?Carbon $dueDate, $settings)

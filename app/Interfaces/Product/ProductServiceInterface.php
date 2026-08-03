@@ -8,6 +8,10 @@ interface ProductServiceInterface
 
     public function publicCatalog(object $payload);
 
+    public function publicTopSelling(object $payload);
+
+    public function publicFindByUuid(string $uuid);
+
     public function findByUuid(string $uuid);
 
     public function create(object $payload);
@@ -15,4 +19,6 @@ interface ProductServiceInterface
     public function update(string $uuid, object $payload);
 
     public function delete(string $uuid);
+
+    public function topSelling(object $payload);
 }

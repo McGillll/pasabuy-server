@@ -142,7 +142,7 @@ PATCH /api/admin/orders/36d53541-.../delivery-status
 - **404** — no order with that uuid: `{ "success": false, "message": "Order not found.", "data": null }`
 - **422** — `delivery_status` missing or not one of `not_delivered`/`delivered`.
 
-**Side effect:** setting `delivery_status` to `delivered` passes the order to `InvoiceMailerService::sendIfDue($order, 'delivery')`. The invoice is only actually emailed if the seller's invoice setting `due_date_reference` is `delivery` (if it's `schedule_finish`, the email already fired at schedule finish — see `pasabuy-schedule-api.md`) and the order hasn't already been emailed (`Order.invoice_sent_at` guards against duplicates, e.g. toggling delivered → not_delivered → delivered again does not resend it). Same skip/log-on-failure behavior as the schedule-finish trigger — never fails this request.
+Setting `delivery_status` has no invoice side effect — invoice emails are only ever queued once, at schedule finish (see `POST .../finish` in `pasabuy-schedule-api.md`).
 
 ## Seller order-item editor
 

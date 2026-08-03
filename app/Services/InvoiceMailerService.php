@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Interfaces\Invoice\InvoiceMailerServiceInterface;
 use App\Interfaces\Invoice\InvoiceServiceInterface;
-use App\Interfaces\InvoiceSetting\InvoiceSettingRepositoryInterface;
 use App\Mail\OverdueReminderMail;
 use App\Mail\PasabuyInvoiceMail;
 use App\Models\PasabuyOrder;
@@ -16,27 +15,19 @@ class InvoiceMailerService implements InvoiceMailerServiceInterface
 {
     public function __construct(
         protected InvoiceServiceInterface $invoiceService,
-        protected InvoiceSettingRepositoryInterface $invoiceSettingRepository,
     ) {}
 
     /**
-     * Sends the invoice email only once per order, and only when $trigger matches the
-     * seller's due_date_reference setting — otherwise the invoice's due_date would resolve
-     * to null (the reference event hasn't happened yet) and the email would read "Due: N/A".
+     * Sends the invoice email only once per order — guarded by invoice_sent_at so re-running
+     * the schedule-finish sweep is a no-op for orders already emailed.
      */
-    public function sendIfDue(PasabuyOrder $order, string $trigger)
+    public function sendIfDue(PasabuyOrder $order)
     {
         if ($order->invoice_sent_at !== null) {
             return;
         }
 
         if (! in_array($order->status, PasabuyOrder::LIVE_STATUSES, true)) {
-            return;
-        }
-
-        $settings = $this->invoiceSettingRepository->getForUser($order->pasabuySchedule->user_id);
-
-        if ($settings->due_date_reference !== $trigger) {
             return;
         }
 

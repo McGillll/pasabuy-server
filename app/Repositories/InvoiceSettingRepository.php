@@ -25,8 +25,7 @@ class InvoiceSettingRepository implements InvoiceSettingRepositoryInterface
             $setting->markup_threshold_amount = 1000.00;
             $setting->markup_percentage = 10.00;
             $setting->markup_fixed_amount = 100.00;
-            $setting->due_days = 15;
-            $setting->due_date_reference = 'delivery';
+            $setting->handling_fee = 0.00;
             $setting->interest_rate = 1.00;
             $setting->interest_period = 'month';
             $setting->interest_base = 'outstanding_balance';
@@ -44,8 +43,7 @@ class InvoiceSettingRepository implements InvoiceSettingRepositoryInterface
         $setting->markup_threshold_amount = $payload->markup_threshold_amount;
         $setting->markup_percentage = $payload->markup_percentage;
         $setting->markup_fixed_amount = $payload->markup_fixed_amount;
-        $setting->due_days = $payload->due_days;
-        $setting->due_date_reference = $payload->due_date_reference;
+        $setting->handling_fee = $payload->handling_fee;
         $setting->interest_rate = $payload->interest_rate;
         $setting->interest_period = $payload->interest_period;
         $setting->interest_base = $payload->interest_base;

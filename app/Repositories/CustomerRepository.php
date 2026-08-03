@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Interfaces\Customer\CustomerRepositoryInterface;
+use App\Models\PasabuyOrder;
 use App\Models\User;
 use App\Traits\InteractsWithCache;
 use Carbon\Carbon;
@@ -76,5 +77,22 @@ class CustomerRepository implements CustomerRepositoryInterface
         $customer = $this->findByUuid($uuid);
 
         return $customer->orders()->with('items.pasabuyScheduleProduct.product', 'pasabuySchedule')->latest()->get();
+    }
+
+    public function topBuyers(object $payload)
+    {
+        $year = $payload->year ?? now()->year;
+        $month = $payload->month ?? now()->month;
+
+        return PasabuyOrder::selectRaw('users.id, users.uuid, users.first_name, users.last_name, SUM(pasabuy_orders.total_amount) as total_spend, COUNT(*) as order_count')
+            ->join('users', 'users.id', '=', 'pasabuy_orders.user_id')
+            ->whereHas('pasabuySchedule', fn ($query) => $query->where('user_id', $payload->seller_id)
+                ->whereYear('pasabuy_schedule_date', $year)
+                ->whereMonth('pasabuy_schedule_date', $month))
+            ->whereIn('status', PasabuyOrder::LIVE_STATUSES)
+            ->groupBy('users.id', 'users.uuid', 'users.first_name', 'users.last_name')
+            ->orderByDesc('total_spend')
+            ->limit($payload->limit ?? 5)
+            ->get();
     }
 }

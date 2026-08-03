@@ -1,5 +1,87 @@
 # Latest Updates
 
+## 2026-08-02 — Brand feature removed entirely
+
+**What changed:**
+- The whole Brand module is deleted: `brands` table dropped, `pasabuy_products.brand_id` column dropped (via additive migration `2026_08_02_003430_drop_brand_feature`, which also documents the down-migration schema for reference). `Brand` model, repository, service, interfaces, controller, requests, resource, filter, and routes (`/admin/brands`) all removed.
+- `ProductResource` no longer includes a `brand` field; `ProductStoreRequest`/`ProductUpdateRequest` no longer accept `brand_uuid`; the `brand_uuid` filter param is gone from `GET /api/admin/products` and `GET /api/public/products`.
+- `brand-api.md` deleted.
+
+**Why:** Product requested full removal of the brand concept from the catalog.
+
+**Docs updated:** `product-api.md` (removed `brand` field, `brand_uuid` params, related response examples and error notes). `brand-api.md` deleted outright.
+
+**Frontend impact:** `client/app/types/Brand.ts`, `BrandService.ts`, `BrandsPanel.vue`, `BrandList.vue` deleted. `admin/products/index.vue` loses the "Brands" tab and all `allBrands` state/wiring. `ProductsPanel.vue` loses the brand filter, brand column, and brand form field — submits no longer send `brand_uuid`. `AdminProductList.vue`, `Product.ts`, `ProductService.ts`, `useProductDisplayName.ts`, and `pasabuy/[uuid].vue` (public schedule page's brand filter tabs) all had their brand references removed.
+
+## 2026-08-01 — Top products / top buyers now scoped by the schedule's date, not order placement date
+
+**What changed:** `GET /api/admin/products/top-selling` and `GET /api/admin/customers/top-buyers` now filter `month`/`year` against the related pasabuy schedule's `pasabuy_schedule_date`, instead of the order's own `created_at`. Query params and response shape are unchanged.
+
+**Why:** Customers place orders against a schedule before its `pasabuy_schedule_date` arrives (that's the whole cutoff mechanic), so an order's `created_at` is often in an earlier month than the schedule it belongs to. Filtering by `created_at` meant browsing "this month" could show nothing even when a schedule dated this month had plenty of orders, because those orders were all placed last month. Filtering by the schedule's own date makes "this month" mean "runs happening this month," matching how the rest of the app already treats `pasabuy_schedule_date` as the authoritative date for a schedule.
+
+**Docs updated:** `product-api.md` (`GET /top-selling`), `customer-api.md` (`GET /top-buyers`).
+
+**Frontend impact:** none required — same request/response contract. `client/app/components/RankedList.vue` also gained prev/next month arrows (emits `change-month`) so the dashboard's Top products/Top buyers card is no longer locked to the current calendar month.
+
+## 2026-08-01 — Handling fee added to invoice settings
+
+**What changed:**
+- New `handling_fee` decimal column (default `0.00`) on `pasabuy_seller_invoice_settings` and `pasabuy_schedule_invoice_settings`, added via additive migrations (`2026_08_01_190512_...`, `2026_08_01_190513_...`).
+- `InvoiceSettingResource`/`InvoiceSettingUpdateRequest` now include `handling_fee` (required, numeric, min 0).
+- `InvoiceService`'s `total` calculation is now `subtotal + markup_amount + handling_fee` (was `subtotal + markup_amount`). `InvoiceResource` exposes the new `handling_fee` field alongside `markup_amount`.
+- `ScheduleInvoiceSettingRepository::createFromSource()` snapshots `handling_fee` onto the schedule the same way it already does for the markup fields.
+- Default `0.00` means existing sellers see no change to `total` until they set a non-zero handling fee.
+
+**Why:** Sellers need a flat fee (e.g. courier/packing handling cost) added to every order alongside the existing markup, independent of the markup threshold split.
+
+**Docs updated:** `invoice-setting-api.md`, `invoice-api.md`.
+
+**Frontend impact:** `client/app/types/InvoiceSetting.ts` and `Invoice.ts` gain `handling_fee`. `client/app/pages/admin/settings.vue`'s invoice form gains a "Handling fee" input (sent every `PATCH`, since that endpoint is a full replace). `client/app/components/order/InvoiceBreakdown.vue` shows a "Handling fee" line when non-zero. The invoice email template also shows it conditionally.
+
+## 2026-08-01 — Invoice due date moved from settings to the schedule, set mandatorily on finish
+
+**What changed:**
+- `due_days` and `due_date_reference` removed from `pasabuy_seller_invoice_settings` and `pasabuy_schedule_invoice_settings` (both the DB columns and every field in `InvoiceSettingResource`/`InvoiceSettingUpdateRequest`).
+- New `pasabuy_schedules.due_date` column (nullable date). `POST /api/admin/pasabuy-schedules/{uuid}/finish` now **requires** a `due_date` in the request body — guarded to be today or later (`422` if in the past). It's set once, at finish, and never changes afterward (the transition to `finished` is already terminal).
+- `InvoiceService`'s `due_date` calculation now reads `order.pasabuySchedule.due_date` directly — no more offset math, no more branching on a reference event.
+- `InvoiceMailerService::sendIfDue()` dropped its `$trigger` parameter and the `due_date_reference` gating — it's still guarded by `invoice_sent_at`/`LIVE_STATUSES`/customer-email-present, unchanged. The `delivery`-triggered invoice email on `PATCH /admin/orders/{uuid}/delivery-status` is removed entirely — invoice emails are now only ever queued once, at schedule finish.
+
+**Why:** `due_date_reference: delivery` let an order's due date depend on per-order delivery timing, which no longer matches the desired flow — the seller now picks one due date for the whole batch, at the moment they finish it, and every order on that schedule shares it.
+
+**Docs updated:** `invoice-setting-api.md`, `invoice-api.md`, `pasabuy-schedule-api.md` (`POST .../finish`), `order-api.md` (delivery-status side effect removed).
+
+**Frontend impact:** `client/app/types/InvoiceSetting.ts` and the invoice-settings form in `client/app/pages/admin/settings.vue` lose `due_days`/`due_date_reference` fields. The finish-schedule flow (`useScheduleWorkspace.ts` / `ScheduleStatusStepper.vue`) now must collect a mandatory `due_date` (date >= today) before calling `POST .../finish`, and `PasabuyScheduleService.ts#finishSchedule` takes a `{ due_date }` payload.
+
+## 2026-07-30 — Top products / top buyers scoped to the current month
+
+**What changed:** `GET /api/admin/products/top-selling` and `GET /api/admin/customers/top-buyers` now filter by the order's `created_at` month/year, defaulting to the current calendar month if `month`/`year` aren't passed. Both accept optional `month` (1-12) and `year` query params to look at a different month later if a date picker is added.
+
+**Why:** Both rankings previously aggregated over all-time order history with no time boundary, so a big one-off order months ago could permanently dominate the "top" list even after it stopped being representative of current selling activity. Scoping to the current month by default keeps the dashboard reflecting what's actually happening now; the `month`/`year` params are there so a future UI can look back at past months without a new endpoint.
+
+**Docs updated:** `product-api.md` (`GET /top-selling` query params), `customer-api.md` (`GET /top-buyers` query params).
+
+**Frontend impact:** none required to keep working — no params sent means "this month" applies automatically. The dashboard's `RankedList` card now shows a period label (current month/year) next to the Top products/Top buyers tabs so it's clear the ranking is monthly, not all-time.
+
+## 2026-07-29 — Top buyers ranking
+
+**What changed:** New `GET /api/admin/customers/top-buyers` endpoint. Returns the seller's top 5 customers by total spend (`pasabuy_orders.total_amount` summed), aggregated across all of the seller's pasabuy schedules and scoped to `pending`/`confirmed` orders only (cancelled excluded — same `LIVE_STATUSES` filter as the top-products endpoint, for consistency: this reflects orders actually placed and not withdrawn, not just fully-settled revenue). Grouped by the real `pasabuy_orders.user_id` FK, not the denormalized `customer_name` snapshot string, so casing/whitespace variations in the snapshot never cause a customer to be double-counted. Optional `limit` query param, default 5. Response is a plain array of `{ uuid, name, total_spend, order_count }`, no pagination.
+
+**Why:** Brand-new feature, not a bug fix — the seller dashboard wants a "Top 5 buyers" card reusing the existing `RankedList`/`RankedRow` components (already generic enough for this, previously only used for top products) so sellers get visibility into their best customers at a glance. No aggregation for this existed anywhere in the codebase.
+
+**Docs updated:** `customer-api.md` (new endpoint section).
+
+**Frontend impact:** `client/app/components/api/admin/CustomerService.ts` gets a new `fetchTopBuyers()` method calling this endpoint, and `client/app/types/User.ts` gets a matching `TopBuyer` type. Not wired into `admin/index.vue` yet — left for a separate in-progress integration pass (same as the top-products card).
+
+## 2026-07-29 — Top products ranking
+
+**What changed:** New `GET /api/admin/products/top-selling` endpoint. Returns the seller's top 5 products by total ordered quantity (`pasabuy_order_items.quantity` summed), aggregated across all of the seller's pasabuy schedules and scoped to `pending`/`confirmed` orders only (cancelled excluded). Optional `limit` query param, default 5. Response is a plain array of `{ uuid, name, total_quantity }`, no pagination.
+
+**Why:** The seller dashboard's `RankedList` component was built ahead of the backend (flagged in `client/backend_flags.md`) to show top-5 products by ordered quantity; no aggregation endpoint existed for it. This mirrors the existing per-schedule `PasabuyScheduleRepository::summary()` pattern but grouped by product across all schedules instead of one.
+
+**Docs updated:** `product-api.md` (new endpoint section).
+
+**Frontend impact:** `client/app/components/api/admin/ProductService.ts` gets a new `fetchTopSelling()` method calling this endpoint; the `RankedList` component on the admin dashboard can now be wired to real data instead of `:items="[]"`. Not wired into `admin/index.vue` yet — left for a separate in-progress integration pass. `client/backend_flags.md`'s "Top products ranking" entry removed.
+
 ## 2026-07-28 — Schedule deletion restricted to open; payments restricted to finished
 
 **What changed:**

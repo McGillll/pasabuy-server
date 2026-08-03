@@ -10,8 +10,7 @@ use Illuminate\Database\Eloquent\Model;
     'markup_threshold_amount',
     'markup_percentage',
     'markup_fixed_amount',
-    'due_days',
-    'due_date_reference',
+    'handling_fee',
     'interest_rate',
     'interest_period',
     'interest_base',
@@ -20,8 +19,6 @@ use Illuminate\Database\Eloquent\Model;
 class PasabuySellerInvoiceSetting extends Model
 {
     use UsesUuid;
-
-    public const DUE_DATE_REFERENCES = ['delivery', 'schedule_finish'];
 
     public const INTEREST_PERIODS = ['day', 'week', 'month'];
 
@@ -33,6 +30,7 @@ class PasabuySellerInvoiceSetting extends Model
             'markup_threshold_amount' => 'decimal:2',
             'markup_percentage' => 'decimal:2',
             'markup_fixed_amount' => 'decimal:2',
+            'handling_fee' => 'decimal:2',
             'interest_rate' => 'decimal:2',
             'is_active' => 'boolean',
         ];

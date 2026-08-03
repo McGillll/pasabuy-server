@@ -16,24 +16,12 @@ class PasabuyProductFilter extends ModelFilter
 
     public function search($query)
     {
-        return $this->where(function ($builder) use ($query) {
-            $builder->where('name', 'like', "%{$query}%")
-                ->orWhereHas('brand', function ($brandQuery) use ($query) {
-                    $brandQuery->where('name', 'like', "%{$query}%");
-                });
-        });
+        return $this->where('name', 'like', "%{$query}%");
     }
 
     public function categoryUuid($uuid)
     {
         return $this->whereHas('category', function ($query) use ($uuid) {
-            $query->where('uuid', $uuid);
-        });
-    }
-
-    public function brandUuid($uuid)
-    {
-        return $this->whereHas('brand', function ($query) use ($uuid) {
             $query->where('uuid', $uuid);
         });
     }

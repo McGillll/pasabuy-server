@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CustomerResource;
 use App\Http\Resources\OrderResource;
+use App\Http\Resources\TopBuyerResource;
 use App\Interfaces\Customer\CustomerServiceInterface;
 use App\Traits\ApiResponse;
 use App\Traits\InteractsWithCache;
@@ -62,5 +63,15 @@ class CustomerController extends Controller
         $orders = $this->customerService->orders($uuid);
 
         return $this->success(OrderResource::collection($orders))->header('ETag', $etag);
+    }
+
+    public function topBuyers(Request $request)
+    {
+        $payload = (object) $request->query();
+        $payload->seller_id = $request->user()->id;
+
+        $customers = $this->customerService->topBuyers($payload);
+
+        return $this->success(TopBuyerResource::collection($customers));
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductStoreRequest;
 use App\Http\Requests\ProductUpdateRequest;
 use App\Http\Resources\ProductResource;
+use App\Http\Resources\TopProductResource;
 use App\Interfaces\Product\ProductServiceInterface;
 use App\Traits\ApiResponse;
 use App\Traits\InteractsWithCache;
@@ -82,5 +83,15 @@ class ProductController extends Controller
         $this->productService->delete($uuid);
 
         return $this->success(null, 'Product deleted successfully');
+    }
+
+    public function topSelling(Request $request)
+    {
+        $payload = (object) $request->query();
+        $payload->seller_id = $request->user()->id;
+
+        $products = $this->productService->topSelling($payload);
+
+        return $this->success(TopProductResource::collection($products));
     }
 }

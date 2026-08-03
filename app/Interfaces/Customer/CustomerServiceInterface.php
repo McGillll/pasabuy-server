@@ -15,4 +15,6 @@ interface CustomerServiceInterface
     public function reject(string $uuid);
 
     public function orders(string $uuid);
+
+    public function topBuyers(object $payload);
 }

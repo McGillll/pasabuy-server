@@ -2,7 +2,9 @@
 
 Per-seller invoice rules: markup calculation and overdue compounding interest. Every seller (`admin`-ability user) has exactly one invoice-settings row, auto-created with sensible defaults on first access. Endpoints always operate on "my own settings" — there is no identifier in the URL.
 
-**Retroactivity:** updating these settings only affects orders on schedules that are still `open`/`closed`. When a schedule is `finished`, the current rules are snapshotted onto that schedule (`pasabuy_schedule_invoice_settings`) and used for all its orders from then on — later edits here do not change due dates or markup for already-finished schedules. See `invoice-api.md`.
+Due date is **not** configured here — it lives on the pasabuy schedule itself (`pasabuy_schedules.due_date`), set mandatorily when the seller finishes the schedule. See `pasabuy-schedule-api.md`'s `POST .../finish`.
+
+**Retroactivity:** updating these settings only affects orders on schedules that are still `open`/`closed`. When a schedule is `finished`, the current rules are snapshotted onto that schedule (`pasabuy_schedule_invoice_settings`) and used for all its orders from then on — later edits here do not change markup for already-finished schedules. See `invoice-api.md`.
 
 ## Endpoints overview
 
@@ -29,8 +31,7 @@ Per-seller invoice rules: markup calculation and overdue compounding interest. E
 | markup_threshold_amount   | decimal | 1000.00               | Order total above this uses percentage markup, at/below uses the fixed markup |
 | markup_percentage         | decimal | 10.00                 | Percent applied when total > threshold |
 | markup_fixed_amount       | decimal | 100.00                | Flat amount applied when total ≤ threshold |
-| due_days                  | integer | 15                    | Days after the `due_date_reference` event before the invoice is due |
-| due_date_reference        | enum    | `delivery`            | One of `delivery` (count from the order's own `delivered_at`) or `schedule_finish` (count from the schedule's `finished_at`) — chooses which event starts the due-date clock |
+| handling_fee              | decimal | 0.00                  | Flat fee added on top of markup on every order, regardless of threshold |
 | interest_rate             | decimal | 1.00                  | Percent compounded per period once overdue |
 | interest_period           | enum    | `month`               | One of `day`, `week`, `month` — the compounding period unit |
 | interest_base             | enum    | `outstanding_balance` | One of `outstanding_balance` (total minus payments so far) or `full_total` (ignores partial payments) |
@@ -53,8 +54,7 @@ Returns the authenticated seller's invoice rules. If the seller has never config
     "markup_threshold_amount": "1000.00",
     "markup_percentage": "10.00",
     "markup_fixed_amount": "100.00",
-    "due_days": 15,
-    "due_date_reference": "delivery",
+    "handling_fee": "0.00",
     "interest_rate": "1.00",
     "interest_period": "month",
     "interest_base": "outstanding_balance",
@@ -76,8 +76,7 @@ Full replace — send every field each time (pre-fill the form from `GET`).
 | markup_threshold_amount   | numeric | Yes      | Min 0 |
 | markup_percentage         | numeric | Yes      | 0–100 |
 | markup_fixed_amount       | numeric | Yes      | Min 0 |
-| due_days                  | integer | Yes      | Min 1 |
-| due_date_reference        | string  | Yes      | `delivery` or `schedule_finish` |
+| handling_fee              | numeric | Yes      | Min 0 |
 | interest_rate             | numeric | Yes      | Min 0 |
 | interest_period           | string  | Yes      | `day`, `week`, or `month` |
 | interest_base             | string  | Yes      | `outstanding_balance` or `full_total` |
@@ -91,8 +90,7 @@ PATCH /api/admin/invoice-settings
   "markup_threshold_amount": 1000,
   "markup_percentage": 10,
   "markup_fixed_amount": 100,
-  "due_days": 15,
-  "due_date_reference": "delivery",
+  "handling_fee": 0,
   "interest_rate": 1,
   "interest_period": "month",
   "interest_base": "outstanding_balance",

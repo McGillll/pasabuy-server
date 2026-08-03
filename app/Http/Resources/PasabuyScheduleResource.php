@@ -16,6 +16,7 @@ class PasabuyScheduleResource extends JsonResource
             'pasabuy_schedule_date' => $this->pasabuy_schedule_date?->toDateString(),
             'status' => $this->status,
             'is_open' => $this->is_open,
+            'due_date' => $this->due_date?->toDateString(),
             'seller_name' => $this->whenLoaded('user', fn () => $this->user->fullName()),
             'product_count' => $this->whenCounted('scheduleProducts'),
             'products' => PasabuyScheduleProductResource::collection($this->whenLoaded('scheduleProducts')),

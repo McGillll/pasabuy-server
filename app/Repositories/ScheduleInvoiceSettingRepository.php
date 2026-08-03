@@ -28,8 +28,7 @@ class ScheduleInvoiceSettingRepository implements ScheduleInvoiceSettingReposito
         $setting->markup_threshold_amount = $source->markup_threshold_amount;
         $setting->markup_percentage = $source->markup_percentage;
         $setting->markup_fixed_amount = $source->markup_fixed_amount;
-        $setting->due_days = $source->due_days;
-        $setting->due_date_reference = $source->due_date_reference;
+        $setting->handling_fee = $source->handling_fee;
         $setting->interest_rate = $source->interest_rate;
         $setting->interest_period = $source->interest_period;
         $setting->interest_base = $source->interest_base;
