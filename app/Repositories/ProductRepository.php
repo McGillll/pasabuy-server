@@ -42,6 +42,42 @@ class ProductRepository implements ProductRepositoryInterface
         );
     }
 
+    public function publicTopSelling(object $payload)
+    {
+        $version = $this->cacheVersion('products');
+        $limit = $payload->limit ?? 10;
+        $month = now()->format('Y-m');
+
+        return Cache::remember(
+            "products:public_top_selling:v{$version}:{$month}:{$limit}",
+            300,
+            function () use ($limit) {
+                $from = now()->subMonth()->startOfMonth();
+
+                $ranked = PasabuyOrderItem::selectRaw('pasabuy_products.id, SUM(pasabuy_order_items.quantity) as total_quantity')
+                    ->join('pasabuy_schedule_products', 'pasabuy_schedule_products.id', '=', 'pasabuy_order_items.pasabuy_schedule_product_id')
+                    ->join('pasabuy_products', 'pasabuy_products.id', '=', 'pasabuy_schedule_products.product_id')
+                    ->where('pasabuy_products.is_active', true)
+                    ->whereHas('order', fn ($query) => $query->whereHas('pasabuySchedule', fn ($q2) => $q2->where('pasabuy_schedule_date', '>=', $from))
+                        ->whereIn('status', PasabuyOrder::LIVE_STATUSES))
+                    ->groupBy('pasabuy_products.id')
+                    ->orderByDesc('total_quantity')
+                    ->limit($limit)
+                    ->pluck('total_quantity', 'pasabuy_products.id');
+
+                if ($ranked->isEmpty()) {
+                    return collect();
+                }
+
+                return PasabuyProduct::with('category')
+                    ->whereIn('id', $ranked->keys())
+                    ->get()
+                    ->sortByDesc(fn ($product) => $ranked[$product->id])
+                    ->values();
+            }
+        );
+    }
+
     public function findByUuid(string $uuid)
     {
         $version = $this->cacheVersion('products');
@@ -50,6 +86,17 @@ class ProductRepository implements ProductRepositoryInterface
             "products:uuid:v{$version}:{$uuid}",
             600,
             fn () => PasabuyProduct::with('category')->where('uuid', $uuid)->first()
+        );
+    }
+
+    public function publicFindByUuid(string $uuid)
+    {
+        $version = $this->cacheVersion('products');
+
+        return Cache::remember(
+            "products:public_uuid:v{$version}:{$uuid}",
+            600,
+            fn () => PasabuyProduct::with('category')->where('uuid', $uuid)->where('is_active', true)->first()
         );
     }
 

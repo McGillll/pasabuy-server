@@ -33,9 +33,25 @@ class ProductService implements ProductServiceInterface
         return $this->productRepository->publicCatalog($payload);
     }
 
+    public function publicTopSelling(object $payload)
+    {
+        return $this->productRepository->publicTopSelling($payload);
+    }
+
     public function findByUuid(string $uuid)
     {
         $product = $this->productRepository->findByUuid($uuid);
+
+        if (! $product) {
+            throw new NotFoundException('Product not found.');
+        }
+
+        return $product;
+    }
+
+    public function publicFindByUuid(string $uuid)
+    {
+        $product = $this->productRepository->publicFindByUuid($uuid);
 
         if (! $product) {
             throw new NotFoundException('Product not found.');

@@ -11,6 +11,8 @@ Route::prefix('pasabuy-schedules')->group(function () {
 });
 
 Route::get('/products', [PublicProductController::class, 'index']);
+Route::get('/products/top-selling', [PublicProductController::class, 'topSelling']);
+Route::get('/products/{uuid}', [PublicProductController::class, 'show']);
 
 Route::post('/customers/register', [PublicCustomerController::class, 'register'])->middleware('throttle:register');
 
