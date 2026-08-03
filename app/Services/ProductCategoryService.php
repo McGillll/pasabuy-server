@@ -28,9 +28,35 @@ class ProductCategoryService implements ProductCategoryServiceInterface
         return $this->productCategoryRepository->all($payload);
     }
 
+    public function publicChildren(object $payload)
+    {
+        if (isset($payload->parent_uuid)) {
+            $parent = $this->productCategoryRepository->findByUuid($payload->parent_uuid);
+
+            if (! $parent || ! $parent->is_active) {
+                throw new NotFoundException("Product category {$payload->parent_uuid} not found.");
+            }
+
+            $payload->parent_id = $parent->id;
+        }
+
+        return $this->productCategoryRepository->publicChildren($payload);
+    }
+
     public function findByUuid(string $uuid)
     {
         $category = $this->productCategoryRepository->findByUuid($uuid);
+
+        if (! $category) {
+            throw new NotFoundException('Product category not found.');
+        }
+
+        return $category;
+    }
+
+    public function publicFindByUuid(string $uuid)
+    {
+        $category = $this->productCategoryRepository->publicFindByUuid($uuid);
 
         if (! $category) {
             throw new NotFoundException('Product category not found.');

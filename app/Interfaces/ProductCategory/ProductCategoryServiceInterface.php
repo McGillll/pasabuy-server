@@ -6,6 +6,10 @@ interface ProductCategoryServiceInterface
 {
     public function all(object $payload);
 
+    public function publicChildren(object $payload);
+
+    public function publicFindByUuid(string $uuid);
+
     public function findByUuid(string $uuid);
 
     public function create(object $payload);

@@ -33,6 +33,26 @@ class ProductCategoryRepository implements ProductCategoryRepositoryInterface
         );
     }
 
+    public function publicChildren(object $payload)
+    {
+        $version = $this->cacheVersion('product_categories');
+
+        return Cache::remember(
+            "product_categories:public_children:v{$version}:".md5(json_encode($payload)),
+            300,
+            fn () => ProductCategory::where('is_active', true)
+                ->with('parent')
+                ->withCount('children')
+                ->when(
+                    isset($payload->parent_id),
+                    fn ($query) => $query->where('parent_id', $payload->parent_id),
+                    fn ($query) => $query->whereNull('parent_id')
+                )
+                ->orderBy('name')
+                ->get()
+        );
+    }
+
     public function findByUuid(string $uuid)
     {
         $version = $this->cacheVersion('product_categories');
@@ -41,6 +61,21 @@ class ProductCategoryRepository implements ProductCategoryRepositoryInterface
             "product_categories:uuid:v{$version}:{$uuid}",
             600,
             fn () => ProductCategory::where('uuid', $uuid)->first()
+        );
+    }
+
+    public function publicFindByUuid(string $uuid)
+    {
+        $version = $this->cacheVersion('product_categories');
+
+        return Cache::remember(
+            "product_categories:public_uuid:v{$version}:{$uuid}",
+            600,
+            fn () => ProductCategory::with('parent')
+                ->withCount('children')
+                ->where('uuid', $uuid)
+                ->where('is_active', true)
+                ->first()
         );
     }
 
