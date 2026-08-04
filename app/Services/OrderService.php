@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\OrderStatusChanged;
 use App\Exceptions\InvalidPayloadException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedActionException;
@@ -41,7 +42,11 @@ class OrderService implements OrderServiceInterface
 
         $this->ensureOrderOwnership($order, $payload->user_id);
 
-        return $this->orderRepository->updateStatus($uuid, $payload);
+        $updated = $this->orderRepository->updateStatus($uuid, $payload);
+
+        OrderStatusChanged::dispatch($updated);
+
+        return $updated;
     }
 
     public function updateDeliveryStatus(string $uuid, object $payload)
@@ -54,7 +59,11 @@ class OrderService implements OrderServiceInterface
 
         $this->ensureOrderOwnership($order, $payload->user_id);
 
-        return $this->orderRepository->updateDeliveryStatus($uuid, $payload);
+        $updated = $this->orderRepository->updateDeliveryStatus($uuid, $payload);
+
+        OrderStatusChanged::dispatch($updated);
+
+        return $updated;
     }
 
     public function createForSchedule(string $scheduleUuid, object $payload)
