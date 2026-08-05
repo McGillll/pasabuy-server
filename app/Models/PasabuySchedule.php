@@ -50,4 +50,9 @@ class PasabuySchedule extends Model
     {
         return $this->hasMany(PasabuyOrder::class);
     }
+
+    public function pasabuyScheduleInvoiceSetting()
+    {
+        return $this->hasOne(PasabuyScheduleInvoiceSetting::class);
+    }
 }

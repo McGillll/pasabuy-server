@@ -94,10 +94,11 @@ class OrderRepository implements OrderRepositoryInterface
         $locked = PasabuyOrder::whereKey($order->id)->lockForUpdate()->first();
 
         $paid = $locked->payments()->sum('amount');
+        $balanceDue = $locked->invoiceBreakdown()['balance_due'];
 
         $locked->payment_status = match (true) {
             bccomp((string) $paid, '0', 2) <= 0 => 'unpaid',
-            bccomp((string) $paid, (string) $locked->total_amount, 2) >= 0 => 'paid',
+            bccomp((string) $balanceDue, '0', 2) <= 0 => 'paid',
             default => 'partially_paid',
         };
 

@@ -47,7 +47,7 @@ The backend does not gate on the pasabuy schedule's status — the customer endp
 | handling_fee      | number        | Flat fee from the seller's invoice settings, added on every order |
 | total             | number        | `subtotal + markup_amount + handling_fee` |
 | due_date          | string\|null  | ISO 8601, null until the schedule is finished (the seller sets it mandatorily on finish) |
-| is_overdue        | boolean       | `now() > due_date` |
+| is_overdue        | boolean       | `now() > due_date` and `payment_status` is not `paid` |
 | interest_base     | string        | Seller setting: `outstanding_balance` or `full_total` |
 | interest_lines    | array         | Chronological ledger entries: `type` (`interest` or `payment`), `label`, `amount` (signed; negative for payments), `running_total`. Empty if not overdue |
 | interest_total    | number        | Sum of `interest_lines[]` entries where `type` is `interest` |

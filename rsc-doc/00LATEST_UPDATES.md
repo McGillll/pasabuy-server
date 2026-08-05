@@ -1,5 +1,19 @@
 # Latest Updates
 
+## 2026-08-05 — `payment_status` now accounts for markup, handling fee, and overdue interest
+
+**What changed:**
+- `PasabuyOrder` gained `overallBalance()` and `invoiceBreakdown()` — the single source of truth for what an order truly owes (subtotal + markup + handling fee + interest accrued to date). `InvoiceService` now delegates to these instead of duplicating the calculation.
+- `OrderRepository::recalcPaymentStatus` now flips to `paid` based on the invoice's `balance_due <= 0` instead of comparing the paid sum against the raw `total_amount` column, so `payment_status` only becomes `paid` once markup, handling fee, and any accrued overdue interest are actually covered — not just the base subtotal. (`balance_due` is used rather than `overallBalance()`/`grand_total` because in `outstanding_balance` interest mode, `grand_total` already nets out every payment as the ledger walks — comparing paid-to-date against it would flip to `paid` on a good partial payment; `balance_due` is correctly net in both interest modes.)
+- Invoice's `is_overdue` flag now also requires `payment_status !== 'paid'` (previously it was purely `now() > due_date`, so a fully settled order past its due date still showed as overdue).
+- Overdue interest stops accruing once an order is fully paid (`PasabuyOrder::paidOffAt()` caps the interest clock at the last payment date instead of continuing to compound against "now").
+
+**Why:** A customer paying only the base subtotal on a schedule with markup/handling fee/interest configured was being marked `paid` while still owing money — the seller saw no "overdue" badge and no indication a balance remained.
+
+**Docs updated:** `order-api.md` (`payment_status` description), `invoice-api.md` (`is_overdue` description).
+
+**Frontend impact:** none required — same field names and response shape. Orders that were previously (incorrectly) marked `paid` under partial payment will now correctly show `partially_paid` going forward.
+
 ## 2026-08-02 — Brand feature removed entirely
 
 **What changed:**
