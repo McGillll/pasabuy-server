@@ -1,5 +1,15 @@
 # Latest Updates
 
+## 2026-08-06 — Basket `total_items` now counts distinct line items, not summed quantities
+
+**What changed:** `BasketResource::total_items` changed from `$items->sum('quantity')` to `$items->count()`.
+
+**Why:** The basket badge showed the sum of every item's quantity (e.g. 3 Rebisco + 2 Honey + 1 Milk = 6), which read as confusing clutter compared to showing how many distinct products are in the basket (3).
+
+**Docs updated:** `basket-api.md` (`total_items` example and description).
+
+**Frontend impact:** none required — same field name and shape, badge value will just be smaller/more accurate.
+
 ## 2026-08-05 — `payment_status` now accounts for markup, handling fee, and overdue interest
 
 **What changed:**

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Interfaces\Auth\AuthServiceInterface;
+use App\Interfaces\Basket\BasketServiceInterface;
 use App\Interfaces\Customer\CustomerServiceInterface;
 use App\Interfaces\DailyVerse\DailyVerseServiceInterface;
 use App\Interfaces\Invoice\InvoiceMailerServiceInterface;
@@ -15,6 +16,7 @@ use App\Interfaces\Product\ProductServiceInterface;
 use App\Interfaces\ProductCategory\ProductCategoryServiceInterface;
 use App\Interfaces\Settings\SettingsServiceInterface;
 use App\Services\AuthService;
+use App\Services\BasketService;
 use App\Services\CustomerService;
 use App\Services\DailyVerseService;
 use App\Services\InvoiceMailerService;
@@ -33,6 +35,7 @@ class ServiceProviders extends ServiceProvider
     public function register()
     {
         $this->app->bind(AuthServiceInterface::class, AuthService::class);
+        $this->app->bind(BasketServiceInterface::class, BasketService::class);
         $this->app->bind(ProductServiceInterface::class, ProductService::class);
         $this->app->bind(ProductCategoryServiceInterface::class, ProductCategoryService::class);
         $this->app->bind(PasabuyScheduleServiceInterface::class, PasabuyScheduleService::class);
