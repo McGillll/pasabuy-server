@@ -38,6 +38,24 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(PasabuySellerInvoiceSetting::class);
     }
 
+    /**
+     * Total balance the customer currently owes across their live, unsettled orders.
+     * Always 0 for admins since they place no orders of their own.
+     */
+    public function getReceivable()
+    {
+        if ($this->role === 'admin') {
+            return 0.0;
+        }
+
+        return round($this->orders()
+            ->whereIn('status', PasabuyOrder::LIVE_STATUSES)
+            ->where('payment_status', '!=', 'paid')
+            ->with(['payments', 'pasabuySchedule.pasabuyScheduleInvoiceSetting', 'pasabuySchedule.user.invoiceSetting'])
+            ->get()
+            ->sum(fn ($order) => $order->invoiceBreakdown()['balance_due']), 2);
+    }
+
     public function fullName()
     {
         return trim("{$this->first_name} {$this->last_name}");

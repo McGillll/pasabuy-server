@@ -193,7 +193,7 @@ POST /api/customer/pasabuy-schedules/e9400549-.../orders
 
 ### Success response — 200
 
-Same paginator shape as `product-api.md`'s index endpoint, with `Order` objects in `data.data`. `amount_paid`/`amount_due` are now populated here too (same calculation as `order-api.md`'s admin list).
+Same paginator shape as `product-api.md`'s index endpoint, with `Order` objects in `data.data`. `amount_paid`/`amount_due` are now populated here too (same calculation as `order-api.md`'s admin list). `due_date` (the parent schedule's payment due date, `null` until the schedule is `finished`) and `is_overdue` (`true` when `due_date` has passed and `payment_status` isn't `paid`) are populated here as well — same values as the invoice breakdown's `due_date`/`is_overdue` (`invoice-api.md`).
 
 ---
 

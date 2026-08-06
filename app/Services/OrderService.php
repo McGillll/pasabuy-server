@@ -80,7 +80,7 @@ class OrderService implements OrderServiceInterface
             throw new InvalidPayloadException('You already have an order for this pasabuy. Edit your existing order instead.');
         }
 
-        if ($this->orderRepository->findUnpaidLiveOrderForUser($payload->user->id)) {
+        if ($payload->user->getReceivable() > 0) {
             throw new InvalidPayloadException('You have an unpaid order pending. Please settle it before placing a new order.');
         }
 
@@ -237,6 +237,8 @@ class OrderService implements OrderServiceInterface
             $summary = $this->invoiceService->summaryForOrder($order);
             $order->amount_paid = $summary['amount_paid'];
             $order->amount_due = $summary['balance_due'];
+            $order->due_date = $summary['due_date'];
+            $order->is_overdue = $summary['is_overdue'];
         }
     }
 

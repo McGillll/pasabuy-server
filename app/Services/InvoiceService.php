@@ -24,6 +24,8 @@ class InvoiceService implements InvoiceServiceInterface
         return [
             'amount_paid' => $breakdown['amount_paid'],
             'balance_due' => $breakdown['balance_due'],
+            'due_date' => $breakdown['due_date'],
+            'is_overdue' => $breakdown['is_overdue'],
         ];
     }
 

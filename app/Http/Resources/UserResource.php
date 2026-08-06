@@ -9,6 +9,8 @@ class UserResource extends JsonResource
 {
     public function toArray(Request $request)
     {
+        $receivable = $this->getReceivable();
+
         return [
             'uuid' => $this->uuid,
             'first_name' => $this->first_name,
@@ -18,6 +20,8 @@ class UserResource extends JsonResource
             'role' => $this->role,
             'is_approved' => $this->is_approved,
             'is_verified' => $this->email_verified_at !== null,
+            'receivable' => $receivable,
+            'is_valid_to_order' => $receivable === 0.0,
         ];
     }
 }
