@@ -1,5 +1,15 @@
 # Latest Updates
 
+## 2026-08-07 — Schedule summary totals now use effective schedule pricing
+
+**What changed:** `GET /api/admin/pasabuy-schedules/{uuid}/summary` now returns `unit_price`, `actual_price`, `price_confirmed_at`, and `product_status`. Its `subtotal` now uses confirmed `actual_price` when available, falls back to product `default_price` before confirmation, and returns `0` for out-of-stock rows. `default_price` remains in the response for reference/backward compatibility.
+
+**Why:** The seller Summary / Price & Totals card could show the old catalog price after the seller confirmed an actual S&R price, even though affected order items had already been recalculated.
+
+**Docs updated:** `pasabuy-schedule-api.md` (`GET .../summary` response and subtotal semantics).
+
+**Frontend impact:** Summary views should display `unit_price` for the row price and use `subtotal` as the current effective subtotal. Existing code reading `default_price` should switch to `unit_price` where it means “current price.”
+
 ## 2026-08-06 — Basket `total_items` now counts distinct line items, not summed quantities
 
 **What changed:** `BasketResource::total_items` changed from `$items->sum('quantity')` to `$items->count()`.

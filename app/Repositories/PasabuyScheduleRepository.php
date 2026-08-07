@@ -181,6 +181,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             $scheduleProduct = $scheduleProducts[$row->pasabuy_schedule_product_id];
             $row->product_id = $scheduleProduct->product_id;
             $row->product = $scheduleProduct->product;
+            $row->schedule_product = $scheduleProduct;
 
             return $row;
         });

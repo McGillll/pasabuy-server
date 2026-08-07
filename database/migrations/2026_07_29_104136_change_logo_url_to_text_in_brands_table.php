@@ -10,6 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement('ALTER TABLE `brands` MODIFY `logo_url` TEXT NULL');
     }
 
@@ -18,6 +22,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement('ALTER TABLE `brands` MODIFY `logo_url` VARCHAR(255) NULL');
     }
 };

@@ -260,7 +260,7 @@ Returns every order placed against this schedule, newest first, each with its `i
 
 ## GET /api/admin/pasabuy-schedules/{uuid}/summary
 
-Aggregates ordered quantity per product across every **live** order (`pending`/`confirmed`; cancelled orders and bonus items are excluded) on this schedule. Products marked `is_out_of_stock` still appear here with their originally ordered quantity — the row isn't dropped just because the seller marked it out of stock in-store. This is the "Price & Totals" view — click through to `buyers` below for the per-buyer breakdown behind one row.
+Aggregates ordered quantity per product across every **live** order (`pending`/`confirmed`; cancelled orders and bonus items are excluded) on this schedule. Products marked out of stock still appear here with their originally ordered quantity — the row isn't dropped just because the seller marked it out of stock in-store. This is the "Price & Totals" view — click through to `buyers` below for the per-buyer breakdown behind one row.
 
 ### Success response — 200
 
@@ -269,12 +269,23 @@ Aggregates ordered quantity per product across every **live** order (`pending`/`
   "success": true,
   "message": "Success",
   "data": [
-    { "product_uuid": "...", "product_name": "Instant Noodles", "category_name": "Noodles & Canned Goods", "default_price": "25.00", "total_quantity": 8, "subtotal": "200.00" }
+    {
+      "product_uuid": "...",
+      "product_name": "Instant Noodles",
+      "category_name": "Noodles & Canned Goods",
+      "default_price": "25.00",
+      "unit_price": "27.00",
+      "actual_price": "27.00",
+      "price_confirmed_at": "2026-08-07T09:30:00.000000Z",
+      "product_status": "none",
+      "total_quantity": 8,
+      "subtotal": "216.00"
+    }
   ]
 }
 ```
 
-`subtotal` is `default_price * total_quantity` (not the confirmed `actual_price` — this is a pre-shopping estimate). Sum every item's `subtotal` client-side for a grand total.
+`unit_price` is the effective row price: confirmed `actual_price` when set, otherwise the product's `default_price`. `subtotal` is `unit_price * total_quantity`, except `product_status: "out_of_stock"` returns `0`. B1T1 does not double the charged subtotal; it only affects the physical shopping quantity shown by the client/checklist.
 
 ### Error responses
 
