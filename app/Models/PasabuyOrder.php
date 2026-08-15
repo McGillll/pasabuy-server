@@ -197,7 +197,7 @@ class PasabuyOrder extends Model
             'month' => $dueDate->diffInMonths($asOf),
         };
 
-        return max((int) floor($periods), 1);
+        return (int) floor($periods);
     }
 
     /**
