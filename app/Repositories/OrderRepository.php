@@ -130,7 +130,9 @@ class OrderRepository implements OrderRepositoryInterface
             $orderItem->actual_price = $item['actual_price'] ?? null;
             $orderItem->quantity = $item['quantity'];
             $orderItem->bonus_quantity = $item['bonus_quantity'] ?? 0;
-            $orderItem->subtotal = ($item['actual_price'] ?? $item['estimated_price']) * $item['quantity'];
+            $orderItem->subtotal = ($item['is_out_of_stock'] ?? false)
+                ? 0
+                : ($item['actual_price'] ?? $item['estimated_price']) * $item['quantity'];
             $orderItem->save();
         }
 

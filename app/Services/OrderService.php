@@ -267,13 +267,16 @@ class OrderService implements OrderServiceInterface
 
             $scheduleProduct = $this->pasabuyScheduleRepository->findOrCreateScheduleProduct($schedule, $product);
 
+            $isOutOfStock = $scheduleProduct->product_status === 'out_of_stock';
+
             return [
                 'pasabuy_schedule_product_id' => $scheduleProduct->id,
                 'product_name' => $product->name,
                 'estimated_price' => $product->default_price,
-                'actual_price' => $scheduleProduct->actual_price,
+                'actual_price' => $isOutOfStock ? null : $scheduleProduct->actual_price,
                 'quantity' => $item['quantity'],
-                'bonus_quantity' => $scheduleProduct->product_status === 'b1t1' ? $item['quantity'] : 0,
+                'bonus_quantity' => ! $isOutOfStock && $scheduleProduct->product_status === 'b1t1' ? $item['quantity'] : 0,
+                'is_out_of_stock' => $isOutOfStock,
             ];
         })->all();
     }
@@ -289,13 +292,16 @@ class OrderService implements OrderServiceInterface
 
             $scheduleProduct = $this->pasabuyScheduleRepository->findOrCreateScheduleProduct($schedule, $product);
 
+            $isOutOfStock = $scheduleProduct->product_status === 'out_of_stock';
+
             return [
                 'pasabuy_schedule_product_id' => $scheduleProduct->id,
                 'product_name' => $product->name,
                 'estimated_price' => $product->default_price,
-                'actual_price' => $scheduleProduct->price_confirmed_at ? $scheduleProduct->actual_price : null,
+                'actual_price' => ($isOutOfStock || ! $scheduleProduct->price_confirmed_at) ? null : $scheduleProduct->actual_price,
                 'quantity' => $item['quantity'],
-                'bonus_quantity' => $scheduleProduct->product_status === 'b1t1' ? $item['quantity'] : 0,
+                'bonus_quantity' => ! $isOutOfStock && $scheduleProduct->product_status === 'b1t1' ? $item['quantity'] : 0,
+                'is_out_of_stock' => $isOutOfStock,
             ];
         })->all();
     }

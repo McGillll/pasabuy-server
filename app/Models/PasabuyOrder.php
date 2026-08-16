@@ -88,13 +88,13 @@ class PasabuyOrder extends Model
 
     public function invoiceBreakdown()
     {
-        $this->loadMissing(['payments', 'pasabuySchedule.pasabuyScheduleInvoiceSetting', 'pasabuySchedule.user.invoiceSetting']);
+        $this->loadMissing(['items.pasabuyScheduleProduct', 'payments', 'pasabuySchedule.pasabuyScheduleInvoiceSetting', 'pasabuySchedule.user.invoiceSetting']);
 
         $settings = $this->resolveInvoiceSettings();
 
-        $subtotal = (float) $this->total_amount;
+        $subtotal = (float) $this->items->reject(fn ($item) => $item->is_out_of_stock)->sum('subtotal');
         $markupAmount = $subtotal > (float) $settings->markup_threshold_amount
-            ? round($subtotal * (float) $settings->markup_percentage / 100, 2)
+            ? ceil($subtotal * (float) $settings->markup_percentage / 100)
             : (float) $settings->markup_fixed_amount;
 
         $handlingFee = (float) $settings->handling_fee;
