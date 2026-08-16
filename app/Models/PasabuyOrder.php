@@ -211,7 +211,8 @@ class PasabuyOrder extends Model
                 'month' => $dueDate->copy()->addMonths($period),
             };
 
-            $interestAmount = round($runningTotal * $rate, 2);
+            // Interest is rounded up to the nearest whole peso so no centavos accrue.
+            $interestAmount = ceil($runningTotal * $rate);
             $runningTotal = round($runningTotal + $interestAmount, 2);
 
             $ledger[] = [
@@ -264,7 +265,8 @@ class PasabuyOrder extends Model
                 'month' => $dueDate->copy()->addMonths($period),
             };
 
-            $interestAmount = $running > 0 ? round($running * $rate, 2) : 0.0;
+            // Interest is rounded up to the nearest whole peso so no centavos accrue.
+            $interestAmount = $running > 0 ? ceil($running * $rate) : 0.0;
             $running = round($running + $interestAmount, 2);
 
             $ledger[] = [
