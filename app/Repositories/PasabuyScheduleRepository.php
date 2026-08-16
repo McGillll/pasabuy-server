@@ -391,7 +391,11 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             PasabuyOrderItem::whereIn('pasabuy_schedule_product_id', $scheduleProductIds)->delete();
 
             PasabuyOrder::whereIn('id', $affectedOrderIds)->get()->each(function (PasabuyOrder $order) {
-                $order->total_amount = $order->items()->sum('subtotal');
+                // Remaining items may still belong to a different out-of-stock schedule
+                // product; exclude via the live accessor, same as recalcTotal().
+                $order->total_amount = $order->items()->with('pasabuyScheduleProduct')->get()
+                    ->reject(fn ($item) => $item->is_out_of_stock)
+                    ->sum('subtotal');
                 $order->save();
             });
 

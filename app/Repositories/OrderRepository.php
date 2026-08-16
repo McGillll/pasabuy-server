@@ -187,7 +187,13 @@ class OrderRepository implements OrderRepositoryInterface
 
     protected function recalcTotal(PasabuyOrder $order)
     {
-        $order->total_amount = $order->items()->sum('subtotal');
+        // A DB-level sum('subtotal') would include items whose product has since been
+        // marked out of stock, since is_out_of_stock is a live accessor off the
+        // schedule product, not a stored column. Load and filter in PHP to match
+        // PasabuyOrder::invoiceBreakdown()'s treatment of out-of-stock items.
+        $order->total_amount = $order->items()->with('pasabuyScheduleProduct')->get()
+            ->reject(fn ($item) => $item->is_out_of_stock)
+            ->sum('subtotal');
         $order->save();
 
         $this->bumpCacheVersion('orders');
