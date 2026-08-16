@@ -122,17 +122,10 @@ class PasabuyOrder extends Model
             $ledger
         )), 2);
 
-        if ($ledger !== []) {
-            $grandTotal = end($ledger)['running_total'];
-            // outstanding_balance ledger already nets every payment as it walks the timeline,
-            // so balance_due is the ledger's final running total, not a second subtraction.
-            $balanceDue = $settings->interest_base === 'outstanding_balance'
-                ? $grandTotal
-                : $grandTotal - $amountPaid;
-        } else {
-            $grandTotal = $total;
-            $balanceDue = $total - $amountPaid;
-        }
+        // Grand total is what the order was actually worth (total plus accrued interest) —
+        // it must never net out payments, since that's what balance_due is for.
+        $grandTotal = round($total + $interestTotal, 2);
+        $balanceDue = round($grandTotal - $amountPaid, 2);
 
         return [
             'subtotal' => $subtotal,
@@ -147,7 +140,7 @@ class PasabuyOrder extends Model
             'grand_total' => $grandTotal,
             'payments' => $paymentLines,
             'amount_paid' => $amountPaid,
-            'balance_due' => round($balanceDue, 2),
+            'balance_due' => $balanceDue,
         ];
     }
 
