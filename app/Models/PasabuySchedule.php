@@ -32,7 +32,7 @@ class PasabuySchedule extends Model
     protected function isOpen(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->status === 'open' && (! $this->pasabuy_schedule_date || $this->pasabuy_schedule_date->isFuture()),
+            get: fn () => $this->status === 'open',
         );
     }
 

@@ -30,10 +30,6 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     {
         return PasabuySchedule::filter((array) $payload)
             ->where('status', 'open')
-            ->where(function ($query) {
-                $query->whereNull('pasabuy_schedule_date')
-                    ->orWhereDate('pasabuy_schedule_date', '>', now()->toDateString());
-            })
             ->with('user')
             ->withCount('scheduleProducts')
             ->latest()
