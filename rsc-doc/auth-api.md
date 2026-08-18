@@ -2,7 +2,7 @@
 
 Sanctum personal-access-token authentication, shared by both the seller/admin app and customer accounts — `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `PATCH /api/auth/me`, `PATCH /api/auth/me/password`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `POST /api/auth/email/verify`, and `POST /api/auth/email/verification-notification` work identically regardless of `role`. Customer registration and admin approval are separate endpoints documented in `customer-api.md`; this module covers logging in, self-service "My Account" profile/password management, forgot/reset password, and email verification for an already-registered account (admin or customer).
 
-Email verification does **not** block login — an unverified user can still authenticate and call every read-only endpoint. It only gates specific mutation endpoints (creating/updating/closing/finishing a pasabuy schedule, confirming schedule product prices, managing checklist items, updating order items, and recording/deleting order payments), which reject with **403** until `email_verified_at` is set.
+Email verification does **not** block login — an unverified user can still authenticate, call read-only endpoints, and manage their Blue Basket. It gates schedule/order mutation endpoints (creating/updating/closing/finishing a pasabuy schedule, confirming schedule product prices, managing checklist items, placing or updating customer schedule orders, updating seller-side order items, and recording/deleting order payments), which reject with **403** until `email_verified_at` is set.
 
 ## Endpoints overview
 
@@ -387,7 +387,7 @@ Requires `Authorization: Bearer {token}`. Re-sends the verification email to the
 |--------|-----------------------------------|-----------------------|
 | 401    | Bad credentials, or missing/invalid/expired token | login, logout, me, PATCH me, PATCH me/password, verification-notification |
 | 401    | Incorrect `current_password`      | PATCH me/password     |
-| 403    | Email not verified                | schedule create/update/close/reopen/finish, confirm-price, checklist toggle/regenerate/share-link regenerate, order items update, order payments create/delete |
+| 403    | Email not verified                | schedule create/update/close/reopen/finish, confirm-price, checklist toggle/regenerate/share-link regenerate, customer order create/update, seller order items update, order payments create/delete |
 | 422    | Validation failure                | login, PATCH me, PATCH me/password, forgot-password, reset-password, email/verify |
 | 422    | Reset token invalid or expired     | reset-password         |
 | 422    | Verification link invalid or expired | email/verify         |

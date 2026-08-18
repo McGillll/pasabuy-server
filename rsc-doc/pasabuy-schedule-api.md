@@ -144,10 +144,13 @@ Only allowed while the schedule is **open**. Returns **422** `"This pasabuy sche
 Transitions `open` → `closed`. No request body. Blocks customer-side ordering/editing (already enforced elsewhere); does not affect the seller's own ability to confirm prices, or (now that it's closed) edit customer orders via the endpoint below.
 
 **Also (re)snapshots the checklist** (see `GET .../checklist` below) from the current live order totals:
-- First close ever → creates one checklist row per product currently ordered, unchecked, `quantity` = current total ordered.
-- Any later close (after a reopen let more orders in) → unchecked rows just get `quantity` refreshed to the new total; checked rows keep their original `quantity` frozen and instead get `additional_quantity`/`return_quantity` populated with the delta against the new total.
+- First close ever → creates one checklist row per product currently ordered, unchecked, `quantity` = current total ordered, `picked_quantity` = 0.
+- Any later close (after a reopen let more orders in) → if the row's demand still matches `picked_quantity` (nothing changed since it was last checked/recomputed), it's left alone. If demand changed:
+  - An **unchecked** row (never picked anything, or still carrying an earlier unresolved delta) gets `quantity` recomputed as the outstanding amount against `picked_quantity` (`0` for a row that was never checked, so this is the full new total), plus `additional_quantity`/`return_quantity` set from the same delta.
+  - A **checked** row is flipped back to unchecked (`checked_at` reset to `null`) and its `quantity` becomes just the outstanding delta against `picked_quantity` — not the new grand total — so the seller only sees what's left to act on, not a re-ask for what they already bought. `picked_quantity` itself is untouched until the row is checked again.
+  - A previously-delta'd unchecked row whose demand settles back to exactly `picked_quantity` (e.g. the extra order that caused the delta gets cancelled) is auto-checked again, `quantity` reset to `picked_quantity`, deltas cleared.
 - `quantity` is the **physical shopping quantity**, not the raw paid total: products confirmed `product_status: 'out_of_stock'` are skipped entirely (no checklist row — nothing to buy), and products confirmed `product_status: 'b1t1'` have their `bonus_quantity` added on top of the paid quantity, since the seller needs stock to cover the free unit too. This differs from `GET .../summary`, which reports raw paid quantity only and leaves out-of-stock/b1t1 adjustments to the client.
-- A product with a computed quantity of `0` (e.g. its only orders were cancelled/removed) never gets a row either. If it already had an **unchecked** row from an earlier close, that row is deleted outright rather than left at `quantity: 0`. A **checked** row is never deleted this way — it's preserved with `return_quantity` set to its full frozen `quantity`, since the seller already bought it and needs to return everything.
+- A product with a computed quantity of `0` (e.g. its only orders were cancelled/removed) never gets a row either. If the row has no `picked_quantity` (never actually bought anything), it's deleted outright. Otherwise it's flipped back to unchecked with `return_quantity` set to its full `picked_quantity` — the seller already bought that amount and now needs to return all of it.
 
 ### Success response — 200
 
@@ -326,12 +329,12 @@ The seller's shopping checklist. **Empty until the schedule has been closed at l
   "success": true,
   "message": "Success",
   "data": [
-    { "product_uuid": "...", "product_name": "Instant Noodles", "category_name": "Noodles & Canned Goods", "quantity": 8, "is_checked": false, "checked_at": null, "additional_quantity": 0, "return_quantity": 0 }
+    { "product_uuid": "...", "product_name": "Instant Noodles", "category_name": "Noodles & Canned Goods", "quantity": 8, "picked_quantity": 0, "is_checked": false, "checked_at": null, "additional_quantity": 0, "return_quantity": 0 }
   ]
 }
 ```
 
-`quantity` is the amount to buy while unchecked; once checked it freezes at whatever quantity it was checked at. `additional_quantity`/`return_quantity` are only ever populated on a checked item, by a later `close` recalculation — buy `additional_quantity` more, or return `return_quantity` of what was already bought. Products currently `product_status: 'out_of_stock'` never have a row here; `b1t1` products have their `quantity` inflated by the bonus item count (see `close` above).
+`quantity` is always the amount still needing action right now: the full amount to buy while unchecked-and-fresh, or just the outstanding delta while unchecked-with-a-pending-adjustment. `picked_quantity` is the cumulative amount already confirmed bought as of the last check — it only changes when the item is checked, never on a `close`/`regenerate` recalculation. `additional_quantity`/`return_quantity` are only ever populated on a row that's currently unchecked because demand shifted since it was last checked (see `close` above) — a checked row never carries a nonzero delta. Products currently `product_status: 'out_of_stock'` never have a row here; `b1t1` products have their `quantity` inflated by the bonus item count (see `close` above).
 
 ### Error responses
 
@@ -341,7 +344,7 @@ The seller's shopping checklist. **Empty until the schedule has been closed at l
 
 ## PATCH /api/admin/pasabuy-schedules/{uuid}/checklist/{productUuid}
 
-Check or uncheck one item. Nothing in the system auto-unchecks an item — this is the only way `is_checked` changes.
+Check or uncheck one item. Checking (`is_checked: true`) folds any pending `additional_quantity`/`return_quantity` delta into `picked_quantity` and clears both; unchecking just clears `checked_at` and leaves the quantities as they are. A `close`/`regenerate` recalculation can also auto-uncheck (or, if demand settles back to `picked_quantity`, auto-check) a row on its own — see `close` above — so `is_checked` is not exclusively client-driven.
 
 ### Request body
 
@@ -363,7 +366,7 @@ Returns the updated checklist item (same shape as one entry above).
 
 ## POST /api/admin/pasabuy-schedules/{uuid}/checklist/regenerate
 
-Manually re-runs the same sync `close` performs (see above), without changing the schedule's status. For when orders were edited or new orders confirmed after the initial close and the checklist quantities/deltas have gone stale. No request body. Safe to call repeatedly — unchecked rows just get `quantity` refreshed; checked rows keep their frozen `quantity` and get `additional_quantity`/`return_quantity` recomputed against the new total.
+Manually re-runs the same sync `close` performs (see above), without changing the schedule's status. For when orders were edited or new orders confirmed after the initial close and the checklist quantities/deltas have gone stale. No request body. Safe to call repeatedly — same merge/auto-uncheck rules as `close` above.
 
 Only callable once the schedule has been closed at least once (`status` is `closed` or `finished`).
 

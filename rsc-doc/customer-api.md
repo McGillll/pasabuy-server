@@ -6,7 +6,8 @@ Customer registration, admin approval, and everything a logged-in customer can d
 
 - **Anyone** (no auth) can register via `POST /api/public/customers/register`.
 - **Any logged-in customer**, even one pending approval, can call `/auth/login`, `/auth/me`, `/auth/logout` — this lets the frontend show a "pending approval" screen instead of a dead login.
-- **Only an approved customer** (`is_approved: true`) can place orders, edit orders, or view their own orders. Every route below except registration requires `Authorization: Bearer {token}` from a token whose ability is `customer`, **and** `is_approved: true` — otherwise every one of them returns **403** with `"Your account is pending admin approval."`
+- **Only an approved customer** (`is_approved: true`) can browse customer pasabuys, manage their Blue Basket, view their own orders, and cancel their own editable orders. Every route below except registration requires `Authorization: Bearer {token}` from a token whose ability is `customer`, **and** `is_approved: true` — otherwise every one of them returns **403** with `"Your account is pending admin approval."`
+- **Only an email-verified approved customer** (`is_verified: true`) can place a new order into a pasabuy schedule or replace items on an existing order. Blue Basket add/update/remove remains allowed before email verification.
 - **Only an admin** can list customers and approve/reject them (`admin/customers/*`) — see the admin section at the bottom.
 
 ## Endpoints overview
@@ -15,10 +16,10 @@ Customer registration, admin approval, and everything a logged-in customer can d
 |--------|--------------------------------------------------------------|---------------------------|--------------------------------------|
 | POST   | `/api/public/customers/register`                              | No                         | Register a new customer account (pending approval) |
 | GET    | `/api/customer/pasabuy-schedules`                              | Yes (customer, approved)  | Browse open pasabuy schedules available to order from |
-| POST   | `/api/customer/pasabuy-schedules/{scheduleUuid}/orders`       | Yes (customer, approved)  | Place an order against an open schedule |
+| POST   | `/api/customer/pasabuy-schedules/{scheduleUuid}/orders`       | Yes (customer, approved, email verified) | Place an order against an open schedule |
 | GET    | `/api/customer/orders`                                        | Yes (customer, approved)  | List the authenticated customer's own orders |
 | GET    | `/api/customer/orders/{uuid}`                                 | Yes (customer, approved)  | View one of the authenticated customer's own orders |
-| PUT    | `/api/customer/orders/{uuid}`                                 | Yes (customer, approved)  | Replace the items on a still-editable order |
+| PUT    | `/api/customer/orders/{uuid}`                                 | Yes (customer, approved, email verified) | Replace the items on a still-editable order |
 | PATCH  | `/api/customer/orders/{uuid}/cancel`                          | Yes (customer, approved)  | Cancel an order outright (only while `pending`, and while the schedule is still open) |
 | GET    | `/api/admin/customers`                                        | Yes (admin)                | List customers (paginated, filterable) |
 | GET    | `/api/admin/customers/{uuid}/orders`                           | Yes (admin)                | List every order placed by one customer |
@@ -171,7 +172,7 @@ POST /api/customer/pasabuy-schedules/e9400549-.../orders
 
 ### Error responses
 
-- **403** — `"Your account is pending admin approval."`
+- **403** — `"Your account is pending admin approval."` / `"Please verify your email address before continuing."`
 - **404** — no schedule with that uuid.
 - **422** — `"This pasabuy is closed for orders."` / `"You already have an order for this pasabuy. Edit your existing order instead."` / `"You have an unpaid order pending. Please settle it before placing a new order."` / `"Product {uuid} is not available in this pasabuy."` / standard field validation.
 
@@ -234,7 +235,7 @@ PUT /api/customer/orders/36d53541-.../
 
 ### Error responses
 
-- **403** — `"Your account is pending admin approval."`
+- **403** — `"Your account is pending admin approval."` / `"Please verify your email address before continuing."`
 - **404** — `"Order not found."` (doesn't exist, or not owned by this customer).
 - **422** — `"This order can no longer be edited."` / `"This pasabuy is closed for orders."` / product-availability messages (same as order placement).
 
@@ -383,6 +384,7 @@ Sets `is_approved` back to `false` and clears `approved_at` — revokes access w
 |--------|------------------------------------------------|--------------------------------------------|
 | 401    | Missing/invalid/expired token                   | all authenticated endpoints                 |
 | 403    | Customer account pending admin approval          | all customer endpoints except registration  |
+| 403    | Email not verified                               | order placement/edit                        |
 | 404    | Resource not found or not owned                 | orders show/update/cancel, admin approve/reject/orders |
 | 422    | Validation failure or business-rule rejection    | register, order placement/edit/cancel |
 | 429    | Rate limited                                     | register (5/min/IP)                         |

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['pasabuy_schedule_id', 'product_id', 'product_name', 'quantity', 'checked_at', 'additional_quantity', 'return_quantity'])]
+#[Fillable(['pasabuy_schedule_id', 'product_id', 'product_name', 'quantity', 'picked_quantity', 'checked_at', 'additional_quantity', 'return_quantity'])]
 class PasabuyScheduleChecklistItem extends Model
 {
     use UsesUuid;

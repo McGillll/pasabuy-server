@@ -1,5 +1,15 @@
 # Latest Updates
 
+## 2026-08-18 — Customer schedule orders now require verified email
+
+**What changed:** `POST /api/customer/pasabuy-schedules/{scheduleUuid}/orders` and `PUT /api/customer/orders/{uuid}` now require the existing `email.verified` middleware. Approved customers can still add/update/remove items in Blue Basket before verification, and can still browse schedules, view orders, and cancel editable orders.
+
+**Why:** Blue Basket is only a saved list, but placing or updating items into a pasabuy schedule is an actual order commitment and should require a verified email address.
+
+**Docs updated:** `customer-api.md` (customer auth requirements and order errors), `auth-api.md` (email-verification gated mutation list).
+
+**Frontend impact:** Disable or block the customer schedule order create/update action when `/auth/me` returns `is_verified: false`; keep Blue Basket actions enabled.
+
 ## 2026-08-07 — Schedule summary totals now use effective schedule pricing
 
 **What changed:** `GET /api/admin/pasabuy-schedules/{uuid}/summary` now returns `unit_price`, `actual_price`, `price_confirmed_at`, and `product_status`. Its `subtotal` now uses confirmed `actual_price` when available, falls back to product `default_price` before confirmation, and returns `0` for out-of-stock rows. `default_price` remains in the response for reference/backward compatibility.

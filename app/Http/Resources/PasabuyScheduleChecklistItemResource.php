@@ -14,6 +14,7 @@ class PasabuyScheduleChecklistItemResource extends JsonResource
             'product_name' => $this->product_name,
             'category_name' => $this->product?->category?->name,
             'quantity' => $this->quantity,
+            'picked_quantity' => $this->picked_quantity,
             'is_checked' => $this->is_checked,
             'checked_at' => $this->checked_at,
             'additional_quantity' => $this->additional_quantity,

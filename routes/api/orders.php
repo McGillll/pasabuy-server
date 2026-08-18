@@ -13,10 +13,13 @@ Route::prefix('admin/orders')->middleware(['auth:sanctum', 'abilities:admin'])->
 
 Route::middleware(['auth:sanctum', 'abilities:customer', 'customer.approved'])->group(function () {
     Route::get('/customer/pasabuy-schedules', [PasabuyScheduleController::class, 'browseOpenForCustomer']);
-    Route::post('/customer/pasabuy-schedules/{scheduleUuid}/orders', [OrderController::class, 'storeForCustomer']);
     Route::get('/customer/orders', [OrderController::class, 'myOrders']);
     Route::get('/customer/orders/{uuid}', [OrderController::class, 'myOrderShow']);
     Route::get('/customer/orders/{uuid}/invoice', [InvoiceController::class, 'myInvoice']);
-    Route::put('/customer/orders/{uuid}', [OrderController::class, 'updateMyOrder']);
     Route::post('/customer/orders/{uuid}/cancel', [OrderController::class, 'cancelMyOrder']);
+
+    Route::middleware('email.verified')->group(function () {
+        Route::post('/customer/pasabuy-schedules/{scheduleUuid}/orders', [OrderController::class, 'storeForCustomer']);
+        Route::put('/customer/orders/{uuid}', [OrderController::class, 'updateMyOrder']);
+    });
 });

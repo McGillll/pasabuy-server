@@ -293,7 +293,23 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
             return null;
         }
 
-        $item->checked_at = $isChecked ? now() : null;
+        if ($isChecked) {
+            if ($item->additional_quantity > 0) {
+                $item->picked_quantity += $item->additional_quantity;
+            } elseif ($item->return_quantity > 0) {
+                $item->picked_quantity -= $item->return_quantity;
+            } else {
+                $item->picked_quantity = $item->quantity;
+            }
+
+            $item->quantity = $item->picked_quantity;
+            $item->additional_quantity = 0;
+            $item->return_quantity = 0;
+            $item->checked_at = now();
+        } else {
+            $item->checked_at = null;
+        }
+
         $item->save();
 
         return $item->fresh('product.category');
@@ -331,18 +347,34 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
                 if (! $item->exists) {
                     $item->product_name = $row->product->name;
                     $item->quantity = $totalQuantity;
+                    $item->picked_quantity = 0;
                     $item->checked_at = null;
                     $item->additional_quantity = 0;
                     $item->return_quantity = 0;
-                } elseif (! $item->is_checked) {
-                    $item->product_name = $row->product->name;
-                    $item->quantity = $totalQuantity;
-                    $item->additional_quantity = 0;
-                    $item->return_quantity = 0;
+                } elseif ($item->is_checked) {
+                    $delta = $totalQuantity - $item->picked_quantity;
+
+                    if ($delta !== 0) {
+                        $item->product_name = $row->product->name;
+                        $item->quantity = abs($delta);
+                        $item->additional_quantity = $delta > 0 ? $delta : 0;
+                        $item->return_quantity = $delta < 0 ? abs($delta) : 0;
+                        $item->checked_at = null;
+                    }
                 } else {
-                    $delta = $totalQuantity - $item->quantity;
-                    $item->additional_quantity = $delta > 0 ? $delta : 0;
-                    $item->return_quantity = $delta < 0 ? abs($delta) : 0;
+                    $delta = $totalQuantity - $item->picked_quantity;
+                    $item->product_name = $row->product->name;
+
+                    if ($delta === 0 && $item->picked_quantity > 0) {
+                        $item->quantity = $item->picked_quantity;
+                        $item->additional_quantity = 0;
+                        $item->return_quantity = 0;
+                        $item->checked_at = now();
+                    } else {
+                        $item->quantity = abs($delta);
+                        $item->additional_quantity = $delta > 0 ? $delta : 0;
+                        $item->return_quantity = $delta < 0 ? abs($delta) : 0;
+                    }
                 }
 
                 $item->save();
@@ -352,14 +384,16 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
                 ->whereNotIn('product_id', $seenProductIds)
                 ->get()
                 ->each(function (PasabuyScheduleChecklistItem $item) {
-                    if (! $item->is_checked) {
+                    if ($item->picked_quantity <= 0) {
                         $item->delete();
 
                         return;
                     }
 
-                    $item->return_quantity = $item->quantity;
+                    $item->quantity = $item->picked_quantity;
+                    $item->return_quantity = $item->picked_quantity;
                     $item->additional_quantity = 0;
+                    $item->checked_at = null;
                     $item->save();
                 });
         });
