@@ -30,6 +30,7 @@ There is no order-level status change from this recalculation — an order's `st
 | customer_name              | string        | Snapshot of the owning customer's name at order time |
 | customer_contact           | string        | Snapshot of the owning customer's contact number at order time |
 | status                     | string        | `pending` \| `confirmed` \| `cancelled` |
+| channel                    | string        | `customer` \| `seller` — `seller` means the seller placed this order on behalf of a walk-in/offline customer (see `POST .../orders` in `pasabuy-schedule-api.md`); `user_id` is `null` in that case and `customer_name`/`customer_contact` are whatever the seller typed in, not an account snapshot |
 | total_amount               | string        | Decimal string, server-computed — never trust a client-sent total |
 | amount_paid                | number\|null  | Sum of the order's recorded payments — same figure as `amount_paid` on the invoice (`invoice-api.md`). Only populated on `GET /api/admin/orders` (the cross-schedule list) and `GET /api/admin/pasabuy-schedules/{uuid}/orders` (the per-schedule list); `null` on responses from other order endpoints |
 | amount_due                 | number\|null  | Outstanding balance — same calculation as the invoice's `balance_due` (markup + overdue compounding interest, minus `amount_paid`). Only populated on `GET /api/admin/orders`, `GET /api/admin/pasabuy-schedules/{uuid}/orders`, and `GET /api/customer/orders`; `null` elsewhere |
@@ -43,7 +44,7 @@ There is no order-level status change from this recalculation — an order's `st
 | items                       | array         | See `OrderItem` object below                        |
 | created_at                  | datetime      |                                                     |
 
-Every order now belongs to a customer account (`user_id` internally) — there is no more anonymous/guest ordering. See `customer-api.md` for registration, approval, and the customer-facing order placement/edit/list endpoints.
+Every customer-channel order belongs to a customer account (`user_id` internally). Seller-channel orders (`channel: "seller"`) are the one exception — no `user_id`, since they represent a customer who never created an account. See `customer-api.md` for registration, approval, and the customer-facing order placement/edit/list endpoints, and `pasabuy-schedule-api.md` (`POST .../orders`) for the seller-placed flow.
 
 ### OrderItem object
 

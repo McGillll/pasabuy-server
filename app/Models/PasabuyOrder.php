@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
-#[Fillable(['customer_name', 'customer_contact', 'status', 'total_amount', 'payment_status', 'delivery_status'])]
+#[Fillable(['customer_name', 'customer_contact', 'status', 'total_amount', 'payment_status', 'delivery_status', 'channel'])]
 class PasabuyOrder extends Model
 {
     use Filterable, HasFactory, UsesUuid;

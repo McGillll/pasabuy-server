@@ -422,6 +422,32 @@ Same request body / response shape / behavior as `PATCH /api/admin/pasabuy-sched
 
 ---
 
+## POST /api/admin/pasabuy-schedules/{uuid}/orders
+
+Seller-placed order — lets the seller record an order on behalf of a customer who won't use the app themselves (walk-in, phone/chat order, etc). Same item-resolution/pricing as a customer order (`createForSchedule` in `order-api.md`), but skips the customer-only guards (no "already has a live order" or unpaid-balance block, since there's no customer account behind it). Requires the caller to own the schedule and the schedule to still be `open`. The resulting order has `channel: "seller"` and `user_id: null` — it isn't tied to any customer account.
+
+### Request body
+
+| Field                  | Type   | Required | Notes                          |
+|------------------------|--------|----------|------------------------------------|
+| customer_name          | string | Yes      | Free-text label for who the order is for (name, nickname, "Unit 5B", etc) |
+| customer_contact       | string | No       |                                       |
+| items                  | array  | Yes      | Min 1                                |
+| items[].product_uuid   | string | Yes      | Must be an active catalog product   |
+| items[].quantity       | int    | Yes      | >= 1                                 |
+
+### Success response — 201
+
+Returns the created `OrderResource` (see `order-api.md`), with `channel: "seller"`.
+
+### Error responses
+
+- **403** — caller doesn't own this schedule.
+- **404** — schedule not found, or a `product_uuid` doesn't exist / isn't active.
+- **422** — schedule isn't `open` (`"This pasabuy is closed for orders."`), or basic field validation (`customer_name` missing, `items` empty, etc).
+
+---
+
 ## PUT /api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items
 
 Seller-side order correction tool — full replace of one customer's order items (add, remove, change quantity). Only allowed once the schedule's `status` is `closed`; no quantity cap is enforced (the seller is trusted to know real-world stock). Recalculates the order's `subtotal`/`total_amount` the same way customer edits do, sourcing price from the schedule-product's confirmed `actual_price` if set, else the product's `default_price`. Adding a product not yet ordered on this schedule creates its `PasabuyScheduleProduct` row on the fly, same as a customer ordering it for the first time.
@@ -448,7 +474,7 @@ Returns the updated `OrderResource` (see `order-api.md`).
 | Status | Meaning              | Applies to                        |
 |--------|-----------------------|-------------------------------------|
 | 401    | Missing/invalid token | all admin endpoints (not applicable to the public checklist endpoints, which use the share token instead) |
-| 403    | Not the schedule's owner | update, destroy, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate, checklist share-link (get/regenerate) |
-| 404    | Not found             | show, update, destroy, close, reopen, finish, orders, confirm-price, summary, buyers, checklist, order items, checklist share-link, public checklist (bad/rotated token) |
-| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate (still open), order items, public checklist (schedule not closed yet) |
+| 403    | Not the schedule's owner | update, destroy, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate, checklist share-link (get/regenerate), seller-placed order |
+| 404    | Not found             | show, update, destroy, close, reopen, finish, orders, confirm-price, summary, buyers, checklist, order items, checklist share-link, public checklist (bad/rotated token), seller-placed order |
+| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate (still open), order items, public checklist (schedule not closed yet), seller-placed order (schedule not open) |
 | 429    | Rate limit exceeded   | public checklist GET/PATCH (`checklist-toggle`: 60/min per IP) |

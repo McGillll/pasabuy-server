@@ -119,6 +119,23 @@ class OrderRepository implements OrderRepositoryInterface
         return $order;
     }
 
+    public function createForSeller(object $payload)
+    {
+        $order = new PasabuyOrder;
+        $order->pasabuy_schedule_id = $payload->pasabuy_schedule_id;
+        $order->user_id = null;
+        $order->channel = 'seller';
+        $order->customer_name = $payload->customer_name;
+        $order->customer_contact = $payload->customer_contact;
+        $order->status = 'pending';
+        $order->total_amount = 0;
+        $order->save();
+
+        $this->bumpCacheVersion('orders');
+
+        return $order;
+    }
+
     public function addItems(object $order, object $payload)
     {
         foreach ($payload->items as $item) {

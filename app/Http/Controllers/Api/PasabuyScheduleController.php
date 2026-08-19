@@ -7,6 +7,7 @@ use App\Http\Requests\PasabuyScheduleChecklistToggleRequest;
 use App\Http\Requests\PasabuyScheduleFinishRequest;
 use App\Http\Requests\PasabuyScheduleProductConfirmPriceRequest;
 use App\Http\Requests\PasabuyScheduleOrderItemsUpdateRequest;
+use App\Http\Requests\PasabuyScheduleOrderStoreRequest;
 use App\Http\Requests\PasabuyScheduleStoreRequest;
 use App\Http\Requests\PasabuyScheduleUpdateRequest;
 use App\Http\Resources\OrderResource;
@@ -195,6 +196,16 @@ class PasabuyScheduleController extends Controller
         $token = $this->pasabuyScheduleService->regenerateChecklistShareLink($uuid, $request->user()->id);
 
         return $this->success(['token' => $token], 'Checklist share link regenerated');
+    }
+
+    public function storeOrder(PasabuyScheduleOrderStoreRequest $request, string $uuid)
+    {
+        $payload = (object) $request->validated();
+        $payload->user_id = $request->user()->id;
+
+        $order = $this->orderService->createForSeller($uuid, $payload);
+
+        return $this->success(new OrderResource($order), 'Order placed successfully', 201);
     }
 
     public function updateOrderItems(PasabuyScheduleOrderItemsUpdateRequest $request, string $uuid, string $orderUuid)

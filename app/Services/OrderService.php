@@ -44,7 +44,7 @@ class OrderService implements OrderServiceInterface
 
         $updated = $this->orderRepository->updateStatus($uuid, $payload);
 
-        OrderStatusChanged::dispatch($updated);
+        broadcast(new OrderStatusChanged($updated));
 
         return $updated;
     }
@@ -61,7 +61,7 @@ class OrderService implements OrderServiceInterface
 
         $updated = $this->orderRepository->updateDeliveryStatus($uuid, $payload);
 
-        OrderStatusChanged::dispatch($updated);
+        broadcast(new OrderStatusChanged($updated));
 
         return $updated;
     }
@@ -92,6 +92,33 @@ class OrderService implements OrderServiceInterface
                 'user_id' => $payload->user->id,
                 'customer_name' => $payload->user->fullName(),
                 'customer_contact' => $payload->user->contact_number,
+            ]);
+
+            return $this->orderRepository->addItems($order, (object) ['items' => $resolvedItems]);
+        });
+    }
+
+    public function createForSeller(string $scheduleUuid, object $payload)
+    {
+        $schedule = $this->pasabuyScheduleRepository->findByUuid($scheduleUuid);
+
+        if (! $schedule) {
+            throw new NotFoundException('Pasabuy schedule not found.');
+        }
+
+        if ($schedule->user_id !== $payload->user_id) {
+            throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
+        }
+
+        $this->ensureScheduleIsOpen($schedule);
+
+        $resolvedItems = $this->resolveItems($schedule, $payload->items);
+
+        return DB::transaction(function () use ($schedule, $payload, $resolvedItems) {
+            $order = $this->orderRepository->createForSeller((object) [
+                'pasabuy_schedule_id' => $schedule->id,
+                'customer_name' => $payload->customer_name,
+                'customer_contact' => $payload->customer_contact ?? null,
             ]);
 
             return $this->orderRepository->addItems($order, (object) ['items' => $resolvedItems]);

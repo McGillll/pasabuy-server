@@ -23,6 +23,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         Route::patch('/{uuid}/checklist/{productUuid}', [PasabuyScheduleController::class, 'toggleChecklistItem']);
         Route::post('/{uuid}/checklist/regenerate', [PasabuyScheduleController::class, 'regenerateChecklist']);
         Route::post('/{uuid}/checklist/share-link/regenerate', [PasabuyScheduleController::class, 'regenerateChecklistShareLink']);
+        Route::post('/{uuid}/orders', [PasabuyScheduleController::class, 'storeOrder']);
         Route::put('/{uuid}/orders/{orderUuid}/items', [PasabuyScheduleController::class, 'updateOrderItems']);
     });
 });

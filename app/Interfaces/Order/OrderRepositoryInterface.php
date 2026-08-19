@@ -24,6 +24,8 @@ interface OrderRepositoryInterface
 
     public function create(object $payload);
 
+    public function createForSeller(object $payload);
+
     public function addItems(object $order, object $payload);
 
     public function replaceItems(object $order, object $payload);

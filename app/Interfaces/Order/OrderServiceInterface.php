@@ -12,6 +12,8 @@ interface OrderServiceInterface
 
     public function createForSchedule(string $scheduleUuid, object $payload);
 
+    public function createForSeller(string $scheduleUuid, object $payload);
+
     public function updateItemsForCustomer(string $orderUuid, object $payload);
 
     public function myOrders(object $payload);
