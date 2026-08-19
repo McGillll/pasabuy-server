@@ -94,8 +94,10 @@ class SellerPlacedOrderTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_seller_cannot_place_an_order_on_a_closed_schedule()
+    public function test_seller_can_place_an_order_on_a_closed_schedule()
     {
+        // Unlike customer ordering, this is a seller/admin action, so it isn't gated by
+        // is_open — the seller can still record a walk-in order after closing the schedule.
         $seller = User::factory()->create();
         $schedule = PasabuySchedule::factory()->create(['user_id' => $seller->id, 'status' => 'closed']);
         $product = $this->createProduct();
@@ -107,8 +109,25 @@ class SellerPlacedOrderTest extends TestCase
             'items' => [
                 ['product_uuid' => $product->uuid, 'quantity' => 1],
             ],
+        ])->assertCreated()
+            ->assertJsonPath('data.customer_name', 'Auntie Rosa');
+    }
+
+    public function test_seller_cannot_place_an_order_on_a_finished_schedule()
+    {
+        $seller = User::factory()->create();
+        $schedule = PasabuySchedule::factory()->create(['user_id' => $seller->id, 'status' => 'finished']);
+        $product = $this->createProduct();
+
+        Sanctum::actingAs($seller, ['admin']);
+
+        $this->postJson("/api/admin/pasabuy-schedules/{$schedule->uuid}/orders", [
+            'customer_name' => 'Auntie Rosa',
+            'items' => [
+                ['product_uuid' => $product->uuid, 'quantity' => 1],
+            ],
         ])->assertStatus(422)
-            ->assertJsonPath('message', 'This pasabuy is closed for orders.');
+            ->assertJsonPath('message', 'This pasabuy is finished and no longer accepts new orders.');
     }
 
     public function test_unverified_seller_cannot_place_an_order()

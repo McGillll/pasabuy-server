@@ -424,7 +424,7 @@ Same request body / response shape / behavior as `PATCH /api/admin/pasabuy-sched
 
 ## POST /api/admin/pasabuy-schedules/{uuid}/orders
 
-Seller-placed order — lets the seller record an order on behalf of a customer who won't use the app themselves (walk-in, phone/chat order, etc). Same item-resolution/pricing as a customer order (`createForSchedule` in `order-api.md`), but skips the customer-only guards (no "already has a live order" or unpaid-balance block, since there's no customer account behind it). Requires the caller to own the schedule and the schedule to still be `open`. The resulting order has `channel: "seller"` and `user_id: null` — it isn't tied to any customer account.
+Seller-placed order — lets the seller record an order on behalf of a customer who won't use the app themselves (walk-in, phone/chat order, etc). Same item-resolution/pricing as a customer order (`createForSchedule` in `order-api.md`), but skips the customer-only guards (no "already has a live order" or unpaid-balance block, since there's no customer account behind it) and, since this is a seller/admin action rather than a customer-facing one, is **not** gated by `is_open` — the seller can still place a walk-in order after closing the schedule. Requires the caller to own the schedule and the schedule to not yet be `finished`. The resulting order has `channel: "seller"` and `user_id: null` — it isn't tied to any customer account.
 
 ### Request body
 
@@ -444,7 +444,7 @@ Returns the created `OrderResource` (see `order-api.md`), with `channel: "seller
 
 - **403** — caller doesn't own this schedule.
 - **404** — schedule not found, or a `product_uuid` doesn't exist / isn't active.
-- **422** — schedule isn't `open` (`"This pasabuy is closed for orders."`), or basic field validation (`customer_name` missing, `items` empty, etc).
+- **422** — schedule is `finished` (`"This pasabuy is finished and no longer accepts new orders."`), or basic field validation (`customer_name` missing, `items` empty, etc).
 
 ---
 
@@ -476,5 +476,5 @@ Returns the updated `OrderResource` (see `order-api.md`).
 | 401    | Missing/invalid token | all admin endpoints (not applicable to the public checklist endpoints, which use the share token instead) |
 | 403    | Not the schedule's owner | update, destroy, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate, checklist share-link (get/regenerate), seller-placed order |
 | 404    | Not found             | show, update, destroy, close, reopen, finish, orders, confirm-price, summary, buyers, checklist, order items, checklist share-link, public checklist (bad/rotated token), seller-placed order |
-| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate (still open), order items, public checklist (schedule not closed yet), seller-placed order (schedule not open) |
+| 422    | Validation failure    | store, update, close, reopen, finish, confirm-price, checklist toggle, checklist regenerate (still open), order items, public checklist (schedule not closed yet), seller-placed order (schedule finished) |
 | 429    | Rate limit exceeded   | public checklist GET/PATCH (`checklist-toggle`: 60/min per IP) |

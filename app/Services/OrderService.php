@@ -110,7 +110,9 @@ class OrderService implements OrderServiceInterface
             throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
         }
 
-        $this->ensureScheduleIsOpen($schedule);
+        if ($schedule->status === 'finished') {
+            throw new InvalidPayloadException('This pasabuy is finished and no longer accepts new orders.');
+        }
 
         $resolvedItems = $this->resolveItems($schedule, $payload->items);
 
