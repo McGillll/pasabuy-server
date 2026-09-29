@@ -243,14 +243,18 @@ class OrderService implements OrderServiceInterface
             throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
         }
 
-        if ($schedule->status !== 'closed') {
-            throw new InvalidPayloadException('Order items can only be edited by the seller while the schedule is closed.');
-        }
-
         $order = $this->orderRepository->findByUuidForSchedule($orderUuid, $schedule->id);
 
         if (! $order) {
             throw new NotFoundException('Order not found.');
+        }
+
+        if ($order->channel === 'seller') {
+            if ($schedule->status === 'finished') {
+                throw new InvalidPayloadException('Order items can no longer be edited once the schedule is finished.');
+            }
+        } elseif ($schedule->status !== 'closed') {
+            throw new InvalidPayloadException('Order items can only be edited by the seller while the schedule is closed.');
         }
 
         $resolvedItems = $this->resolveSellerItems($schedule, $payload->items);

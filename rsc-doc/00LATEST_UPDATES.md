@@ -1,5 +1,15 @@
 # Latest Updates
 
+## 2026-09-29 — Manual (seller-placed) order items now editable while schedule is open
+
+**What changed:** `PUT /api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items` now allows editing a **manual** order's items (`channel` = `seller`) anytime the schedule isn't `finished` — previously it required the schedule to be `closed`, same as customer orders. Customer orders (`channel` = `customer`) are unaffected: still closed-only. New error for manual orders on a `finished` schedule: `"Order items can no longer be edited once the schedule is finished."`
+
+**Why:** Sellers already create manual orders while a schedule is open ("Add order"), but couldn't correct mistakes in them until closing the whole schedule.
+
+**Docs updated:** `pasabuy-schedule-api.md` (`PUT .../orders/{orderUuid}/items`), `order-api.md` (seller order-item editor section).
+
+**Frontend impact:** `useScheduleWorkspace.ts`'s `canEditOrderItems` is now channel-aware (checks `viewingOrder.value?.channel`) instead of purely `isClosed`.
+
 ## 2026-08-18 — Customer schedule orders now require verified email
 
 **What changed:** `POST /api/customer/pasabuy-schedules/{scheduleUuid}/orders` and `PUT /api/customer/orders/{uuid}` now require the existing `email.verified` middleware. Approved customers can still add/update/remove items in Blue Basket before verification, and can still browse schedules, view orders, and cancel editable orders.

@@ -149,7 +149,7 @@ Setting `delivery_status` has no invoice side effect — invoice emails are only
 
 ## Seller order-item editor
 
-Sellers correct a customer's order (add/remove items, change quantities) once the schedule is `closed`, via `PUT /api/admin/pasabuy-schedules/{scheduleUuid}/orders/{orderUuid}/items` — see `pasabuy-schedule-api.md` for the full request/response shape and error cases.
+Sellers correct an order's items (add/remove items, change quantities) via `PUT /api/admin/pasabuy-schedules/{scheduleUuid}/orders/{orderUuid}/items`. Manual orders (`channel` = `seller`) are editable anytime the schedule isn't `finished`; customer orders (`channel` = `customer`) are only editable once the schedule is `closed` — see `pasabuy-schedule-api.md` for the full request/response shape and error cases.
 
 ## Order payments (admin)
 

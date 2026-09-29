@@ -29,7 +29,7 @@ A pasabuy schedule is the seller's shareable "batch" — customers can order **a
 | POST   | `/api/admin/pasabuy-schedules/{uuid}/checklist/regenerate` | Manually re-run the checklist sync (same logic as `close`) against current order totals, without changing schedule status |
 | GET    | `/api/admin/pasabuy-schedules/{uuid}/checklist/share-link` | Get (or lazily create) the checklist's public share token |
 | POST   | `/api/admin/pasabuy-schedules/{uuid}/checklist/share-link/regenerate` | Rotate the checklist share token, invalidating any previously shared link |
-| PUT    | `/api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items` | Seller edits a customer's order items (closed schedules only) |
+| PUT    | `/api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items` | Seller edits an order's items (manual orders: anytime not finished; customer orders: closed schedules only) |
 
 Unauthenticated helper access to the checklist (view + check off items, no login required) is documented separately below under **Public checklist (unauthenticated)**.
 
@@ -450,7 +450,7 @@ Returns the created `OrderResource` (see `order-api.md`), with `channel: "seller
 
 ## PUT /api/admin/pasabuy-schedules/{uuid}/orders/{orderUuid}/items
 
-Seller-side order correction tool — full replace of one customer's order items (add, remove, change quantity). Only allowed once the schedule's `status` is `closed`; no quantity cap is enforced (the seller is trusted to know real-world stock). Recalculates the order's `subtotal`/`total_amount` the same way customer edits do, sourcing price from the schedule-product's confirmed `actual_price` if set, else the product's `default_price`. Adding a product not yet ordered on this schedule creates its `PasabuyScheduleProduct` row on the fly, same as a customer ordering it for the first time.
+Seller-side order correction tool — full replace of one order's items (add, remove, change quantity). For a **manual order** (`channel` = `seller`, created via the "Add order" flow), this is allowed anytime the schedule isn't `finished` (i.e. `open` or `closed`). For a **customer order** (`channel` = `customer`), it's only allowed once the schedule's `status` is `closed`. No quantity cap is enforced (the seller is trusted to know real-world stock). Recalculates the order's `subtotal`/`total_amount` the same way customer edits do, sourcing price from the schedule-product's confirmed `actual_price` if set, else the product's `default_price`. Adding a product not yet ordered on this schedule creates its `PasabuyScheduleProduct` row on the fly, same as a customer ordering it for the first time.
 
 ### Request body
 
@@ -467,7 +467,7 @@ Returns the updated `OrderResource` (see `order-api.md`).
 ### Error responses
 
 - **404** — schedule not found, order not found (or doesn't belong to this schedule), or a `product_uuid` doesn't exist / isn't active.
-- **422** — schedule isn't `closed` (`"Order items can only be edited by the seller while the schedule is closed."`), or basic field validation.
+- **422** — customer order and schedule isn't `closed` (`"Order items can only be edited by the seller while the schedule is closed."`), manual order and schedule is `finished` (`"Order items can no longer be edited once the schedule is finished."`), or basic field validation.
 
 ## Error status summary
 
