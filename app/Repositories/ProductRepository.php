@@ -169,7 +169,7 @@ class ProductRepository implements ProductRepositoryInterface
         return PasabuyOrderItem::selectRaw('pasabuy_products.id, pasabuy_products.uuid, pasabuy_products.name, SUM(pasabuy_order_items.quantity) as total_quantity')
             ->join('pasabuy_schedule_products', 'pasabuy_schedule_products.id', '=', 'pasabuy_order_items.pasabuy_schedule_product_id')
             ->join('pasabuy_products', 'pasabuy_products.id', '=', 'pasabuy_schedule_products.product_id')
-            ->whereHas('order', fn ($query) => $query->whereHas('pasabuySchedule', fn ($q2) => $q2->where('user_id', $payload->seller_id)
+            ->whereHas('order', fn ($query) => $query->whereHas('pasabuySchedule', fn ($q2) => $q2->when($payload->seller_id ?? null, fn ($q3, $sellerId) => $q3->where('user_id', $sellerId))
                 ->whereYear('pasabuy_schedule_date', $year)
                 ->whereMonth('pasabuy_schedule_date', $month))
                 ->whereIn('status', PasabuyOrder::LIVE_STATUSES))

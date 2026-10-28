@@ -20,6 +20,13 @@ class PasabuySchedule extends Model
         'finished' => [],
     ];
 
+    /**
+     * Extra transitions only a superadmin may perform, on top of ALLOWED_STATUS_TRANSITIONS.
+     */
+    public const SUPERADMIN_STATUS_TRANSITIONS = [
+        'finished' => ['closed'],
+    ];
+
     protected function casts()
     {
         return [

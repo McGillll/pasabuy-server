@@ -14,7 +14,7 @@ class OrderRepository implements OrderRepositoryInterface
     public function all(object $payload)
     {
         return PasabuyOrder::filter((array) $payload)
-            ->whereHas('pasabuySchedule', fn ($query) => $query->where('user_id', $payload->seller_id))
+            ->when($payload->seller_id ?? null, fn ($query, $sellerId) => $query->whereHas('pasabuySchedule', fn ($q2) => $q2->where('user_id', $sellerId)))
             ->with('items.pasabuyScheduleProduct.product', 'pasabuySchedule', 'payments')
             ->latest()
             ->paginate($payload->per_page ?? 15);

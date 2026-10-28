@@ -37,7 +37,7 @@ class AuthService implements AuthServiceInterface
             ? Carbon::now()->addDays(30)
             : Carbon::now()->addHours(12);
 
-        $token = $user->createToken('auth_token', [$user->role], $expiresAt)->plainTextToken;
+        $token = $user->createToken('auth_token', $user->abilities(), $expiresAt)->plainTextToken;
 
         return [
             'user' => $user,

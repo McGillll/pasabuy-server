@@ -37,6 +37,12 @@ All requests: `Accept: application/json`, `Authorization: Bearer {token}` (admin
 
 **Ownership.** Every mutating endpoint here requires the acting admin to be the schedule's creator. Acting on someone else's schedule returns **403**: `{ "success": false, "message": "You do not own this pasabuy schedule.", "data": null }`. Read-only endpoints (`show`, `orders`, `summary`, `buyers`, `checklist` GET) are not ownership-gated.
 
+**Superadmin.** A user with `role: "superadmin"` is never ownership-gated (here, in `order-api.md` and on order payments) and the admin list endpoints (`GET /api/admin/pasabuy-schedules`, `GET /api/admin/orders`, top buyers, top products) return every seller's data instead of only their own. On top of that, a superadmin may:
+- move a `finished` schedule back to `closed` via `POST .../close` (see below);
+- edit a `finished` schedule via `PUT` and `confirm-price`;
+- `DELETE` a `closed` or `finished` schedule (still cascades to orders and payments);
+- edit order items via `PUT .../orders/{orderUuid}/items` while the schedule is `finished` (customer orders: `closed` or `finished`; manual orders: any status).
+
 ## Schedule object
 
 | Field       | Type          | Notes                                                                 |
@@ -152,6 +158,8 @@ Transitions `open` → `closed`. No request body. Blocks customer-side ordering/
 - `quantity` is the **physical shopping quantity**, not the raw paid total: products confirmed `product_status: 'out_of_stock'` are skipped entirely (no checklist row — nothing to buy), and products confirmed `product_status: 'b1t1'` have their `bonus_quantity` added on top of the paid quantity, since the seller needs stock to cover the free unit too. This differs from `GET .../summary`, which reports raw paid quantity only and leaves out-of-stock/b1t1 adjustments to the client.
 - A product with a computed quantity of `0` (e.g. its only orders were cancelled/removed) never gets a row either. If the row has no `picked_quantity` (never actually bought anything), it's deleted outright. Otherwise it's flipped back to unchecked with `return_quantity` set to its full `picked_quantity` — the seller already bought that amount and now needs to return all of it.
 
+**Superadmin only: `finished` → `closed`.** Same endpoint, no body. Resets `finished_at` and `due_date` to `null` and clears every order's `invoice_sent_at`, so calling `finish` again sets a new due date and re-sends all invoices. Recorded payments and the invoice settings snapshot are left untouched. The checklist sync above runs as usual.
+
 ### Success response — 200
 
 ```json
@@ -160,7 +168,7 @@ Transitions `open` → `closed`. No request body. Blocks customer-side ordering/
 
 ### Error responses
 
-- **403** (not owner), **404**, **422** — invalid transition (e.g. already closed, or already `finished`).
+- **403** (not owner), **404**, **422** — invalid transition (e.g. already closed, or already `finished` for a non-superadmin).
 
 ---
 

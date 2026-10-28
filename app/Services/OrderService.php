@@ -12,6 +12,7 @@ use App\Interfaces\Order\OrderServiceInterface;
 use App\Interfaces\PasabuySchedule\PasabuyScheduleRepositoryInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Models\PasabuyOrder;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class OrderService implements OrderServiceInterface
@@ -40,7 +41,7 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        $this->ensureOrderOwnership($order, $payload->user_id);
+        $this->ensureOrderOwnership($order, $payload->user);
 
         $updated = $this->orderRepository->updateStatus($uuid, $payload);
 
@@ -57,7 +58,7 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        $this->ensureOrderOwnership($order, $payload->user_id);
+        $this->ensureOrderOwnership($order, $payload->user);
 
         $updated = $this->orderRepository->updateDeliveryStatus($uuid, $payload);
 
@@ -106,9 +107,7 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Pasabuy schedule not found.');
         }
 
-        if ($schedule->user_id !== $payload->user_id) {
-            throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
-        }
+        $this->ensureScheduleOwnership($schedule, $payload->user);
 
         if ($schedule->status === 'finished') {
             throw new InvalidPayloadException('This pasabuy is finished and no longer accepts new orders.');
@@ -178,7 +177,7 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        $this->ensureOrderOwnership($order, $payload->user_id);
+        $this->ensureOrderOwnership($order, $payload->user);
 
         return $order;
     }
@@ -239,9 +238,7 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Pasabuy schedule not found.');
         }
 
-        if ($schedule->user_id !== $payload->user_id) {
-            throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
-        }
+        $this->ensureScheduleOwnership($schedule, $payload->user);
 
         $order = $this->orderRepository->findByUuidForSchedule($orderUuid, $schedule->id);
 
@@ -249,11 +246,13 @@ class OrderService implements OrderServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
+        $isSuperadmin = $payload->user->isSuperadmin();
+
         if ($order->channel === 'seller') {
-            if ($schedule->status === 'finished') {
+            if ($schedule->status === 'finished' && ! $isSuperadmin) {
                 throw new InvalidPayloadException('Order items can no longer be edited once the schedule is finished.');
             }
-        } elseif ($schedule->status !== 'closed') {
+        } elseif ($schedule->status !== 'closed' && ! ($isSuperadmin && $schedule->status === 'finished')) {
             throw new InvalidPayloadException('Order items can only be edited by the seller while the schedule is closed.');
         }
 
@@ -275,10 +274,25 @@ class OrderService implements OrderServiceInterface
         }
     }
 
-    protected function ensureOrderOwnership(PasabuyOrder $order, int $userId)
+    protected function ensureOrderOwnership(PasabuyOrder $order, User $user)
     {
-        if ($order->pasabuySchedule->user_id !== $userId) {
+        if ($user->isSuperadmin()) {
+            return;
+        }
+
+        if ($order->pasabuySchedule->user_id !== $user->id) {
             throw new UnauthorizedActionException('You do not own this order.');
+        }
+    }
+
+    protected function ensureScheduleOwnership($schedule, User $user)
+    {
+        if ($user->isSuperadmin()) {
+            return;
+        }
+
+        if ($schedule->user_id !== $user->id) {
+            throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
         }
     }
 

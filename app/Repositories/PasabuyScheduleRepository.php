@@ -21,7 +21,7 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
     public function all(object $payload)
     {
         return PasabuySchedule::filter((array) $payload)
-            ->where('user_id', $payload->seller_id)
+            ->when($payload->seller_id ?? null, fn ($query, $sellerId) => $query->where('user_id', $sellerId))
             ->latest()
             ->paginate($payload->per_page ?? 15);
     }
@@ -63,6 +63,32 @@ class PasabuyScheduleRepository implements PasabuyScheduleRepositoryInterface
         $schedule->save();
 
         $this->bumpCacheVersion('pasabuy_schedules');
+
+        return $schedule->fresh([
+            'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),
+            'scheduleProducts.product.category',
+        ]);
+    }
+
+    /**
+     * Moves a finished schedule back to closed. Payments and the invoice settings snapshot
+     * are kept; invoice_sent_at is cleared so finishing again re-sends every invoice.
+     */
+    public function revertFinished(string $uuid)
+    {
+        $schedule = PasabuySchedule::where('uuid', $uuid)->first();
+
+        DB::transaction(function () use ($schedule) {
+            $schedule->status = 'closed';
+            $schedule->finished_at = null;
+            $schedule->due_date = null;
+            $schedule->save();
+
+            $schedule->orders()->update(['invoice_sent_at' => null]);
+        });
+
+        $this->bumpCacheVersion('pasabuy_schedules');
+        $this->bumpCacheVersion('orders');
 
         return $schedule->fresh([
             'scheduleProducts' => fn ($query) => $query->where('is_disabled', false),

@@ -26,7 +26,7 @@ class OrderPaymentController extends Controller
             return $notModified;
         }
 
-        $payments = $this->orderPaymentService->listForOrder($orderUuid, $request->user()->id);
+        $payments = $this->orderPaymentService->listForOrder($orderUuid, $request->user());
 
         return $this->success(OrderPaymentResource::collection($payments))->header('ETag', $etag);
     }
@@ -35,7 +35,7 @@ class OrderPaymentController extends Controller
     {
         $payload = (object) $request->validated();
         $payload->recorded_by_user_id = $request->user()->id;
-        $payload->user_id = $request->user()->id;
+        $payload->user = $request->user();
 
         $payment = $this->orderPaymentService->create($orderUuid, $payload);
 
@@ -44,7 +44,7 @@ class OrderPaymentController extends Controller
 
     public function destroy(Request $request, string $orderUuid, string $uuid)
     {
-        $this->orderPaymentService->delete($orderUuid, $uuid, $request->user()->id);
+        $this->orderPaymentService->delete($orderUuid, $uuid, $request->user());
 
         return $this->success(null, 'Payment removed');
     }

@@ -23,6 +23,16 @@ class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<UserFactory> */
     use Filterable, HasApiTokens, HasFactory, MustVerifyEmailTrait, Notifiable, SoftDeletes, UsesUuid;
 
+    /**
+     * Sanctum token abilities granted per role. A superadmin carries both the admin
+     * and customer abilities so it can use either side of the app.
+     */
+    public const ROLE_ABILITIES = [
+        'superadmin' => ['superadmin', 'admin', 'customer'],
+        'admin' => ['admin'],
+        'customer' => ['customer'],
+    ];
+
     public function modelFilter()
     {
         return $this->provideFilter(CustomerFilter::class);
@@ -61,9 +71,19 @@ class User extends Authenticatable implements MustVerifyEmail
         return trim("{$this->first_name} {$this->last_name}");
     }
 
+    public function isSuperadmin()
+    {
+        return $this->role === 'superadmin';
+    }
+
+    public function abilities()
+    {
+        return self::ROLE_ABILITIES[$this->role] ?? [];
+    }
+
     public function getIsApprovedAttribute()
     {
-        return $this->role === 'admin' || $this->approved_at !== null;
+        return in_array($this->role, ['admin', 'superadmin'], true) || $this->approved_at !== null;
     }
 
     protected function casts()

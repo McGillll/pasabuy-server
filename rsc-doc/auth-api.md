@@ -47,8 +47,8 @@ Every response — success or failure — uses:
 | last_name      | string        |                                  |
 | email          | string        |                                  |
 | contact_number | string\|null  |                                  |
-| role           | string        | `"admin"` or `"customer"`        |
-| is_approved    | boolean       | Always `true` for `admin`. For `customer`, `false` until an admin approves the registration — a pending customer can still log in and call `/auth/me` to see this flag, but every ordering endpoint rejects with **403** until it flips to `true` (see `customer-api.md`) |
+| role           | string        | `"superadmin"`, `"admin"` or `"customer"`. A `superadmin` login token carries both the `admin` and `customer` abilities, so it can call every admin and customer endpoint (see "Superadmin" in `pasabuy-schedule-api.md` for the extra powers). Superadmins are created by the seeder only |
+| is_approved    | boolean       | Always `true` for `admin` and `superadmin`. For `customer`, `false` until an admin approves the registration — a pending customer can still log in and call `/auth/me` to see this flag, but every ordering endpoint rejects with **403** until it flips to `true` (see `customer-api.md`) |
 | is_verified    | boolean       | `true` once the account's email has been confirmed via the `email/verify` link. `false` does not block login, but blocks the mutation endpoints listed above |
 | receivable     | number        | Total balance owed across the customer's live (`pending`/`confirmed`), not-yet-`paid` orders, including any accrued overdue interest. Always `0` for `admin` |
 | is_valid_to_order | boolean    | `receivable === 0`. `false` means the customer has an outstanding balance and `POST /customer/pasabuy-schedules/{uuid}/orders` will reject with **422** — use this to disable the "Place order" action up front instead of letting the request fail |

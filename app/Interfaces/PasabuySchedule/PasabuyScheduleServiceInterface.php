@@ -2,6 +2,8 @@
 
 namespace App\Interfaces\PasabuySchedule;
 
+use App\Models\User;
+
 interface PasabuyScheduleServiceInterface
 {
     public function all(object $payload);
@@ -14,13 +16,13 @@ interface PasabuyScheduleServiceInterface
 
     public function update(string $uuid, object $payload);
 
-    public function delete(string $uuid, int $userId);
+    public function delete(string $uuid, User $user);
 
-    public function close(string $uuid, int $userId);
+    public function close(string $uuid, User $user);
 
-    public function reopen(string $uuid, int $userId);
+    public function reopen(string $uuid, User $user);
 
-    public function finish(string $uuid, int $userId, string $dueDate);
+    public function finish(string $uuid, User $user, string $dueDate);
 
     public function orders(string $uuid);
 
@@ -34,11 +36,11 @@ interface PasabuyScheduleServiceInterface
 
     public function toggleChecklistItem(string $scheduleUuid, string $productUuid, object $payload);
 
-    public function regenerateChecklist(string $uuid, int $userId);
+    public function regenerateChecklist(string $uuid, User $user);
 
-    public function getChecklistShareLink(string $uuid, int $userId);
+    public function getChecklistShareLink(string $uuid, User $user);
 
-    public function regenerateChecklistShareLink(string $uuid, int $userId);
+    public function regenerateChecklistShareLink(string $uuid, User $user);
 
     public function publicChecklist(string $token);
 

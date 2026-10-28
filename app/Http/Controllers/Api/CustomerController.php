@@ -68,7 +68,7 @@ class CustomerController extends Controller
     public function topBuyers(Request $request)
     {
         $payload = (object) $request->query();
-        $payload->seller_id = $request->user()->id;
+        $payload->seller_id = $request->user()->isSuperadmin() ? null : $request->user()->id;
 
         $customers = $this->customerService->topBuyers($payload);
 

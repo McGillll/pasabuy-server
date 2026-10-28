@@ -24,7 +24,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $payload = (object) $request->query();
-        $payload->seller_id = $request->user()->id;
+        $payload->seller_id = $request->user()->isSuperadmin() ? null : $request->user()->id;
         $etag = $this->etagFor('orders', $payload);
 
         if ($notModified = $this->notModified($request, $etag)) {
@@ -44,7 +44,7 @@ class OrderController extends Controller
     public function updateStatus(OrderStatusUpdateRequest $request, string $uuid)
     {
         $payload = (object) $request->validated();
-        $payload->user_id = $request->user()->id;
+        $payload->user = $request->user();
 
         $order = $this->orderService->updateStatus($uuid, $payload);
 
@@ -54,7 +54,7 @@ class OrderController extends Controller
     public function updateDeliveryStatus(OrderDeliveryStatusUpdateRequest $request, string $uuid)
     {
         $payload = (object) $request->validated();
-        $payload->user_id = $request->user()->id;
+        $payload->user = $request->user();
 
         $order = $this->orderService->updateDeliveryStatus($uuid, $payload);
 

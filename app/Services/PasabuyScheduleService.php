@@ -15,6 +15,7 @@ use App\Interfaces\PasabuySchedule\PasabuyScheduleServiceInterface;
 use App\Interfaces\Product\ProductRepositoryInterface;
 use App\Interfaces\ScheduleInvoiceSetting\ScheduleInvoiceSettingRepositoryInterface;
 use App\Models\PasabuySchedule;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 
 class PasabuyScheduleService implements PasabuyScheduleServiceInterface
@@ -57,51 +58,54 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     public function update(string $uuid, object $payload)
     {
         $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $payload->user_id);
-        $this->assertNotFinished($schedule);
+        $this->ensureOwnership($schedule, $payload->user);
+        $this->assertNotFinished($schedule, $payload->user);
 
         if (isset($payload->status) && $payload->status !== $schedule->status) {
-            $this->assertValidTransition($schedule, $payload->status);
+            $this->assertValidTransition($schedule, $payload->status, $payload->user);
         }
 
         return $this->pasabuyScheduleRepository->update($uuid, $payload);
     }
 
-    public function delete(string $uuid, int $userId)
+    public function delete(string $uuid, User $user)
     {
         $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $userId);
-        $this->assertOpen($schedule);
+        $this->ensureOwnership($schedule, $user);
+        $this->assertOpen($schedule, $user);
 
         return $this->pasabuyScheduleRepository->delete($uuid);
     }
 
-    public function close(string $uuid, int $userId)
+    public function close(string $uuid, User $user)
     {
         $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $userId);
-        $this->assertValidTransition($schedule, 'closed');
+        $this->ensureOwnership($schedule, $user);
+        $this->assertValidTransition($schedule, 'closed', $user);
 
-        $updated = $this->pasabuyScheduleRepository->updateStatus($uuid, 'closed');
+        $updated = $schedule->status === 'finished'
+            ? $this->pasabuyScheduleRepository->revertFinished($uuid)
+            : $this->pasabuyScheduleRepository->updateStatus($uuid, 'closed');
+
         $this->pasabuyScheduleRepository->syncChecklistOnClose($updated);
 
         return $updated;
     }
 
-    public function reopen(string $uuid, int $userId)
+    public function reopen(string $uuid, User $user)
     {
         $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $userId);
-        $this->assertValidTransition($schedule, 'open');
+        $this->ensureOwnership($schedule, $user);
+        $this->assertValidTransition($schedule, 'open', $user);
 
         return $this->pasabuyScheduleRepository->updateStatus($uuid, 'open');
     }
 
-    public function finish(string $uuid, int $userId, string $dueDate)
+    public function finish(string $uuid, User $user, string $dueDate)
     {
         $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $userId);
-        $this->assertValidTransition($schedule, 'finished');
+        $this->ensureOwnership($schedule, $user);
+        $this->assertValidTransition($schedule, 'finished', $user);
         $this->assertDueDateNotPast($dueDate);
 
         $updated = $this->pasabuyScheduleRepository->updateStatus($uuid, 'finished', $dueDate);
@@ -126,8 +130,8 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload)
     {
         $schedule = $this->findByUuid($scheduleUuid);
-        $this->ensureOwnership($schedule, $payload->user_id);
-        $this->assertNotFinished($schedule);
+        $this->ensureOwnership($schedule, $payload->user);
+        $this->assertNotFinished($schedule, $payload->user);
 
         if ($payload->product_status !== 'out_of_stock' && (! isset($payload->actual_price) || $payload->actual_price < 0)) {
             throw new InvalidPayloadException('A valid actual price is required unless marking the item out of stock.');
@@ -174,19 +178,19 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
     public function toggleChecklistItem(string $scheduleUuid, string $productUuid, object $payload)
     {
         $schedule = $this->findByUuid($scheduleUuid);
-        $this->ensureOwnership($schedule, $payload->user_id);
+        $this->ensureOwnership($schedule, $payload->user);
 
-        $item = $this->pasabuyScheduleRepository->toggleChecklistItem($scheduleUuid, $productUuid, $payload->is_checked);
+        $item =$this->pasabuyScheduleRepository->toggleChecklistItem($scheduleUuid, $productUuid, $payload->is_checked);
 
         $this->broadcastChecklistItemToggled($schedule, $item);
 
         return $item;
     }
 
-    public function regenerateChecklist(string $uuid, int $userId)
+    public function regenerateChecklist(string $uuid, User $user)
     {
         $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $userId);
+        $this->ensureOwnership($schedule, $user);
 
         if (! in_array($schedule->status, ['closed', 'finished'], true)) {
             throw new InvalidPayloadException('Checklist can only be regenerated for a closed or finished schedule.');
@@ -201,18 +205,18 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         return $items;
     }
 
-    public function getChecklistShareLink(string $uuid, int $userId)
+    public function getChecklistShareLink(string $uuid, User $user)
     {
         $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $userId);
+        $this->ensureOwnership($schedule, $user);
 
         return $this->pasabuyScheduleRepository->getOrCreateChecklistShareToken($uuid);
     }
 
-    public function regenerateChecklistShareLink(string $uuid, int $userId)
+    public function regenerateChecklistShareLink(string $uuid, User $user)
     {
         $schedule = $this->findByUuid($uuid);
-        $this->ensureOwnership($schedule, $userId);
+        $this->ensureOwnership($schedule, $user);
 
         return $this->pasabuyScheduleRepository->regenerateChecklistShareToken($uuid);
     }
@@ -295,23 +299,27 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         broadcast(new ChecklistRegenerated($schedule->checklist_share_token, $items));
     }
 
-    protected function ensureOwnership(PasabuySchedule $schedule, int $userId)
+    protected function ensureOwnership(PasabuySchedule $schedule, User $user)
     {
-        if ($schedule->user_id !== $userId) {
+        if ($user->isSuperadmin()) {
+            return;
+        }
+
+        if ($schedule->user_id !== $user->id) {
             throw new UnauthorizedActionException('You do not own this pasabuy schedule.');
         }
     }
 
-    protected function assertNotFinished(PasabuySchedule $schedule)
+    protected function assertNotFinished(PasabuySchedule $schedule, User $user)
     {
-        if ($schedule->status === 'finished') {
+        if ($schedule->status === 'finished' && ! $user->isSuperadmin()) {
             throw new InvalidPayloadException('This pasabuy schedule is finished and can no longer be edited.');
         }
     }
 
-    protected function assertOpen(PasabuySchedule $schedule)
+    protected function assertOpen(PasabuySchedule $schedule, User $user)
     {
-        if ($schedule->status !== 'open') {
+        if ($schedule->status !== 'open' && ! $user->isSuperadmin()) {
             throw new InvalidPayloadException('This pasabuy schedule is no longer open and can no longer be deleted.');
         }
     }
@@ -332,9 +340,13 @@ class PasabuyScheduleService implements PasabuyScheduleServiceInterface
         }
     }
 
-    protected function assertValidTransition(PasabuySchedule $schedule, string $newStatus)
+    protected function assertValidTransition(PasabuySchedule $schedule, string $newStatus, User $user)
     {
         $allowed = PasabuySchedule::ALLOWED_STATUS_TRANSITIONS[$schedule->status] ?? [];
+
+        if ($user->isSuperadmin()) {
+            $allowed = array_merge($allowed, PasabuySchedule::SUPERADMIN_STATUS_TRANSITIONS[$schedule->status] ?? []);
+        }
 
         if (! in_array($newStatus, $allowed, true)) {
             throw new InvalidPayloadException("Cannot change schedule status from \"{$schedule->status}\" to \"{$newStatus}\".");

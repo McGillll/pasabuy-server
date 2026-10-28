@@ -21,6 +21,8 @@ interface PasabuyScheduleRepositoryInterface
 
     public function updateStatus(string $uuid, string $status, ?string $dueDate = null);
 
+    public function revertFinished(string $uuid);
+
     public function orders(string $uuid);
 
     public function confirmProductPrice(string $scheduleUuid, string $scheduleProductUuid, object $payload);

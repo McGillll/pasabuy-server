@@ -20,7 +20,7 @@ class InvoiceController extends Controller
 
     public function show(Request $request, string $orderUuid)
     {
-        $order = $this->orderService->findOwnedBySellerUuid($orderUuid, (object) ['user_id' => $request->user()->id]);
+        $order = $this->orderService->findOwnedBySellerUuid($orderUuid, (object) ['user' => $request->user()]);
 
         $invoice = $this->invoiceService->buildForOrder($order);
 

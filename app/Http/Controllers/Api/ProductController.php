@@ -88,7 +88,7 @@ class ProductController extends Controller
     public function topSelling(Request $request)
     {
         $payload = (object) $request->query();
-        $payload->seller_id = $request->user()->id;
+        $payload->seller_id = $request->user()->isSuperadmin() ? null : $request->user()->id;
 
         $products = $this->productService->topSelling($payload);
 

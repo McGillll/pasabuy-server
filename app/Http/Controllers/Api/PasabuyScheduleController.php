@@ -34,7 +34,7 @@ class PasabuyScheduleController extends Controller
     public function index(Request $request)
     {
         $payload = (object) $request->query();
-        $payload->seller_id = $request->user()->id;
+        $payload->seller_id = $request->user()->isSuperadmin() ? null : $request->user()->id;
         $etag = $this->etagFor('pasabuy_schedules', $payload);
 
         if ($notModified = $this->notModified($request, $etag)) {
@@ -89,7 +89,7 @@ class PasabuyScheduleController extends Controller
     public function update(PasabuyScheduleUpdateRequest $request, string $uuid)
     {
         $payload = (object) $request->validated();
-        $payload->user_id = $request->user()->id;
+        $payload->user = $request->user();
 
         $schedule = $this->pasabuyScheduleService->update($uuid, $payload);
 
@@ -98,21 +98,21 @@ class PasabuyScheduleController extends Controller
 
     public function destroy(Request $request, string $uuid)
     {
-        $this->pasabuyScheduleService->delete($uuid, $request->user()->id);
+        $this->pasabuyScheduleService->delete($uuid, $request->user());
 
         return $this->success(null, 'Pasabuy schedule deleted successfully');
     }
 
     public function close(Request $request, string $uuid)
     {
-        $schedule = $this->pasabuyScheduleService->close($uuid, $request->user()->id);
+        $schedule = $this->pasabuyScheduleService->close($uuid, $request->user());
 
         return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule closed');
     }
 
     public function reopen(Request $request, string $uuid)
     {
-        $schedule = $this->pasabuyScheduleService->reopen($uuid, $request->user()->id);
+        $schedule = $this->pasabuyScheduleService->reopen($uuid, $request->user());
 
         return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule reopened');
     }
@@ -121,7 +121,7 @@ class PasabuyScheduleController extends Controller
     {
         $payload = (object) $request->validated();
 
-        $schedule = $this->pasabuyScheduleService->finish($uuid, $request->user()->id, $payload->due_date);
+        $schedule = $this->pasabuyScheduleService->finish($uuid, $request->user(), $payload->due_date);
 
         return $this->success(new PasabuyScheduleResource($schedule), 'Pasabuy schedule finished');
     }
@@ -136,7 +136,7 @@ class PasabuyScheduleController extends Controller
     public function confirmProductPrice(PasabuyScheduleProductConfirmPriceRequest $request, string $uuid, string $scheduleProductUuid)
     {
         $payload = (object) $request->validated();
-        $payload->user_id = $request->user()->id;
+        $payload->user = $request->user();
 
         $result = $this->pasabuyScheduleService->confirmProductPrice($uuid, $scheduleProductUuid, $payload);
 
@@ -170,7 +170,7 @@ class PasabuyScheduleController extends Controller
     public function toggleChecklistItem(PasabuyScheduleChecklistToggleRequest $request, string $uuid, string $productUuid)
     {
         $payload = (object) $request->validated();
-        $payload->user_id = $request->user()->id;
+        $payload->user = $request->user();
 
         $item = $this->pasabuyScheduleService->toggleChecklistItem($uuid, $productUuid, $payload);
 
@@ -179,21 +179,21 @@ class PasabuyScheduleController extends Controller
 
     public function regenerateChecklist(Request $request, string $uuid)
     {
-        $items = $this->pasabuyScheduleService->regenerateChecklist($uuid, $request->user()->id);
+        $items = $this->pasabuyScheduleService->regenerateChecklist($uuid, $request->user());
 
         return $this->success(PasabuyScheduleChecklistItemResource::collection($items), 'Checklist regenerated');
     }
 
     public function checklistShareLink(Request $request, string $uuid)
     {
-        $token = $this->pasabuyScheduleService->getChecklistShareLink($uuid, $request->user()->id);
+        $token = $this->pasabuyScheduleService->getChecklistShareLink($uuid, $request->user());
 
         return $this->success(['token' => $token]);
     }
 
     public function regenerateChecklistShareLink(Request $request, string $uuid)
     {
-        $token = $this->pasabuyScheduleService->regenerateChecklistShareLink($uuid, $request->user()->id);
+        $token = $this->pasabuyScheduleService->regenerateChecklistShareLink($uuid, $request->user());
 
         return $this->success(['token' => $token], 'Checklist share link regenerated');
     }
@@ -201,7 +201,7 @@ class PasabuyScheduleController extends Controller
     public function storeOrder(PasabuyScheduleOrderStoreRequest $request, string $uuid)
     {
         $payload = (object) $request->validated();
-        $payload->user_id = $request->user()->id;
+        $payload->user = $request->user();
 
         $order = $this->orderService->createForSeller($uuid, $payload);
 
@@ -211,7 +211,7 @@ class PasabuyScheduleController extends Controller
     public function updateOrderItems(PasabuyScheduleOrderItemsUpdateRequest $request, string $uuid, string $orderUuid)
     {
         $payload = (object) $request->validated();
-        $payload->user_id = $request->user()->id;
+        $payload->user = $request->user();
 
         $order = $this->orderService->updateItemsForSeller($uuid, $orderUuid, $payload);
 

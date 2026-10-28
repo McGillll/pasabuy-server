@@ -11,6 +11,7 @@ use App\Interfaces\OrderPayment\OrderPaymentRepositoryInterface;
 use App\Interfaces\OrderPayment\OrderPaymentServiceInterface;
 use App\Mail\PaymentConfirmationMail;
 use App\Models\PasabuyOrder;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -24,7 +25,7 @@ class OrderPaymentService implements OrderPaymentServiceInterface
         protected InvoiceServiceInterface $invoiceService,
     ) {}
 
-    public function listForOrder(string $orderUuid, int $userId)
+    public function listForOrder(string $orderUuid, User $user)
     {
         $order = $this->orderRepository->findByUuid($orderUuid);
 
@@ -32,7 +33,7 @@ class OrderPaymentService implements OrderPaymentServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        $this->ensureOrderOwnership($order, $userId);
+        $this->ensureOrderOwnership($order, $user);
 
         return $this->orderPaymentRepository->listForOrder($order);
     }
@@ -45,7 +46,7 @@ class OrderPaymentService implements OrderPaymentServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        $this->ensureOrderOwnership($order, $payload->user_id);
+        $this->ensureOrderOwnership($order, $payload->user);
 
         if ($order->pasabuySchedule->status !== 'finished') {
             throw new InvalidPayloadException('Payments can only be recorded once the pasabuy schedule is finished.');
@@ -68,7 +69,7 @@ class OrderPaymentService implements OrderPaymentServiceInterface
         return $payment;
     }
 
-    public function delete(string $orderUuid, string $uuid, int $userId)
+    public function delete(string $orderUuid, string $uuid, User $user)
     {
         $order = $this->orderRepository->findByUuid($orderUuid);
 
@@ -76,7 +77,7 @@ class OrderPaymentService implements OrderPaymentServiceInterface
             throw new NotFoundException('Order not found.');
         }
 
-        $this->ensureOrderOwnership($order, $userId);
+        $this->ensureOrderOwnership($order, $user);
 
         $payment = $this->orderPaymentRepository->findByUuid($uuid);
 
@@ -101,9 +102,13 @@ class OrderPaymentService implements OrderPaymentServiceInterface
         }
     }
 
-    protected function ensureOrderOwnership(object $order, int $userId)
+    protected function ensureOrderOwnership(object $order, User $user)
     {
-        if ($order->pasabuySchedule->user_id !== $userId) {
+        if ($user->isSuperadmin()) {
+            return;
+        }
+
+        if ($order->pasabuySchedule->user_id !== $user->id) {
             throw new UnauthorizedActionException('You do not own this order.');
         }
     }
